@@ -100,4 +100,4 @@ export {
   ZeroDevLogo,
   type ZeroDevLogoProps,
 } from './components/ZeroDevLogo'
-export { cn } from './utils/common'
+export { camelCaseToTitle, cn } from './utils/common'
