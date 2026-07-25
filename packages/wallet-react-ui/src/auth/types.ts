@@ -1,4 +1,4 @@
-export type AuthMethod = 'email' | 'google' | 'passkey'
+export type AuthMethod = 'email' | 'google' | 'passkey' | 'external-wallet'
 
 export type AuthStep =
   | 'sign-up'

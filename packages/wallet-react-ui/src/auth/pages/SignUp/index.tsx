@@ -5,6 +5,7 @@ import { BlobAnimation } from '../../components/BlobAnimation'
 import type { EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
+import { SignUpExternalWallet } from './ExternalWallet'
 import { SignUpGoogle } from './Google'
 import { SignUpPasskey } from './Passkey'
 
@@ -125,6 +126,7 @@ function SignUpDefault(props: Omit<SignUpRootProps, 'children'>) {
       <SignUpDivider />
       <SignUpGoogle />
       <SignUpEmail />
+      <SignUpExternalWallet />
     </SignUpRoot>
   )
 }
@@ -134,5 +136,6 @@ export const SignUp = Object.assign(SignUpRoot, {
   Passkey: SignUpPasskey,
   Google: SignUpGoogle,
   Email: SignUpEmail,
+  ExternalWallet: SignUpExternalWallet,
   Divider: SignUpDivider,
 })
