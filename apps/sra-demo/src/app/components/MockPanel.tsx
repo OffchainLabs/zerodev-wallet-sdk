@@ -14,18 +14,18 @@ import {
   uninstallMockFetch,
 } from '../mock'
 
-// Hardcoded simulation: 250 USDC on Base → destination chain from the widget's
-// config. Real SRA has to expose the currently-selected picker route for the
-// mock to mirror the user's choice; until it does, this is honest enough for
-// a "here's what a deposit looks like" preview.
-const SOURCE_CHAIN_ID = base.id
-const SOURCE_CHAIN_NAME = 'Base'
-const TOKEN_SYMBOL = 'USDC'
-// USDC on Base
-const SOURCE_TOKEN_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const TOKEN_DECIMALS = 6
+// Fallback route used before the widget has seeded a picker selection:
+// 250 USDC on Base. Once `activeRoute` populates from the widget's picker,
+// the simulation switches to whatever token/chain the user chose.
+const FALLBACK = {
+  sourceChainId: base.id,
+  sourceChainName: 'Base',
+  symbol: 'USDC',
+  token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const, // USDC on Base
+  decimals: 6,
+  feeAmount: '250000', // 0.25 USDC
+}
 const AMOUNT_WHOLE = '250'
-const FEE_AMOUNT = '250000' // 0.25 USDC
 
 const STEP_LABELS: Record<MockStage, string> = {
   pending: 'Deposit detected — confirming…',
@@ -33,15 +33,9 @@ const STEP_LABELS: Record<MockStage, string> = {
   completed: 'Sent — track it in the widget.',
 }
 
-const DOT_COLOR: Record<'idle' | MockStage, string> = {
-  idle: 'bg-muted',
-  pending: 'bg-primary animate-mock-pulse',
-  bridging: 'bg-primary animate-mock-pulse',
-  completed: 'bg-[#6bb04f]',
-}
-
 export function MockPanel({ destChainId }: { destChainId: number }) {
-  const { addressState } = useSmartRoutingAddress()
+  const { addressState, activeRoute } = useSmartRoutingAddress()
+  const route = activeRoute ?? FALLBACK
   const [sim, setSim] = useState<'idle' | MockStage>('idle')
   const [pasted, setPasted] = useState('')
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -67,21 +61,21 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
     !!address &&
     pasted.trim().toLowerCase() === address.toLowerCase()
   const running = sim === 'pending' || sim === 'bridging'
-  const amountLabel = `${AMOUNT_WHOLE} ${TOKEN_SYMBOL}`
+  const amountLabel = `${AMOUNT_WHOLE} ${route.symbol}`
 
   const simulate = useCallback(() => {
     clearTimers()
     const past = loadPastDeposits()
     const params = {
-      sourceChainId: SOURCE_CHAIN_ID,
-      token: SOURCE_TOKEN_ADDRESS,
-      amount: parseUnits(AMOUNT_WHOLE, TOKEN_DECIMALS).toString(),
-      feeAmount: FEE_AMOUNT,
+      sourceChainId: route.sourceChainId,
+      token: route.token,
+      amount: parseUnits(AMOUNT_WHOLE, route.decimals).toString(),
+      feeAmount: route.feeAmount,
       destChainId,
       // Simulation reuses the source token address on the destination side;
       // the widget only cares that fields resolve, not that this is realistic
       // for every chain.
-      outputToken: SOURCE_TOKEN_ADDRESS,
+      outputToken: route.token,
     }
     const { snapshot } = createSimulation(params)
 
@@ -101,7 +95,7 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
         setSim('completed')
       }, 6500),
     )
-  }, [destChainId, clearTimers])
+  }, [destChainId, clearTimers, route])
 
   const hint = !address
     ? 'Generating your deposit address…'
@@ -114,44 +108,29 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
           : "That doesn't match your deposit address."
 
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-border-warm bg-white p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-[13px] font-semibold">Simulated wallet</span>
-        <span className="ml-auto rounded-full bg-[#fef1e6] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-primary">
-          Simulated
-        </span>
+    <div className="pg__wallet">
+      <div className="pg__wallet-head">
+        <span className="pg__wallet-title">Simulated wallet</span>
+        <span className="pg__wallet-tag">Simulated</span>
       </div>
 
-      <div className="flex items-baseline gap-1.5 rounded-lg bg-[#f7f4ef] px-3.5 py-3">
-        <span className="text-[22px] font-bold tabular-nums">
-          {AMOUNT_WHOLE}
-        </span>
-        <span className="text-sm font-semibold text-muted">{TOKEN_SYMBOL}</span>
-        <span className="ml-auto text-[13px] text-muted">
-          on {SOURCE_CHAIN_NAME}
-        </span>
+      <div className="pg__wallet-amount">
+        <span className="pg__wallet-value">{AMOUNT_WHOLE}</span>
+        <span className="pg__wallet-symbol">{route.symbol}</span>
+        <span className="pg__wallet-net">on {route.sourceChainName}</span>
       </div>
 
-      {/* Input row — pastedOk drives a green border via the sibling `<input>`
-          selector using `peer` + `peer-data-[ok=true]:` on the border. */}
-      <label className="relative flex flex-col gap-1.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
-          To
-        </span>
+      <label className="pg__wallet-field" data-ok={pastedOk}>
+        <span className="pg__wallet-field-label">To</span>
         <input
-          className={`rounded-lg border bg-white px-3 py-2.5 pr-8 font-mono text-[13px] outline-primary ${
-            pastedOk ? 'border-[#6bb04f]' : 'border-border-warm'
-          }`}
+          className="pg__wallet-input"
           value={pasted}
           onChange={(e) => setPasted(e.target.value.trim())}
           placeholder="Paste your deposit address"
           spellCheck={false}
         />
         {pastedOk && (
-          <span
-            className="absolute right-2.5 top-[30px] font-bold text-[#6bb04f]"
-            aria-hidden="true"
-          >
+          <span className="pg__wallet-ok" aria-hidden="true">
             ✓
           </span>
         )}
@@ -159,7 +138,7 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
 
       <button
         type="button"
-        className="cursor-pointer rounded-lg border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white transition-[opacity,background-color] duration-150 hover:not-disabled:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+        className="pg__wallet-send"
         onClick={simulate}
         disabled={!pastedOk}
       >
@@ -167,8 +146,8 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
       </button>
 
       {hint && (
-        <p className="m-0 flex items-center gap-2 text-[13px] text-muted">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLOR[sim]}`} />
+        <p className="pg__mock-status" data-stage={sim}>
+          <span className="pg__mock-dot" />
           {hint}
         </p>
       )}
