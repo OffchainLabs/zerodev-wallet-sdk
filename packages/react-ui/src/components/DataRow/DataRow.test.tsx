@@ -139,7 +139,7 @@ describe('DataRow', () => {
 describe('DataRowSkeleton', () => {
   it('renders two pulse placeholders when no label is given', () => {
     const { container } = render(<DataRowSkeleton />)
-    const pulses = container.querySelectorAll('.zd\\:animate-pulse')
+    const pulses = container.querySelectorAll('.zd\\:animate-skel-pulse')
     expect(pulses).toHaveLength(2)
   })
 

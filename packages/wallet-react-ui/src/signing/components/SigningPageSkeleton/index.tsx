@@ -4,7 +4,7 @@ function SkeletonBar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse',
+        'zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse',
         className,
       )}
     />

@@ -57,6 +57,45 @@ const config: Config = {
         mono: undefined,
         roboto: ['Roboto', 'sans-serif'],
       },
+      // Sheet / overlay animations bound to Radix's `data-state=open|closed`
+      // attributes. Defined here (not in the CSS) so downstream packages that
+      // `@config` this file inherit them without duplication.
+      keyframes: {
+        'sheet-in': {
+          from: { transform: 'translateY(100%)' },
+          to: { transform: 'translateY(0)' },
+        },
+        'sheet-out': {
+          from: { transform: 'translateY(0)' },
+          to: { transform: 'translateY(100%)' },
+        },
+        'backdrop-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        'backdrop-out': {
+          from: { opacity: '1' },
+          to: { opacity: '0' },
+        },
+        // Gentle opacity pulse for loading skeletons — softer than Tailwind's
+        // default `pulse` (which dips to 50% and looks jittery on greys).
+        'skel-pulse': {
+          '0%, 100%': { opacity: '0.65' },
+          '50%': { opacity: '1' },
+        },
+        'popper-in': {
+          from: { opacity: '0', transform: 'scale(0.97) translateY(-3px)' },
+          to: { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+      },
+      animation: {
+        'sheet-in': 'sheet-in 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards',
+        'sheet-out': 'sheet-out 250ms cubic-bezier(0.32, 0.72, 0, 1) forwards',
+        'backdrop-in': 'backdrop-in 200ms ease-out forwards',
+        'backdrop-out': 'backdrop-out 200ms ease-out forwards',
+        'skel-pulse': 'skel-pulse 1.1s ease-in-out infinite',
+        'popper-in': 'popper-in 160ms ease-out both',
+      },
     },
   },
   plugins: [],
