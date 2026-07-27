@@ -25,7 +25,10 @@ export function SelectTrigger({
       className={cn(
         'zd:inline-flex zd:items-center zd:justify-between zd:gap-2',
         'zd:outline-none zd:cursor-pointer',
-        'zd:data-[state=open]:pointer-events-auto zd:data-[state=open]:cursor-pointer',
+        // Counters Radix's `pointer-events: none` on the trigger while the
+        // panel is open — without this the trigger goes inert and can't be
+        // clicked to toggle closed.
+        'zd:data-[state=open]:pointer-events-auto',
         'zd:disabled:cursor-not-allowed zd:disabled:opacity-50',
         className,
       )}
