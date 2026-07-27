@@ -16,8 +16,11 @@ export function formatTokenAmount(
   }
 }
 
-/** Rounding direction for display amounts */
-export type RoundDirection = 'up' | 'down'
+/** Rounding direction for display amounts. `'up'` / `'down'` are ceil / floor
+ * — use them for values where over- or under-stating is unsafe (fees, min
+ * deposit). `'nearest'` is `Math.round` — use for values the user reads as a
+ * final quantity ("you received X") so 249.9996… reads as 250.00. */
+export type RoundDirection = 'up' | 'down' | 'nearest'
 
 function displayFractionDigits(value: number): number {
   if (value >= 1000) return 0
@@ -50,10 +53,9 @@ export function formatDisplayAmount(
 
   const digits = displayFractionDigits(amount)
   const factor = 10 ** digits
-  const rounded =
-    (round === 'up'
-      ? Math.ceil(amount * factor)
-      : Math.floor(amount * factor)) / factor
+  const roundFn =
+    round === 'up' ? Math.ceil : round === 'down' ? Math.floor : Math.round
+  const rounded = roundFn(amount * factor) / factor
   return rounded.toLocaleString('en-US', {
     maximumFractionDigits: digits,
   })

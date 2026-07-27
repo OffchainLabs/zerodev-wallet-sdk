@@ -22,11 +22,7 @@ import {
 } from '../utils/config'
 import { getDepositStage } from '../utils/deposits'
 import { findFeeDataByToken, tokenAddressMatches } from '../utils/fees'
-import {
-  formatDisplayAmount,
-  formatTokenAmount,
-  truncateAddress,
-} from '../utils/format'
+import { formatDisplayAmount, truncateAddress } from '../utils/format'
 import { buildFeeBreakdown } from '../utils/providerFees'
 
 export interface TransactionDetailsProps {
@@ -90,17 +86,31 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   const sourceHeadline = feeData
     ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
     : String(amount)
+  // Both headline and secondary use magnitude-aware rounding via
+  // `formatDisplayAmount` — the raw-precision `formatTokenAmount` would
+  // spill 18-decimal tokens like ETH into a long fractional tail
+  // (`249.999676016819146305 USDT`).
   const sourceSecondary = feeData
-    ? `${formatTokenAmount(amount, feeData.decimal)} ${sourceSymbol}`
+    ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
     : undefined
 
+  // NOTE: `feeData.decimal` is the source token's decimals — the SRA fee
+  // estimates don't include destination-token decimals, so this is an
+  // approximation that only reads correctly when source and destination
+  // decimals match. Fixing this properly needs a dest-decimals lookup and
+  // is out of scope here.
+  //
+  // Destination amounts use `'nearest'` rounding (unlike source, which
+  // uses `'down'`) — the server returns the actual on-chain amount after
+  // fees + slippage (e.g. 249.9996), and users read this as "how much I
+  // received", so rounding to 250.00 is the intuitive display.
   const destHeadline =
     outAmountRaw && feeData
-      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'down')} ${destSymbol}`
+      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
       : '—'
   const destSecondary =
     outAmountRaw && feeData
-      ? `${formatTokenAmount(outAmountRaw, feeData.decimal)} ${destSymbol}`
+      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
       : undefined
 
   const sourceExplorer = sourceChain?.blockExplorers?.default?.url
@@ -128,7 +138,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
             {...(sourceSecondary && { subtitle: sourceSecondary })}
             {...(sourceTokenLogo && { imageSource: sourceTokenLogo })}
             {...(sourceChainLogo && { chainIconUrl: sourceChainLogo })}
-            imageStyle="filled"
+            imageStyle="contained"
           />
         }
         bottomCard={
@@ -137,7 +147,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
             {...(destSecondary && { subtitle: destSecondary })}
             {...(destTokenLogo && { imageSource: destTokenLogo })}
             {...(destChainLogo && { chainIconUrl: destChainLogo })}
-            imageStyle="filled"
+            imageStyle="contained"
           />
         }
       />
