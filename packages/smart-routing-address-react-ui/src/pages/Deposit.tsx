@@ -329,7 +329,15 @@ export function Deposit({ onQrClick }: DepositProps) {
                   minDepositAmount ?? (
                     // Match PillSkeleton's greyish pulse so all loading
                     // affordances in this card share one visual language.
-                    <div className="zd:h-3.5 zd:w-20 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
+                    // `<output>` gets an implicit `role="status"` — biome's
+                    // `useSemanticElements` prefers it over `<div role>`.
+                    // `aria-busy` + `aria-label` so screen readers hear
+                    // "loading" instead of landing on an empty region.
+                    <output
+                      aria-busy="true"
+                      aria-label="Loading minimum deposit"
+                      className="zd:block zd:h-3.5 zd:w-20 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse"
+                    />
                   )
                 }
                 info

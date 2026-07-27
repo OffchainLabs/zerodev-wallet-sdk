@@ -135,6 +135,9 @@ export function PillSkeleton({
   return (
     <Wrapper
       variant="solid"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
       style={
         disabled ? { backgroundColor: 'rgba(255, 255, 255, 0.05)' } : undefined
       }
@@ -146,7 +149,13 @@ export function PillSkeleton({
         className,
       )}
     >
-      <div className="zd:flex zd:items-center zd:gap-1.5 zd:animate-skel-pulse">
+      {/* Visual only — the outer wrapper carries the a11y busy/label state,
+       *  so hide the placeholder bars from assistive tech to avoid narrating
+       *  empty pill contents. */}
+      <div
+        aria-hidden
+        className="zd:flex zd:items-center zd:gap-1.5 zd:animate-skel-pulse"
+      >
         {/* Logo well mirrors Pill's 44×44 → inner 34×34 (size-8.5). */}
         <div className="zd:relative zd:size-11 zd:shrink-0">
           <div className="zd:absolute zd:top-1/2 zd:left-1/2 zd:size-8.5 zd:-translate-x-1/2 zd:-translate-y-1/2 zd:rounded-full zd:bg-greyScale/15" />

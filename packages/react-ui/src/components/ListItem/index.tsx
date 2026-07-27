@@ -20,15 +20,15 @@ export function ListItemSkeleton({ className }: ListItemSkeletonProps) {
     >
       <div className="zd:flex zd:flex-row zd:justify-between zd:items-center zd:p-2">
         <div className="zd:flex zd:flex-row zd:items-center zd:gap-3">
-          <div className="zd:w-13 zd:h-13 zd:rounded-2xl zd:bg-offWhite/50 zd:animate-pulse" />
+          <div className="zd:w-13 zd:h-13 zd:rounded-2xl zd:bg-greyScale/15 zd:animate-skel-pulse" />
           <div className="zd:gap-2">
-            <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse zd:mb-2" />
-            <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse" />
+            <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse zd:mb-2" />
+            <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse" />
           </div>
         </div>
         <div className="zd:gap-2">
-          <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse zd:mb-2" />
-          <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse" />
+          <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse zd:mb-2" />
+          <div className="zd:w-14 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse" />
         </div>
       </div>
     </div>
