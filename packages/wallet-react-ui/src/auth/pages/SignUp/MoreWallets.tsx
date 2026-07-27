@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useSignUpContext } from './context'
 
 /** "Continue with a wallet" row — hands off to the wallet-selection step. */
-export function SignUpExternalWallet() {
+export function SignUpMoreWallets() {
   const { goToStep } = useAuth()
   const { anyPending, guardAgreement } = useSignUpContext()
 
