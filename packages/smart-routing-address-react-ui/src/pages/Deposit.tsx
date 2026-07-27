@@ -154,7 +154,13 @@ export function Deposit({ onQrClick }: DepositProps) {
       token,
       symbol: sourceSymbol,
       decimals: feeData.decimal,
-      feeAmount: feeData.fee,
+      // `feeData.fee` is a `Hex` string from the SDK — normalise to a
+      // decimal atomic-units string here so `activeRoute.feeAmount` has
+      // one consistent representation across every write path (see
+      // `ActiveRoute.feeAmount` — the demo's fallback uses decimals too).
+      // Hosts using `BigInt()` work either way, but `Number()` /
+      // `parseInt(x, 10)` would silently misread the hex form.
+      feeAmount: BigInt(feeData.fee).toString(),
     })
   }, [source, feeData, sourceSymbol, setActiveRoute])
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatDisplayAmount,
   formatDuration,
+  formatRelativeTime,
   formatSlippage,
   formatTokenAmount,
   truncateAddress,
@@ -86,5 +87,47 @@ describe('formatDuration', () => {
 
   it('never reports zero seconds', () => {
     expect(formatDuration(0.2)).toBe('~1 sec')
+  })
+})
+
+describe('formatRelativeTime', () => {
+  // Fixed reference so every table row is deterministic. Subtract the
+  // desired delta (in seconds) from NOW to produce the input timestamp.
+  const NOW = Date.parse('2026-06-15T12:00:00.000Z')
+  const isoAgo = (deltaSec: number) =>
+    new Date(NOW - deltaSec * 1000).toISOString()
+
+  it('returns null on invalid input', () => {
+    expect(formatRelativeTime('not-a-date', NOW)).toBeNull()
+    expect(formatRelativeTime('', NOW)).toBeNull()
+  })
+
+  it.each([
+    // Boundary: `just now` covers deltas < 30s (including negative /
+    // future deltas which get clamped to 0 by `Math.max`).
+    [0, 'just now'],
+    [29, 'just now'],
+    [-10, 'just now'],
+    // Seconds — 30 through 59.
+    [30, '30 s ago'],
+    [59, '59 s ago'],
+    // Minutes — 60s ≤ delta < 60min. `Math.round` bumps 90s to 2m.
+    [60, '1 m ago'],
+    [90, '2 m ago'],
+    [59 * 60, '59 m ago'],
+    // Hours — 60min ≤ delta < 24h.
+    [60 * 60, '1 h ago'],
+    [23 * 60 * 60, '23 h ago'],
+    // Days — 24h ≤ delta < 30d.
+    [24 * 60 * 60, '1 d ago'],
+    [29 * 24 * 60 * 60, '29 d ago'],
+    // Months — 30d ≤ delta < 12mo (30-day months in this bucket).
+    [30 * 24 * 60 * 60, '1 mo ago'],
+    [11 * 30 * 24 * 60 * 60, '11 mo ago'],
+    // Years — everything beyond 12 30-day months.
+    [12 * 30 * 24 * 60 * 60, '1 y ago'],
+    [3 * 12 * 30 * 24 * 60 * 60, '3 y ago'],
+  ])('formats delta of %i seconds as %s', (deltaSec, expected) => {
+    expect(formatRelativeTime(isoAgo(deltaSec), NOW)).toBe(expected)
   })
 })

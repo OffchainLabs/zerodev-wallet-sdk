@@ -83,6 +83,8 @@ export type ActiveRoute = {
   symbol: string
   /** Decimals of the selected source token */
   decimals: number
-  /** Estimated all-in fee amount in source token atomic units */
+  /** Estimated all-in fee amount in source-token atomic units, as a
+   * base-10 string (e.g. `"250000"` for 0.25 USDC). Consumers can pass it
+   * straight to `BigInt()` or `parseInt(x, 10)`. */
   feeAmount: string
 }

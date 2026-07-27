@@ -48,6 +48,14 @@ export function PendingDeposits({
 
   const destChain = resolveDestChain(config)
   const destChainLogo = CHAIN_ICONS[destChain.id]
+  // Hoisted out of the row `.map` — the source-token list depends only on
+  // `estimatedFees` (constant per render), so recomputing it per deposit
+  // was O(n·m) for no benefit.
+  const sourceTokens = sourceTokensFromFees(estimatedFees)
+  const destSymbol = getDestTokenSymbol(config)
+  const destTokenLogo = destSymbol
+    ? TOKEN_ICONS[destSymbol.toUpperCase()]
+    : undefined
 
   return (
     <section
@@ -69,7 +77,7 @@ export function PendingDeposits({
           // Source pair: reconstruct the SourceToken so we can look up its
           // symbol + chain icon the same way the trigger pill does.
           const source =
-            sourceTokensFromFees(estimatedFees).find(
+            sourceTokens.find(
               (t) => t.chain.id === chainId && t.tokenType === feeData?.name,
             ) ?? null
           const sourceSymbol = source ? getSourceTokenSymbol(source) : ''
@@ -77,11 +85,6 @@ export function PendingDeposits({
             ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
-
-          const destSymbol = getDestTokenSymbol(config)
-          const destTokenLogo = destSymbol
-            ? TOKEN_ICONS[destSymbol.toUpperCase()]
-            : undefined
 
           const status = STAGE_TO_STATUS[getDepositStage(deposit)]
           const amountLabel = feeData

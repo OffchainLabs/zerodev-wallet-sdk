@@ -167,6 +167,7 @@ function AddressLine({ address, href }: { address: string; href?: string }) {
         href={href}
         target="_blank"
         rel="noreferrer noopener"
+        aria-label={`View ${address} on block explorer`}
         className={cn(className, 'zd:hover:text-greyScale')}
       >
         {inner}
