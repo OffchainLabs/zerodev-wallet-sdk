@@ -3,7 +3,7 @@
 import { useSmartRoutingAddress } from '@zerodev/smart-routing-address-react-ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isAddress, parseUnits } from 'viem'
-import { arbitrum, base } from 'viem/chains'
+import { base } from 'viem/chains'
 import {
   createSimulation,
   installMockFetch,
@@ -31,6 +31,13 @@ const STEP_LABELS: Record<MockStage, string> = {
   pending: 'Deposit detected — confirming…',
   bridging: 'Routing across chains…',
   completed: 'Sent — track it in the widget.',
+}
+
+const DOT_COLOR: Record<'idle' | MockStage, string> = {
+  idle: 'bg-muted',
+  pending: 'bg-primary animate-mock-pulse',
+  bridging: 'bg-primary animate-mock-pulse',
+  completed: 'bg-[#6bb04f]',
 }
 
 export function MockPanel({ destChainId }: { destChainId: number }) {
@@ -107,29 +114,44 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
           : "That doesn't match your deposit address."
 
   return (
-    <div className="pg__wallet">
-      <div className="pg__wallet-head">
-        <span className="pg__wallet-title">Simulated wallet</span>
-        <span className="pg__wallet-tag">Simulated</span>
+    <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-border-warm bg-white p-4">
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] font-semibold">Simulated wallet</span>
+        <span className="ml-auto rounded-full bg-[#fef1e6] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-primary">
+          Simulated
+        </span>
       </div>
 
-      <div className="pg__wallet-amount">
-        <span className="pg__wallet-value">{AMOUNT_WHOLE}</span>
-        <span className="pg__wallet-symbol">{TOKEN_SYMBOL}</span>
-        <span className="pg__wallet-net">on {SOURCE_CHAIN_NAME}</span>
+      <div className="flex items-baseline gap-1.5 rounded-lg bg-[#f7f4ef] px-3.5 py-3">
+        <span className="text-[22px] font-bold tabular-nums">
+          {AMOUNT_WHOLE}
+        </span>
+        <span className="text-sm font-semibold text-muted">{TOKEN_SYMBOL}</span>
+        <span className="ml-auto text-[13px] text-muted">
+          on {SOURCE_CHAIN_NAME}
+        </span>
       </div>
 
-      <label className="pg__wallet-field" data-ok={pastedOk}>
-        <span className="pg__wallet-field-label">To</span>
+      {/* Input row — pastedOk drives a green border via the sibling `<input>`
+          selector using `peer` + `peer-data-[ok=true]:` on the border. */}
+      <label className="relative flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+          To
+        </span>
         <input
-          className="pg__wallet-input"
+          className={`rounded-lg border bg-white px-3 py-2.5 pr-8 font-mono text-[13px] outline-primary ${
+            pastedOk ? 'border-[#6bb04f]' : 'border-border-warm'
+          }`}
           value={pasted}
           onChange={(e) => setPasted(e.target.value.trim())}
           placeholder="Paste your deposit address"
           spellCheck={false}
         />
         {pastedOk && (
-          <span className="pg__wallet-ok" aria-hidden="true">
+          <span
+            className="absolute right-2.5 top-[30px] font-bold text-[#6bb04f]"
+            aria-hidden="true"
+          >
             ✓
           </span>
         )}
@@ -137,7 +159,7 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
 
       <button
         type="button"
-        className="pg__wallet-send"
+        className="cursor-pointer rounded-lg border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white transition-[opacity,background-color] duration-150 hover:not-disabled:bg-black disabled:cursor-not-allowed disabled:opacity-50"
         onClick={simulate}
         disabled={!pastedOk}
       >
@@ -145,8 +167,8 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
       </button>
 
       {hint && (
-        <p className="pg__mock-status" data-stage={sim}>
-          <span className="pg__mock-dot" />
+        <p className="m-0 flex items-center gap-2 text-[13px] text-muted">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLOR[sim]}`} />
           {hint}
         </p>
       )}
