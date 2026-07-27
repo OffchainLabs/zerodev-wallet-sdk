@@ -132,9 +132,9 @@ export function DataRowSkeleton({ label, className }: DataRowSkeletonProps) {
       {label ? (
         <Text>{label}</Text>
       ) : (
-        <div className="zd:w-24 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse" />
+        <div className="zd:w-24 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse" />
       )}
-      <div className="zd:w-24 zd:h-3 zd:rounded-lg zd:bg-offWhite/50 zd:animate-pulse" />
+      <div className="zd:w-24 zd:h-3 zd:rounded-lg zd:bg-greyScale/15 zd:animate-skel-pulse" />
     </div>
   )
 }

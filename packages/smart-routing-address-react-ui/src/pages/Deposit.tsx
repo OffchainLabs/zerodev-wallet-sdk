@@ -200,9 +200,10 @@ export function Deposit({ onQrClick }: DepositProps) {
                   >
                     <SelectTrigger asChild>
                       <Pill
-                        label={sourceSymbol ?? '—'}
+                        label={sourceSymbol ?? ''}
                         {...(sourceTokenLogo && { logoUri: sourceTokenLogo })}
                         disabled={pickerDisabled}
+                        loading={!sourceSymbol}
                         trailingIcon={!pickerDisabled && <SelectIcon />}
                       />
                     </SelectTrigger>
@@ -246,9 +247,10 @@ export function Deposit({ onQrClick }: DepositProps) {
                   >
                     <SelectTrigger asChild>
                       <Pill
-                        label={sourceChainName ?? '—'}
+                        label={sourceChainName ?? ''}
                         {...(sourceChainLogo && { logoUri: sourceChainLogo })}
                         disabled={pickerDisabled}
+                        loading={!sourceChainName}
                         trailingIcon={!pickerDisabled && <SelectIcon />}
                       />
                     </SelectTrigger>
@@ -299,9 +301,10 @@ export function Deposit({ onQrClick }: DepositProps) {
               <PillRow
                 left={
                   <Pill
-                    label={destSymbol ?? '—'}
+                    label={destSymbol ?? ''}
                     {...(destTokenLogo && { logoUri: destTokenLogo })}
                     disabled
+                    loading={!destSymbol}
                   />
                 }
                 right={
@@ -320,14 +323,26 @@ export function Deposit({ onQrClick }: DepositProps) {
                 address={address}
                 onQrClick={onQrClick}
               />
-              {minDepositAmount && (
-                <DataRow
-                  label="Minimum deposit"
-                  value={minDepositAmount}
-                  info
-                  variant="warning"
-                />
-              )}
+              <DataRow
+                label="Minimum deposit"
+                value={
+                  minDepositAmount ?? (
+                    // Match PillSkeleton's greyish pulse so all loading
+                    // affordances in this card share one visual language.
+                    // `<output>` gets an implicit `role="status"` — biome's
+                    // `useSemanticElements` prefers it over `<div role>`.
+                    // `aria-busy` + `aria-label` so screen readers hear
+                    // "loading" instead of landing on an empty region.
+                    <output
+                      aria-busy="true"
+                      aria-label="Loading minimum deposit"
+                      className="zd:block zd:h-3.5 zd:w-20 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse"
+                    />
+                  )
+                }
+                info
+                variant="warning"
+              />
             </Wrapper>
           }
         />
