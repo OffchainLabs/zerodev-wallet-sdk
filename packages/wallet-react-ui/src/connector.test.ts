@@ -232,53 +232,15 @@ describe('connector', () => {
   })
 
   describe('auth integration', () => {
-    it('initializes auth when config is provided', () => {
-      const authConfig = {
-        enabledMethods: ['email' as const, 'google' as const],
-        onSuccess: vi.fn(),
-        onError: vi.fn(),
-      }
-      const connector = createKitConnector({
-        config: { auth: authConfig },
-      })
-      const store = connector.getKitStore()
-
-      expect(store.getState().auth.config).toEqual(authConfig)
-      expect(store.getState().auth.enabledMethods).toEqual(['email', 'google'])
-      expect(store.getState().auth.step).toBeNull()
-    })
-
-    it('does not initialize auth when config is not provided', () => {
+    it('starts with a null step', () => {
       const connector = createKitConnector()
       const store = connector.getKitStore()
 
-      expect(store.getState().auth.config).toBeNull()
-      expect(store.getState().auth.enabledMethods).toEqual([])
       expect(store.getState().auth.step).toBeNull()
     })
 
-    it('auth config works', () => {
-      const authConfig = {
-        enabledMethods: ['passkey' as const],
-      }
-      const connector = createKitConnector({
-        config: {
-          auth: authConfig,
-        },
-      })
-      const store = connector.getKitStore()
-
-      expect(store.getState().auth.config).toEqual(authConfig)
-      expect(store.getState().auth.enabledMethods).toEqual(['passkey'])
-    })
-
     it('disconnect resets auth state to null step', async () => {
-      const authConfig = {
-        enabledMethods: ['email' as const],
-      }
-      const connector = createKitConnector({
-        config: { auth: authConfig },
-      })
+      const connector = createKitConnector()
       const store = connector.getKitStore()
 
       store.getState().auth.setEmail('test@example.com')
@@ -291,27 +253,6 @@ describe('connector', () => {
 
       expect(store.getState().auth.email).toBeNull()
       expect(store.getState().auth.step).toBeNull()
-      expect(store.getState().auth.config).toEqual(authConfig)
-    })
-
-    it('supports all auth methods in config', () => {
-      const authConfig = {
-        enabledMethods: [
-          'email' as const,
-          'google' as const,
-          'passkey' as const,
-        ],
-      }
-      const connector = createKitConnector({
-        config: { auth: authConfig },
-      })
-      const store = connector.getKitStore()
-
-      expect(store.getState().auth.enabledMethods).toEqual([
-        'email',
-        'google',
-        'passkey',
-      ])
     })
 
     // Depends on the prompt-mode signing gate, which is disabled while signing

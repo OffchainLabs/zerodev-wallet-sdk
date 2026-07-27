@@ -47,7 +47,7 @@ export const config = createConfig({
       config: {
         logo: <ZeroDevLogo variant="mark" tone="color" className="zd:h-8 zd:w-auto" />,
         auth: {
-          enabledMethods: ['email', 'google', 'passkey'],
+          enabledMethods: ['email', 'google', 'passkey', 'external-wallet'],
           emailAuthMethod: getEmailAuthMethod(),
         },
       },
