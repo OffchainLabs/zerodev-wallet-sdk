@@ -1,7 +1,7 @@
 "use client";
 
 
-import Link from "next/link";
+import { ConfigLink } from "../ConfigLink";
 import { usePathname } from "next/navigation";
 import { cn } from "../../lib/utils";
 import {
@@ -51,7 +51,7 @@ function FeatureLink({
   const Icon = feature.areas[0]?.icon ?? FALLBACK_FEATURE_ICON;
 
   return (
-    <Link
+    <ConfigLink
       href={featureHref(feature)}
       data-testid={`nav-feature-${feature.id}`}
       data-active={String(active)}
@@ -65,7 +65,7 @@ function FeatureLink({
       <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate">{feature.name}</span>
       {!active && <StatusChip status={feature.status} />}
-    </Link>
+    </ConfigLink>
   );
 }
 

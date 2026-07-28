@@ -1,13 +1,19 @@
 import { redirect } from "next/navigation";
+import { toURLSearchParams, withConfig } from "../../lib/config-params";
 import { areaHref, defaultAreaId, getFeature } from "../../lib/features";
 
 /**
  * `/tx-signing` has no content of its own — send it to the feature's first
- * area. Only reached by typing the bare path; the nav links straight to an area.
+ * area, carrying any config params so the redirect doesn't silently drop them.
  */
-export default function TxSigningIndexPage() {
+export default async function TxSigningIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = toURLSearchParams(await searchParams);
   const feature = getFeature("tx-signing");
   const area = feature && defaultAreaId(feature);
 
-  redirect(area ? areaHref("tx-signing", area) : "/");
+  redirect(withConfig(area ? areaHref("tx-signing", area) : "/", params));
 }

@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { ConfigLink } from "../components/ConfigLink";
 import { StatusChip } from "../components/lab/LabSidebar";
 import {
   FALLBACK_FEATURE_ICON,
@@ -32,7 +32,7 @@ export default function OverviewPage() {
           const Icon = feature.areas[0]?.icon ?? FALLBACK_FEATURE_ICON;
 
           return (
-            <Link
+            <ConfigLink
               key={feature.id}
               href={featureHref(feature)}
               data-testid={`overview-feature-${feature.id}`}
@@ -56,7 +56,7 @@ export default function OverviewPage() {
                   {feature.areas.map((area) => area.name).join(" · ")}
                 </p>
               )}
-            </Link>
+            </ConfigLink>
           );
         })}
       </div>

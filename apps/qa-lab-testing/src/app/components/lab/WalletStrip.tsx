@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { type Address, formatEther, formatUnits, isAddress, parseAbi } from "viem";
 import { useAccount, useDisconnect, usePublicClient } from "wagmi";
+import { useConfigHref } from "../../lib/use-wallet-config";
 import { cn } from "../../lib/utils";
 import { ChainSelector } from "../ChainSelector";
 import { ExportWalletModal } from "../ExportWalletModal";
@@ -57,6 +58,7 @@ export function WalletStrip({ onLogout }: { onLogout: () => void }) {
   const [showExportModal, setShowExportModal] = useState(false);
   const [isBalanceRefreshing, setIsBalanceRefreshing] = useState(false);
 
+  const configHref = useConfigHref();
   const { address, chain } = useAccount();
   const publicClient = usePublicClient({ chainId: chain?.id });
   const { disconnectAsync: logout } = useDisconnect();
@@ -114,12 +116,15 @@ export function WalletStrip({ onLogout }: { onLogout: () => void }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Keeps the active config across the logout reload — landing on a bare "/"
+  // would silently drop any URL overrides and log you back into a different
+  // setup than the one you were testing.
   const handleLogout = async () => {
     onLogout();
     try {
       await logout();
     } finally {
-      window.location.assign("/");
+      window.location.assign(configHref("/"));
     }
   };
 

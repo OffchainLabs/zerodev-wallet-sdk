@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ConfigLink } from "../ConfigLink";
 import { usePathname } from "next/navigation";
 import { cn } from "../../lib/utils";
 import { areaHref, getFeature } from "../../lib/features";
@@ -56,7 +56,7 @@ export function FeatureHeader({
             const Icon = area.icon;
 
             return (
-              <Link
+              <ConfigLink
                 key={area.id}
                 href={href}
                 data-testid={`feature-${feature.id}-tab-${area.id}`}
@@ -70,7 +70,7 @@ export function FeatureHeader({
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {area.name}
-              </Link>
+              </ConfigLink>
             );
           })}
         </nav>

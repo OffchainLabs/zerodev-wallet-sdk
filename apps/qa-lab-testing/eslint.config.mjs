@@ -11,6 +11,29 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    // The wallet config lives entirely in URL query params, so a link that
+    // drops the query string silently reverts to defaults — and logs the user
+    // out, since a config change rebuilds the connector. `ConfigLink` forwards
+    // them; this turns forgetting it into a build error rather than something
+    // rediscovered months later.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/app/components/ConfigLink.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message:
+                "Use ConfigLink (src/app/components/ConfigLink.tsx) so wallet-config URL params survive navigation.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;
