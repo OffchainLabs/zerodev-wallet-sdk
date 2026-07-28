@@ -7,7 +7,7 @@ import { useReportPending, useSignUpContext } from './context'
 /** "Google" OAuth row. */
 export function SignUpGoogle() {
   const { goToStep } = useAuth()
-  const { anyPending, guardAgreement, setError } = useSignUpContext()
+  const { authPending, guardAgreement, setError } = useSignUpContext()
 
   const { mutateAsync: authenticateOAuth, isPending } = useAuthenticateOAuth({
     mutation: {
@@ -16,9 +16,10 @@ export function SignUpGoogle() {
       },
     },
   })
-  useReportPending('google', isPending)
+  useReportPending(isPending)
 
   const handleClick = async () => {
+    if (authPending) return
     if (!guardAgreement()) return
     setError(null)
     try {
@@ -35,7 +36,7 @@ export function SignUpGoogle() {
       icon={<ListItemIcon name="google" />}
       title="Google"
       trailing={<ListItemChevron />}
-      disabled={anyPending}
+      disabled={authPending}
       onClick={handleClick}
     />
   )

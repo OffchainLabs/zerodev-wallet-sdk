@@ -1,14 +1,14 @@
 import { createContext, useContext, useEffect } from 'react'
-import type { AuthMethod, EmailAuthMethod } from '../../types'
+import type { EmailAuthMethod } from '../../types'
 
 export type SignUpContextValue = {
   /** True while any method's auth attempt is in flight — used to disable
    * sibling methods so two flows can't run at once. */
-  anyPending: boolean
+  authPending: boolean
+  setAuthPending: (pending: boolean) => void
   /** Which email verification flow the Email unit runs. Set on the root
    * (`<SignUp emailAuthMethod=…>`); already resolved to its default here. */
   emailAuthMethod: EmailAuthMethod
-  setPending: (id: AuthMethod, pending: boolean) => void
   /** True when the terms checkbox is required but unchecked. For passive
    * disabled styling; use `guardAgreement` before starting an attempt. */
   needsAgreement: boolean
@@ -28,12 +28,14 @@ export function useSignUpContext(): SignUpContextValue {
   return ctx
 }
 
-/** Report a method's in-flight state into the shared pending registry.
- * Cleans up on unmount so a removed unit can't leave the page locked. */
-export function useReportPending(id: AuthMethod, pending: boolean) {
-  const { setPending } = useSignUpContext()
+/** Mirror a method's in-flight state into the shared pending flag.
+ * Clears on unmount so a removed unit can't leave the page locked.
+ * One flag, not per-unit: methods are mutually exclusive, so at most one
+ * unit reports `true` at a time. */
+export function useReportPending(pending: boolean) {
+  const { setAuthPending } = useSignUpContext()
   useEffect(() => {
-    setPending(id, pending)
-    return () => setPending(id, false)
-  }, [id, pending, setPending])
+    setAuthPending(pending)
+    return () => setAuthPending(false)
+  }, [pending, setAuthPending])
 }

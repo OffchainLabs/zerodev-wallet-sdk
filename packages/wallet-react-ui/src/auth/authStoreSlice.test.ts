@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from '../store'
+
+// Assertion failures must not leak the persisted session into the next test.
+afterEach(() => {
+  window.localStorage.removeItem('zerodev:auth:otpSession')
+})
 
 describe('authStoreSlice', () => {
   describe('initial state', () => {
@@ -30,7 +35,6 @@ describe('authStoreSlice', () => {
       const { auth } = store.getState()
       expect(auth.otpId).toBe('otp-stored')
       expect(auth.otpEncryptionTargetBundle).toBe('bundle-stored')
-      window.localStorage.removeItem('zerodev:auth:otpSession')
     })
 
     it('is a no-op without a stored session', () => {

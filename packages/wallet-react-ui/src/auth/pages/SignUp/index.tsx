@@ -1,8 +1,8 @@
 import { Button, Text } from '@zerodev/react-ui'
-import { type ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { SignUpFooter } from '../../../shared/components/SignUpFooter'
 import { BlobAnimation } from '../../components/BlobAnimation'
-import type { AuthMethod, EmailAuthMethod } from '../../types'
+import type { EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
@@ -27,19 +27,10 @@ function SignUpRoot({
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [highlightAgreement, setHighlightAgreement] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<AuthMethod>>(
-    new Set(),
-  )
-
-  const setPending = useCallback((id: AuthMethod, pending: boolean) => {
-    setPendingIds((prev) => {
-      if (prev.has(id) === pending) return prev
-      const next = new Set(prev)
-      if (pending) next.add(id)
-      else next.delete(id)
-      return next
-    })
-  }, [])
+  // One flag for the whole page: methods are mutually exclusive, so at most
+  // one unit is in flight at a time. Known accepted edge: a unit unmounting
+  // mid-flight (conditional composition) clears a sibling's lock.
+  const [authPending, setAuthPending] = useState(false)
 
   const requiresAgreement = !!(termsAndConditionsUrl || privacyPolicyUrl)
   const needsAgreement = requiresAgreement && !agreedToTerms
@@ -53,9 +44,9 @@ function SignUpRoot({
   return (
     <SignUpContext.Provider
       value={{
-        anyPending: pendingIds.size > 0,
+        authPending,
         emailAuthMethod,
-        setPending,
+        setAuthPending,
         needsAgreement,
         guardAgreement,
         setError,

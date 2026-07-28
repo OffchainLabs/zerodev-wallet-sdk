@@ -7,7 +7,7 @@ import { useReportPending, useSignUpContext } from './context'
 /** "Create a passkey" + "Log in with passkey" buttons. */
 export function SignUpPasskey() {
   const { goToStep } = useAuth()
-  const { anyPending, guardAgreement, setError } = useSignUpContext()
+  const { authPending, guardAgreement, setError } = useSignUpContext()
 
   const mutation = {
     onSuccess: () => {
@@ -24,10 +24,10 @@ export function SignUpPasskey() {
   const { mutate: loginPasskey, isPending: isLoginPending } = useLoginPasskey({
     mutation,
   })
-  useReportPending('passkey', isRegisterPending || isLoginPending)
+  useReportPending(isRegisterPending || isLoginPending)
 
   const guarded = (run: () => void) => () => {
-    if (anyPending) return
+    if (authPending) return
     if (!guardAgreement()) return
     setError(null)
     run()
@@ -40,7 +40,7 @@ export function SignUpPasskey() {
         text="Create a passkey"
         iconName="key"
         trailIcon
-        disabled={anyPending}
+        disabled={authPending}
         onClick={guarded(() => registerPasskey())}
       />
       <Button
@@ -48,7 +48,7 @@ export function SignUpPasskey() {
         text="Log in with passkey"
         iconName="key"
         trailIcon
-        disabled={anyPending}
+        disabled={authPending}
         onClick={guarded(() => loginPasskey())}
       />
     </>

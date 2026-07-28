@@ -10,7 +10,7 @@ import { useReportPending, useSignUpContext } from './context'
 export function SignUpEmail() {
   const { goToStep, setEmail, setOtpSession } = useAuth()
   const {
-    anyPending,
+    authPending,
     emailAuthMethod,
     needsAgreement,
     guardAgreement,
@@ -23,10 +23,10 @@ export function SignUpEmail() {
   const { mutateAsync: sendMagicLink, isPending: isSendMagicLinkPending } =
     useSendMagicLink()
   const isEmailLoading = isSendOtpPending || isSendMagicLinkPending
-  useReportPending('email', isEmailLoading)
+  useReportPending(isEmailLoading)
 
   const handleSubmit = async () => {
-    if (!emailInput || anyPending) return
+    if (!emailInput || authPending) return
     if (!isValidEmailAddress(emailInput)) return
     if (!guardAgreement()) return
 
@@ -55,10 +55,10 @@ export function SignUpEmail() {
       type="email"
       autoCapitalize="none"
       autoComplete="email"
-      disabled={anyPending}
+      disabled={authPending}
       variant="listItemStyle"
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && emailInput && !anyPending) {
+        if (e.key === 'Enter' && emailInput && !authPending) {
           handleSubmit()
         }
       }}

@@ -57,19 +57,21 @@ vi.mock('../shared/components/StatusScreen', () => ({
   ),
 }))
 
-// Mock useAuth hook
+// Mock useAuth hook. Typed against the real hook so field drift (renamed or
+// removed members) fails the typecheck instead of accumulating silently.
 let mockStep: AuthStep | null = null
 vi.mock('./hooks/useAuth', () => ({
-  useAuth: () => ({
+  useAuth: (): ReturnType<typeof import('./hooks/useAuth')['useAuth']> => ({
     step: mockStep,
     email: null,
     otpId: null,
-    config: null,
+    otpEncryptionTargetBundle: null,
     goToStep: vi.fn(),
-    onBack: null,
+    goBack: null,
     reset: vi.fn(),
     setEmail: vi.fn(),
-    setOtpId: vi.fn(),
+    setOtpSession: vi.fn(),
+    clearOtpSession: vi.fn(),
   }),
 }))
 

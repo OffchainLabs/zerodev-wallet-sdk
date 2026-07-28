@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ZeroDevKitConnectorParams } from './connector'
 import { zeroDevWallet } from './connector'
 import type { createStore } from './store'
@@ -232,11 +232,37 @@ describe('connector', () => {
   })
 
   describe('auth integration', () => {
+    afterEach(() => {
+      window.localStorage.removeItem('zerodev:auth:otpSession')
+    })
+
     it('starts with a null step', () => {
       const connector = createKitConnector()
       const store = connector.getKitStore()
 
       expect(store.getState().auth.step).toBeNull()
+    })
+
+    it('restores a persisted OTP session on setup, not at factory time', async () => {
+      window.localStorage.setItem(
+        'zerodev:auth:otpSession',
+        JSON.stringify({
+          otpId: 'otp-stored',
+          otpEncryptionTargetBundle: 'bundle-stored',
+        }),
+      )
+      const connector = createKitConnector()
+      const store = connector.getKitStore()
+
+      // Factory construction runs on the server too — it must not hydrate.
+      expect(store.getState().auth.otpId).toBeNull()
+
+      await connector.setup?.()
+
+      expect(store.getState().auth.otpId).toBe('otp-stored')
+      expect(store.getState().auth.otpEncryptionTargetBundle).toBe(
+        'bundle-stored',
+      )
     })
 
     it('disconnect resets auth state to null step', async () => {

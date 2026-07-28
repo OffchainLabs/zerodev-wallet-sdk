@@ -99,13 +99,13 @@ describe('emailAuthMethod resolution', () => {
 })
 
 function PendingProbe({ pending }: { pending: boolean }) {
-  useReportPending('email', pending)
+  useReportPending(pending)
   return null
 }
 
-function AnyPendingReader() {
-  const { anyPending } = useSignUpContext()
-  return <div data-testid="any-pending">{String(anyPending)}</div>
+function AuthPendingReader() {
+  const { authPending } = useSignUpContext()
+  return <div data-testid="auth-pending">{String(authPending)}</div>
 }
 
 describe('SignUp shared state', () => {
@@ -113,34 +113,34 @@ describe('SignUp shared state', () => {
     const { rerender } = render(
       <SignUp>
         <PendingProbe pending />
-        <AnyPendingReader />
+        <AuthPendingReader />
       </SignUp>,
     )
-    expect(screen.getByTestId('any-pending').textContent).toBe('true')
+    expect(screen.getByTestId('auth-pending').textContent).toBe('true')
 
     rerender(
       <SignUp>
         <PendingProbe pending={false} />
-        <AnyPendingReader />
+        <AuthPendingReader />
       </SignUp>,
     )
-    expect(screen.getByTestId('any-pending').textContent).toBe('false')
+    expect(screen.getByTestId('auth-pending').textContent).toBe('false')
 
     rerender(
       <SignUp>
         <PendingProbe pending />
-        <AnyPendingReader />
+        <AuthPendingReader />
       </SignUp>,
     )
-    expect(screen.getByTestId('any-pending').textContent).toBe('true')
+    expect(screen.getByTestId('auth-pending').textContent).toBe('true')
 
     // Unmounting a pending unit must not leave the page locked.
     rerender(
       <SignUp>
-        <AnyPendingReader />
+        <AuthPendingReader />
       </SignUp>,
     )
-    expect(screen.getByTestId('any-pending').textContent).toBe('false')
+    expect(screen.getByTestId('auth-pending').textContent).toBe('false')
   })
 
   it('guardAgreement blocks and highlights until terms are accepted', () => {

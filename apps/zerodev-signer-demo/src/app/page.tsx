@@ -10,7 +10,7 @@ import { AppHeader } from './components/AppHeader'
 
 export const dynamic = 'force-dynamic'
 
-// Email auth method choice, toggled by the cogwheel (stored in localStorage).
+// Email auth method choice, set by the browser E2E specs (stored in localStorage).
 // Read at render time — AuthFlow renders SignUp only after user interaction,
 // so this always runs client-side with the current value.
 function getEmailAuthMethod(): 'otp' | 'magicLink' {

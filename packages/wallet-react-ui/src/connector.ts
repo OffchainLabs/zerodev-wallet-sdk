@@ -65,9 +65,6 @@ export function zeroDevWallet(
   const baseFactory = baseZeroDevWallet(params)
   const store = createStore()
 
-  // Restore a persisted OTP session so an email flow survives a reload.
-  store.getState().auth.initialize()
-
   return (wagmiConfig) => {
     const connector = baseFactory(wagmiConfig)
 
@@ -111,10 +108,13 @@ export function zeroDevWallet(
       async setup() {
         await connector.setup?.()
 
-        // Request-wrapping is only meaningful in the browser (it gates calls
-        // on UI confirmation). Skip during SSR — getProvider() touches
-        // `window` for EIP-6963 discovery and would crash on the server.
+        // Everything below is browser-only. Skip during SSR — getProvider()
+        // touches `window` for EIP-6963 discovery and would crash on the
+        // server, and the session restore reads localStorage.
         if (typeof window === 'undefined') return
+
+        // Restore a persisted OTP session so an email flow survives a reload.
+        store.getState().auth.initialize()
 
         // Signing is pinned to background mode: the prompt-mode confirmation UI
         // is not part of this package's public surface, so requests always pass
