@@ -2,6 +2,7 @@ import { Button, Text } from '@zerodev/react-ui'
 import { type ReactNode, useCallback, useState } from 'react'
 import { SignUpFooter } from '../../../shared/components/SignUpFooter'
 import { BlobAnimation } from '../../components/BlobAnimation'
+import type { AuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
@@ -21,9 +22,11 @@ function SignUpRoot({
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [highlightAgreement, setHighlightAgreement] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<AuthMethod>>(
+    new Set(),
+  )
 
-  const setPending = useCallback((id: string, pending: boolean) => {
+  const setPending = useCallback((id: AuthMethod, pending: boolean) => {
     setPendingIds((prev) => {
       if (prev.has(id) === pending) return prev
       const next = new Set(prev)

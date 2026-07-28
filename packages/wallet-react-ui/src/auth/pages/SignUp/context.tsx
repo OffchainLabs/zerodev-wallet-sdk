@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect } from 'react'
+import type { AuthMethod } from '../../types'
 
 export type SignUpContextValue = {
   /** True while any method's auth attempt is in flight — used to disable
    * sibling methods so two flows can't run at once. */
   anyPending: boolean
-  setPending: (id: string, pending: boolean) => void
+  setPending: (id: AuthMethod, pending: boolean) => void
   /** True when the terms checkbox is required but unchecked. For passive
    * disabled styling; use `guardAgreement` before starting an attempt. */
   needsAgreement: boolean
@@ -26,7 +27,7 @@ export function useSignUpContext(): SignUpContextValue {
 
 /** Report a method's in-flight state into the shared pending registry.
  * Cleans up on unmount so a removed unit can't leave the page locked. */
-export function useReportPending(id: string, pending: boolean) {
+export function useReportPending(id: AuthMethod, pending: boolean) {
   const { setPending } = useSignUpContext()
   useEffect(() => {
     setPending(id, pending)

@@ -64,7 +64,7 @@ describe('SignUp.Default', () => {
 })
 
 function PendingProbe({ pending }: { pending: boolean }) {
-  useReportPending('probe', pending)
+  useReportPending('email', pending)
   return null
 }
 
