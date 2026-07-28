@@ -16,8 +16,16 @@ const CREATE_METHOD = 'zd_createSmartRoutingAddress'
  * found" state — the widget still validates it via the SDK before polling. */
 const PLACEHOLDER_ADDRESS = '0x5Ea1f7C2B4E0d3a9c61b8E0d2F7A4c9B3D6E1a02'
 
-/** Injected error states the developer controls can toggle */
-export type MockErrorMode = 'none' | 'route-not-found'
+/** Injected error states the developer controls can toggle. Only one is
+ * active at a time — the mock branches by mode. */
+export type MockErrorMode =
+  | 'none'
+  /** Address creation succeeds but returns no routes → "No routes found" */
+  | 'route-not-found'
+  /** Address creation itself fails → "Failed to create deposit address" */
+  | 'address-create-failed'
+  /** Deposit polling fails after address creation → "Failed to load deposits" */
+  | 'polling-failed'
 
 export type MockDeposit = {
   deposit: {
@@ -89,6 +97,9 @@ export function installMockFetch(): void {
     const passthrough = nativeFetch as typeof globalThis.fetch
 
     if (body.includes(STATUS_METHOD)) {
+      if (errorMode === 'polling-failed') {
+        return jsonRpcErrorResponse('Mock: status endpoint unavailable')
+      }
       return jsonRpcResponse({
         deposits: current,
         totalCount: current.length,
@@ -109,6 +120,9 @@ export function installMockFetch(): void {
     // Polling would error on every tick and the widget would sit forever
     // on "Watching for your deposit". Skipped until the widget re-checksums.
     if (body.includes(CREATE_METHOD)) {
+      if (errorMode === 'address-create-failed') {
+        return jsonRpcErrorResponse('Mock: address creation unavailable')
+      }
       if (errorMode === 'route-not-found') {
         return jsonRpcResponse({
           smartRoutingAddress: PLACEHOLDER_ADDRESS,
@@ -147,6 +161,22 @@ function jsonRpcResponse(result: unknown, id: number | string = 1): Response {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+/** Emit a JSON-RPC error envelope so the SDK's request wrapper throws — used
+ * by the developer-controls error toggles to exercise the widget's retry UI. */
+function jsonRpcErrorResponse(
+  message: string,
+  id: number | string = 1,
+): Response {
+  return new Response(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      error: { code: -32000, message },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  )
 }
 
 function randomHash(): string {

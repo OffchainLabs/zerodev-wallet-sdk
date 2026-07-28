@@ -19,6 +19,12 @@ export type SmartRoutingAddressContextValue = {
    */
   ensureAddress: (recipient: Address) => Promise<void>
   /**
+   * Re-run address creation for the current recipient. No-op if no recipient
+   * has been set yet. Wired to the "Failed to create deposit address" retry
+   * button in the deposit UI.
+   */
+  retry: () => Promise<void>
+  /**
    * The route currently shown in the deposit UI. `null` until the picker
    * seeds a selection. Hosts can read this to mirror the widget's state.
    */

@@ -1,6 +1,6 @@
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { getSmartRoutingAddressStatus } from '@zerodev/smart-routing-address'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Address } from 'viem'
 import { DEFAULT_POLLING_INTERVAL_MS } from '../constants'
 
@@ -18,14 +18,17 @@ export type UseDepositStatusResult = {
   hasLoaded: boolean
   isLoading: boolean
   error: Error | null
+  /** Trigger an immediate poll — used by the "Retry" button after a fetch
+   * error. No-op while no address is set. */
+  refetch: () => void
 }
 
-const INITIAL_STATE: UseDepositStatusResult = {
-  deposits: [],
+const INITIAL_STATE = {
+  deposits: [] as DepositedToken[],
   totalCount: 0,
   hasLoaded: false,
   isLoading: false,
-  error: null,
+  error: null as Error | null,
 }
 
 /**
@@ -38,10 +41,16 @@ export function useDepositStatus({
   pollingInterval = DEFAULT_POLLING_INTERVAL_MS,
   baseUrl,
 }: UseDepositStatusParams): UseDepositStatusResult {
-  const [state, setState] = useState<UseDepositStatusResult>(INITIAL_STATE)
+  const [state, setState] = useState(INITIAL_STATE)
+  // Exposed via `refetch`; reassigned every time the effect runs so we always
+  // point at the poller bound to the current (address, baseUrl) pair.
+  const pollRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    if (!address || !enabled) return
+    if (!address || !enabled) {
+      pollRef.current = null
+      return
+    }
 
     let cancelled = false
 
@@ -69,6 +78,11 @@ export function useDepositStatus({
       }
     }
 
+    pollRef.current = () => {
+      setState((previous) => ({ ...previous, isLoading: true, error: null }))
+      poll().catch(() => {})
+    }
+
     setState((previous) => ({ ...previous, isLoading: true }))
     poll().catch(() => {})
     const intervalId = setInterval(() => {
@@ -78,8 +92,13 @@ export function useDepositStatus({
     return () => {
       cancelled = true
       clearInterval(intervalId)
+      pollRef.current = null
     }
   }, [address, enabled, pollingInterval, baseUrl])
 
-  return state
+  const refetch = useCallback(() => {
+    pollRef.current?.()
+  }, [])
+
+  return { ...state, refetch }
 }
