@@ -1,10 +1,17 @@
 import type {
   CreateSmartRoutingAddressParams,
+  DepositedToken,
   GetSmartRoutingAddressFeeEstimatesReturns,
   SmartRoutingAddressVersion,
   TOKEN_TYPE,
 } from '@zerodev/smart-routing-address'
 import type { Address, Chain } from 'viem'
+
+/** `DepositedToken` with the optional `createdAt` some SRA servers ship
+ * alongside the response. The SDK's public type doesn't include it yet, so
+ * we model it as an optional augmentation here — one canonical shape shared
+ * by the pending/past/detail views. */
+export type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 export type EstimatedFee =
   GetSmartRoutingAddressFeeEstimatesReturns['estimatedFees'][number]

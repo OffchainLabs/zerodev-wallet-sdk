@@ -5,7 +5,7 @@ import { TxnItem, type TxnStatus } from '../components/TxnItem'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
-import type { DepositStage } from '../types'
+import type { DepositStage, DepositWithTimestamp } from '../types'
 import {
   getDestTokenSymbol,
   getSourceTokenSymbol,
@@ -28,9 +28,6 @@ const STAGE_TO_STATUS: Record<DepositStage, TxnStatus> = {
   completed: 'Received',
   failed: 'Failed',
 }
-
-/** `DepositedToken` with the optional `createdAt` some SRA servers ship. */
-type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 type Group = { label: string; sortKey: number; items: DepositWithTimestamp[] }
 

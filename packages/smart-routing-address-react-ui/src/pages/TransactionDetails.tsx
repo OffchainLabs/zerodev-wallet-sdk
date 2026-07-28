@@ -8,12 +8,13 @@ import {
   Section,
   Text,
 } from '@zerodev/react-ui'
-import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
+import type { DepositWithTimestamp } from '../types'
+import { getTxUrl } from '../utils/chains'
 import {
   getDestTokenSymbol,
   getSourceTokenSymbol,
@@ -26,8 +27,12 @@ import { formatDisplayAmount, truncateAddress } from '../utils/format'
 import { buildFeeBreakdown } from '../utils/providerFees'
 
 export interface TransactionDetailsProps {
-  deposit: DepositedToken & { createdAt?: string }
+  deposit: DepositWithTimestamp
 }
+
+/** DOM id shared by the fee-toggle button's `aria-controls` and the panel it
+ * opens. Kept as a constant so both sides move together if renamed. */
+const FEE_PANEL_ID = 'sra-tx-fee-panel'
 
 function formatDate(iso?: string): string | null {
   if (!iso) return null
@@ -83,16 +88,12 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   const outAmountRaw = execution?.outputAmount
   const failed = stage === 'failed'
 
+  // Headline reads as "how much you sent" — round down so we never overstate
+  // the deposit. `formatDisplayAmount` (magnitude-aware) also prevents the
+  // 18-decimal fractional tail that `formatTokenAmount` produces for ETH.
   const sourceHeadline = feeData
     ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
     : String(amount)
-  // Both headline and secondary use magnitude-aware rounding via
-  // `formatDisplayAmount` — the raw-precision `formatTokenAmount` would
-  // spill 18-decimal tokens like ETH into a long fractional tail
-  // (`249.999676016819146305 USDT`).
-  const sourceSecondary = feeData
-    ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
-    : undefined
 
   // NOTE: `feeData.decimal` is the source token's decimals — the SRA fee
   // estimates don't include destination-token decimals, so this is an
@@ -100,28 +101,21 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   // decimals match. Fixing this properly needs a dest-decimals lookup and
   // is out of scope here.
   //
-  // Destination amounts use `'nearest'` rounding (unlike source, which
-  // uses `'down'`) — the server returns the actual on-chain amount after
-  // fees + slippage (e.g. 249.9996), and users read this as "how much I
-  // received", so rounding to 250.00 is the intuitive display.
+  // Destination uses `'nearest'` rounding — the server returns the actual
+  // on-chain amount after fees + slippage (e.g. 249.9996), and users read
+  // this as "how much I received", so rounding to 250.00 is intuitive.
   const destHeadline =
     outAmountRaw && feeData
       ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
       : '—'
-  const destSecondary =
-    outAmountRaw && feeData
-      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
-      : undefined
 
-  const sourceExplorer = sourceChain?.blockExplorers?.default?.url
-  const sourceHref = sourceExplorer
-    ? `${sourceExplorer}/tx/${transactionHash}`
+  // `getTxUrl` looks up the chain independently of whether `source` was
+  // resolved above — a deposit on a known chain still gets a link even if
+  // its token wasn't matched via `sourceTokensFromFees`.
+  const sourceHref = getTxUrl(chainId, transactionHash)
+  const destHref = execution
+    ? getTxUrl(destChain.id, execution.transactionHash)
     : undefined
-  const destExplorer = destChain.blockExplorers?.default?.url
-  const destHref =
-    execution && destExplorer
-      ? `${destExplorer}/tx/${execution.transactionHash}`
-      : undefined
 
   const breakdown =
     feeData && sourceSymbol ? buildFeeBreakdown(feeData, sourceSymbol) : null
@@ -135,19 +129,15 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
         topCard={
           <InfoCard
             title={sourceHeadline}
-            {...(sourceSecondary && { subtitle: sourceSecondary })}
             {...(sourceTokenLogo && { imageSource: sourceTokenLogo })}
             {...(sourceChainLogo && { chainIconUrl: sourceChainLogo })}
-            imageStyle="contained"
           />
         }
         bottomCard={
           <InfoCard
             title={destHeadline}
-            {...(destSecondary && { subtitle: destSecondary })}
             {...(destTokenLogo && { imageSource: destTokenLogo })}
             {...(destChainLogo && { chainIconUrl: destChainLogo })}
-            imageStyle="contained"
           />
         }
       />
@@ -183,6 +173,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
                 type="button"
                 onClick={() => setFeeOpen((prev) => !prev)}
                 aria-expanded={feeOpen}
+                aria-controls={FEE_PANEL_ID}
                 aria-label={feeOpen ? 'Hide fee details' : 'Show fee details'}
                 className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-pointer"
               >
@@ -194,7 +185,11 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
             }
           />
         )}
-        {feeOpen && breakdown && <FeeBreakdownRows breakdown={breakdown} />}
+        {feeOpen && breakdown && (
+          <section id={FEE_PANEL_ID} aria-label="Fee breakdown">
+            <FeeBreakdownRows breakdown={breakdown} />
+          </section>
+        )}
       </Section>
 
       <Section title="Transaction Progress">
@@ -212,12 +207,16 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
         <ProgressStep
           label="Routing"
           info={FEE_INFO.routing}
-          done={stage === 'bridging' || stage === 'completed'}
+          // Routing was at least attempted whenever we've left the initial
+          // detected stage — including the failed path (failure implies the
+          // route was tried), so mark it done there too rather than showing
+          // an inert pending circle above the "Failed" row.
+          done={stage === 'bridging' || stage === 'completed' || failed}
           right={
             breakdown?.provider ? (
               <ProviderChip provider={breakdown.provider} />
             ) : (
-              <Text className="zd:text-body3 zd:text-greyScale/50">—</Text>
+              <StatusText>—</StatusText>
             )
           }
         />
@@ -228,9 +227,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
             done={false}
             failed
             isLast
-            right={
-              <Text className="zd:text-body3 zd:text-negative">Error</Text>
-            }
+            right={<StatusText tone="error">Error</StatusText>}
           />
         ) : (
           <ProgressStep
@@ -245,9 +242,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
                   href={destHref}
                 />
               ) : (
-                <Text className="zd:text-body3 zd:text-greyScale/50">
-                  Pending
-                </Text>
+                <StatusText>Pending</StatusText>
               )
             }
           />
@@ -287,7 +282,7 @@ function ProgressStep({
 }) {
   return (
     <div className="zd:relative zd:flex zd:w-full zd:items-start zd:gap-3">
-      <div className="zd:flex zd:flex-col zd:items-center zd:pt-[2px]">
+      <div className="zd:flex zd:flex-col zd:items-center zd:pt-0.5">
         <StatusMark done={done} failed={!!failed} />
         {!isLast && (
           <div
@@ -302,7 +297,14 @@ function ProgressStep({
         <Text
           className={cn(
             'zd:whitespace-nowrap',
-            failed ? 'zd:text-negative' : 'zd:text-greyScale',
+            failed
+              ? 'zd:text-negative'
+              : // Mute the label until the step is done so a "Completed" row
+                // with an inert open circle doesn't read at full intensity
+                // while the flow is still bridging.
+                done
+                ? 'zd:text-greyScale'
+                : 'zd:text-greyScale/50',
           )}
         >
           {label}
@@ -366,6 +368,28 @@ function TxLink({ label, href }: { label: string; href?: string | undefined }) {
         aria-hidden
       />
     </a>
+  )
+}
+
+/** Small right-aligned status text used in `ProgressStep` — dedups the
+ * "Pending" / "—" / "Error" placeholders that all share the same size class
+ * and only differ by tone. */
+function StatusText({
+  children,
+  tone = 'muted',
+}: {
+  children: string
+  tone?: 'muted' | 'error'
+}) {
+  return (
+    <Text
+      className={cn(
+        'zd:text-body3',
+        tone === 'error' ? 'zd:text-negative' : 'zd:text-greyScale/50',
+      )}
+    >
+      {children}
+    </Text>
   )
 }
 
