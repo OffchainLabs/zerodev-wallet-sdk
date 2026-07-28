@@ -1,6 +1,7 @@
 'use client'
 
-import {AuthFlow, useAuth} from '@zerodev/wallet-react-ui'
+import {ZeroDevLogo} from '@zerodev/react-ui'
+import {AuthFlow, SignUp, useAuth} from '@zerodev/wallet-react-ui'
 import {KeyRound, Layers, Loader2, Sparkles} from 'lucide-react'
 import {useRouter} from 'next/navigation'
 import {Suspense, useEffect} from 'react'
@@ -8,6 +9,16 @@ import {useAccount, useConnect} from 'wagmi'
 import { AppHeader } from './components/AppHeader'
 
 export const dynamic = 'force-dynamic'
+
+// Email auth method choice, set by the browser E2E specs (stored in localStorage).
+// Read at render time — AuthFlow renders SignUp only after user interaction,
+// so this always runs client-side with the current value.
+function getEmailAuthMethod(): 'otp' | 'magicLink' {
+  if (typeof window === 'undefined') return 'otp'
+  return localStorage.getItem('zd:emailAuthMethod') === 'magicLink'
+    ? 'magicLink'
+    : 'otp'
+}
 
 export default function LandingPage() {
   return (
@@ -125,7 +136,20 @@ function LandingPageInner() {
             </div>
           ) : (
 
-              <AuthFlow size="md" />
+              // Using renderSignUp for demo purposes, although using <AuthFlow /> on its own would be enough
+              // because SignUp has a default
+              <AuthFlow
+                size="md"
+                logo={<ZeroDevLogo variant="mark" tone="color" className="zd:h-8 zd:w-auto" />}
+                renderSignUp={() =>
+                <SignUp emailAuthMethod={getEmailAuthMethod()}>
+                  <SignUp.Passkey />
+                  <SignUp.Divider />
+                  <SignUp.Wallet walletId="metamask" />
+                  <SignUp.Email />
+                  <SignUp.MoreWallets />
+                </SignUp>
+              } />
 
           )}
 
