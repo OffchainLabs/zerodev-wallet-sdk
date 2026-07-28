@@ -8,6 +8,7 @@ export { AuthFlow } from './auth'
 export { useAuth } from './auth/hooks/useAuth'
 export { SignUp } from './auth/pages/SignUp'
 export type { AuthMethod, AuthStep, EmailAuthMethod } from './auth/types'
+export type { WalletId } from './auth/walletGuide'
 
 // Connector
 export type {
