@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect } from 'react'
-import type { AuthMethod } from '../../types'
+import type { AuthMethod, EmailAuthMethod } from '../../types'
 
 export type SignUpContextValue = {
   /** True while any method's auth attempt is in flight — used to disable
    * sibling methods so two flows can't run at once. */
   anyPending: boolean
+  /** Which email verification flow the Email unit runs. Set on the root
+   * (`<SignUp emailAuthMethod=…>`); already resolved to its default here. */
+  emailAuthMethod: EmailAuthMethod
   setPending: (id: AuthMethod, pending: boolean) => void
   /** True when the terms checkbox is required but unchecked. For passive
    * disabled styling; use `guardAgreement` before starting an attempt. */

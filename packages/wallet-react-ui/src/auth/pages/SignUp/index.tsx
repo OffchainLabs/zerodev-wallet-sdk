@@ -2,23 +2,28 @@ import { Button, Text } from '@zerodev/react-ui'
 import { type ReactNode, useCallback, useState } from 'react'
 import { SignUpFooter } from '../../../shared/components/SignUpFooter'
 import { BlobAnimation } from '../../components/BlobAnimation'
-import type { AuthMethod } from '../../types'
+import type { AuthMethod, EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
 import { SignUpPasskey } from './Passkey'
 
-function SignUpRoot({
-  children,
-  termsAndConditionsUrl,
-  privacyPolicyUrl,
-}: {
+type SignUpRootProps = {
   children: ReactNode
   /** Enable the consent gate: linked from the footer checkbox, and every
    * method is blocked until the user agrees when either URL is set. */
   termsAndConditionsUrl?: string | undefined
   privacyPolicyUrl?: string | undefined
-}) {
+  /** Which email verification flow the Email unit runs. */
+  emailAuthMethod?: EmailAuthMethod | undefined
+}
+
+function SignUpRoot({
+  children,
+  termsAndConditionsUrl,
+  privacyPolicyUrl,
+  emailAuthMethod = 'magicLink',
+}: SignUpRootProps) {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [highlightAgreement, setHighlightAgreement] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +54,7 @@ function SignUpRoot({
     <SignUpContext.Provider
       value={{
         anyPending: pendingIds.size > 0,
+        emailAuthMethod,
         setPending,
         needsAgreement,
         guardAgreement,
@@ -118,9 +124,12 @@ function SignUpDivider({ label = 'or' }: { label?: string }) {
   )
 }
 
-function SignUpDefault() {
+/** The canonical sign-up page. Takes the root's own props (the consent-gate
+ * URLs) and forwards them — per-unit config (e.g. the email method) still
+ * means composing the units yourself. */
+function SignUpDefault(props: Omit<SignUpRootProps, 'children'>) {
   return (
-    <SignUpRoot>
+    <SignUpRoot {...props}>
       <SignUpPasskey />
       <SignUpDivider />
       <SignUpGoogle />

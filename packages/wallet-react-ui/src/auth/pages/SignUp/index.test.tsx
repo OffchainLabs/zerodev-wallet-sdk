@@ -28,14 +28,17 @@ vi.mock('../../../shared/components/SignUpFooter', () => ({
   SignUpFooter: ({
     setAgreedToTerms,
     highlight,
+    termsAndConditionsUrl,
   }: {
     setAgreedToTerms: (agreed: boolean) => void
     highlight: boolean
+    termsAndConditionsUrl?: string | undefined
   }) => (
     <button
       type="button"
       data-testid="footer-agree"
       data-highlight={String(highlight)}
+      data-terms-url={termsAndConditionsUrl ?? ''}
       onClick={() => setAgreedToTerms(true)}
     >
       agree
@@ -60,6 +63,38 @@ describe('SignUp.Default', () => {
     expect(isBefore(passkey, divider)).toBe(true)
     expect(isBefore(divider, google)).toBe(true)
     expect(isBefore(google, email)).toBe(true)
+  })
+
+  it('forwards consent-gate props to the root like a hand-composed <SignUp>', () => {
+    render(<SignUp.Default termsAndConditionsUrl="https://example.com/terms" />)
+
+    expect(screen.getByTestId('footer-agree').dataset.termsUrl).toBe(
+      'https://example.com/terms',
+    )
+  })
+})
+
+function EmailMethodReader() {
+  const { emailAuthMethod } = useSignUpContext()
+  return <div data-testid="email-method">{emailAuthMethod}</div>
+}
+
+describe('emailAuthMethod resolution', () => {
+  it('defaults to magicLink and follows the root prop', () => {
+    const { unmount } = render(
+      <SignUp>
+        <EmailMethodReader />
+      </SignUp>,
+    )
+    expect(screen.getByTestId('email-method').textContent).toBe('magicLink')
+    unmount()
+
+    render(
+      <SignUp emailAuthMethod="otp">
+        <EmailMethodReader />
+      </SignUp>,
+    )
+    expect(screen.getByTestId('email-method').textContent).toBe('otp')
   })
 })
 

@@ -3,22 +3,22 @@ import { useSendMagicLink, useSendOTP } from '@zerodev/wallet-react'
 import { useState } from 'react'
 import { isValidEmailAddress } from '../../../shared/utils/common'
 import { useAuth } from '../../hooks/useAuth'
-import type { EmailAuthMethod } from '../../types'
 import { useReportPending, useSignUpContext } from './context'
 
-/** Email input row: sends an OTP or magic link depending on `method`, then
- * advances to the matching verification step. */
-export function SignUpEmail({
-  method = 'magicLink',
-}: {
-  method?: EmailAuthMethod
-}) {
+/** Email input row: sends an OTP or magic link depending on the root's
+ * `emailAuthMethod`, then advances to the matching verification step. */
+export function SignUpEmail() {
   const { goToStep, setEmail, setOtpSession } = useAuth()
-  const { anyPending, needsAgreement, guardAgreement, setError } =
-    useSignUpContext()
+  const {
+    anyPending,
+    emailAuthMethod,
+    needsAgreement,
+    guardAgreement,
+    setError,
+  } = useSignUpContext()
   const [emailInput, setEmailInput] = useState('')
 
-  const shouldUseOtp = method === 'otp'
+  const shouldUseOtp = emailAuthMethod === 'otp'
   const { mutateAsync: sendOtp, isPending: isSendOtpPending } = useSendOTP()
   const { mutateAsync: sendMagicLink, isPending: isSendMagicLinkPending } =
     useSendMagicLink()
