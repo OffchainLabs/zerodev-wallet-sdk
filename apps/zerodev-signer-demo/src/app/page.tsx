@@ -147,6 +147,7 @@ function LandingPageInner() {
                   <SignUp.Divider />
                   <SignUp.Google />
                   <SignUp.Email />
+                  <SignUp.MoreWallets />
                 </SignUp>
               } />
 

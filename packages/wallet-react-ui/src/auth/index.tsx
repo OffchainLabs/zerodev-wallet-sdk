@@ -7,13 +7,8 @@ import { ErrorScreen } from './pages/ErrorScreen'
 import { OtpInput } from './pages/OtpInput'
 import { SignUp } from './pages/SignUp'
 import { Verifying } from './pages/Verifying'
-import { WalletSelection } from './pages/WalletSelection'
 import type { AuthStep } from './types'
 import { hasMagicLinkCodeInUrl, stripMagicLinkCodeFromUrl } from './utils/url'
-
-const TITLE_BY_STEP: Partial<Record<AuthStep, string>> = {
-  'wallet-selection': 'Choose your wallet',
-}
 
 function OAuthCallback() {
   return (
@@ -52,8 +47,6 @@ function renderStep(
       return <OAuthCallback />
     case 'passkey-prompt':
       return <PasskeyPrompt />
-    case 'wallet-selection':
-      return <WalletSelection />
     case 'error':
       return <ErrorScreen />
     default:
@@ -93,8 +86,6 @@ export function AuthFlow({
     reset()
     userOnClose?.()
   }
-  const title = step ? TITLE_BY_STEP[step] : undefined
-
   return (
     <Screen
       {...(size && { size })}
@@ -105,7 +96,6 @@ export function AuthFlow({
         <TopNav
           {...(goBack !== null && { onLeftButtonClick: goBack })}
           onRightButtonClick={handleClose}
-          {...(title && { title })}
           {...(step === 'sign-up' && {
             ...(logo && { logo }),
             className: 'zd:px-4',
