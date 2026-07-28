@@ -5,7 +5,7 @@ import { useSignUpContext } from './context'
 /** "Continue with a wallet" row — hands off to the wallet-selection step. */
 export function SignUpMoreWallets() {
   const { goToStep } = useAuth()
-  const { anyPending, guardAgreement } = useSignUpContext()
+  const { authPending, guardAgreement } = useSignUpContext()
 
   const handleClick = () => {
     if (!guardAgreement()) return
@@ -17,7 +17,7 @@ export function SignUpMoreWallets() {
       icon={<ListItemIcon name="walletOutline" />}
       title="Continue with a wallet"
       trailing={<ListItemChevron />}
-      disabled={anyPending}
+      disabled={authPending}
       onClick={handleClick}
     />
   )
