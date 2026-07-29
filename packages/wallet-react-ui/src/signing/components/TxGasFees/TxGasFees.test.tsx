@@ -11,31 +11,13 @@ vi.mock('@zerodev/react-ui', async (importOriginal) => {
   }: { name: string } & React.SVGProps<SVGSVGElement>) =>
     React.createElement('svg', { 'data-testid': `icon-${name}`, ...props })
 
-  // ListItem renders its icon internally via the package-private Icon, which
-  // the barrel mock cannot intercept — stub it to expose the same testids.
-  const MockListItem = ({
-    title,
-    iconName,
-    details,
-  }: {
-    title?: string
-    iconName?: string
-    details?: { text?: string; subtext?: string }
-  }) =>
-    React.createElement(
-      'div',
-      null,
-      iconName ? React.createElement(MockIcon, { name: iconName }) : null,
-      title ? React.createElement('p', null, title) : null,
-      details?.text ? React.createElement('p', null, details.text) : null,
-      details?.subtext ? React.createElement('p', null, details.subtext) : null,
-    )
-
   return {
     ...actual,
     Icon: MockIcon,
+    // ListItemIcon wraps the package-private Icon, which this barrel mock
+    // can't reach — stub it to expose the same testids.
+    ListItemIcon: MockIcon,
     icons: {},
-    ListItem: MockListItem,
   }
 })
 
@@ -155,7 +137,7 @@ describe('TxGasFeesSkeleton', () => {
 
   it('renders three ListItem skeletons', () => {
     const { container } = render(<TxGasFeesSkeleton />)
-    const pulses = container.querySelectorAll('.zd\\:animate-pulse')
+    const pulses = container.querySelectorAll('.zd\\:animate-skel-pulse')
     // 2 bars per ListItemSkeleton * 3 rows + avatar circle per row + 2 inline Fee bars
     expect(pulses.length).toBeGreaterThanOrEqual(3)
   })

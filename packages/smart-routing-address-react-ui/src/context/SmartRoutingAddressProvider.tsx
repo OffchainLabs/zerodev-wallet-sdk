@@ -1,7 +1,11 @@
 import { createSmartRoutingAddress } from '@zerodev/smart-routing-address'
 import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import type { Address } from 'viem'
-import type { AddressState, SmartRoutingAddressConfig } from '../types'
+import type {
+  ActiveRoute,
+  AddressState,
+  SmartRoutingAddressConfig,
+} from '../types'
 import {
   resolveActions,
   resolveBaseUrl,
@@ -29,6 +33,7 @@ export function SmartRoutingAddressProvider({
     status: 'idle',
   })
   const [recipient, setRecipient] = useState<Address | undefined>(undefined)
+  const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null)
   const pendingRef = useRef<Promise<void> | null>(null)
   const recipientRef = useRef<Address | null>(null)
   // Each creation request gets a generation; only the latest generation
@@ -103,14 +108,26 @@ export function SmartRoutingAddressProvider({
     [config],
   )
 
+  const retry = useCallback(async () => {
+    const current = recipientRef.current
+    if (!current) return
+    // Force a fresh request even if we still have a settled one cached
+    pendingRef.current = null
+    recipientRef.current = null
+    await ensureAddress(current)
+  }, [ensureAddress])
+
   const value = useMemo(
     () => ({
       config,
       addressState,
       recipient,
       ensureAddress,
+      retry,
+      activeRoute,
+      setActiveRoute,
     }),
-    [config, addressState, recipient, ensureAddress],
+    [config, addressState, recipient, ensureAddress, retry, activeRoute],
   )
 
   return (
