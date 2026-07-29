@@ -145,7 +145,7 @@ function LandingPageInner() {
                 <SignUp emailAuthMethod={getEmailAuthMethod()}>
                   <SignUp.Passkey />
                   <SignUp.Divider />
-                  <SignUp.Wallet walletId="metamask" />
+                  <SignUp.InstalledWallets maxWallets={2} />
                   <SignUp.Email />
                   <SignUp.MoreWallets />
                 </SignUp>

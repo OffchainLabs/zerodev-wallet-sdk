@@ -6,6 +6,7 @@ import type { EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
+import { SignUpInstalledWallets } from './InstalledWallets'
 import { SignUpMoreWallets } from './MoreWallets'
 import { SignUpPasskey } from './Passkey'
 import { SignUpWallet } from './Wallet'
@@ -138,6 +139,7 @@ export const SignUp = Object.assign(SignUpRoot, {
   Google: SignUpGoogle,
   Email: SignUpEmail,
   Wallet: SignUpWallet,
+  InstalledWallets: SignUpInstalledWallets,
   MoreWallets: SignUpMoreWallets,
   Divider: SignUpDivider,
 })

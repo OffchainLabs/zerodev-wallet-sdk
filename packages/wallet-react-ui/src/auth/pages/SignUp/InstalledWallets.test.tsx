@@ -1,0 +1,255 @@
+/**
+ * @vitest-environment happy-dom
+ */
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SignUp } from './index'
+
+afterEach(cleanup)
+
+// Sibling units pull in wagmi/wallet-react hooks — replace them with stubs so
+// the tests exercise the InstalledWallets unit against the real root.
+vi.mock('./Passkey', () => ({ SignUpPasskey: () => null }))
+vi.mock('./Google', () => ({ SignUpGoogle: () => null }))
+vi.mock('./Email', () => ({ SignUpEmail: () => null }))
+vi.mock('./MoreWallets', () => ({ SignUpMoreWallets: () => null }))
+vi.mock('../../components/BlobAnimation', () => ({
+  BlobAnimation: () => null,
+}))
+vi.mock('../../../shared/components/SignUpFooter', () => ({
+  SignUpFooter: ({
+    setAgreedToTerms,
+  }: {
+    setAgreedToTerms: (agreed: boolean) => void
+  }) => (
+    <button
+      type="button"
+      data-testid="footer-agree"
+      onClick={() => setAgreedToTerms(true)}
+    >
+      agree
+    </button>
+  ),
+}))
+
+const goToStep = vi.fn()
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({ goToStep }),
+}))
+
+type FakeConnector = {
+  uid: string
+  id: string
+  name: string
+  type: string
+  icon?: string
+}
+const connect = vi.fn()
+let connectors: FakeConnector[] = []
+let connectPending = false
+vi.mock('wagmi', () => ({
+  useConnectors: () => connectors,
+  useConnect: () => ({ mutate: connect, isPending: connectPending }),
+}))
+
+const announced = (id: string, name = id): FakeConnector => ({
+  uid: crypto.randomUUID(),
+  id,
+  name,
+  type: 'injected',
+  icon: 'data:image/svg+xml,announced',
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  connectors = []
+  connectPending = false
+})
+
+describe('SignUp.InstalledWallets', () => {
+  it('renders a badged row per announced connector and nothing else', () => {
+    connectors = [
+      announced('io.metamask'),
+      announced('com.example.unknown', 'Example Wallet'),
+      // Configured SDK connector: claims an rdns but proves nothing.
+      {
+        uid: crypto.randomUUID(),
+        id: 'coinbaseWalletSDK',
+        name: 'Coinbase Wallet',
+        type: 'coinbaseWallet',
+      },
+      // Generic injected() connector exists regardless of installation.
+      {
+        uid: crypto.randomUUID(),
+        id: 'injected',
+        name: 'Injected',
+        type: 'injected',
+      },
+      // The embedded-wallet connector claims type "injected" too — it must
+      // be excluded by id. WC transport never belongs in the list either.
+      {
+        uid: crypto.randomUUID(),
+        id: 'zerodev-wallet',
+        name: 'ZeroDevWallet',
+        type: 'injected',
+      },
+      {
+        uid: crypto.randomUUID(),
+        id: 'walletConnect',
+        name: 'WalletConnect',
+        type: 'walletConnect',
+      },
+    ]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    // Guide match is branded from the guide; unknown keeps connector identity.
+    expect(screen.getByText('MetaMask')).toBeDefined()
+    expect(screen.getByText('Example Wallet')).toBeDefined()
+    expect(screen.getAllByText('INSTALLED')).toHaveLength(2)
+    expect(screen.queryByText('Coinbase Wallet')).toBeNull()
+    expect(screen.queryByText('Injected')).toBeNull()
+    expect(screen.queryByText('ZeroDevWallet')).toBeNull()
+    expect(screen.queryByText('WalletConnect')).toBeNull()
+  })
+
+  it('renders nothing when no wallet is installed', () => {
+    connectors = [
+      {
+        uid: crypto.randomUUID(),
+        id: 'injected',
+        name: 'Injected',
+        type: 'injected',
+      },
+    ]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+    expect(screen.queryByText('INSTALLED')).toBeNull()
+  })
+
+  it('excludes wallets by guide id or rdns', () => {
+    connectors = [
+      announced('io.metamask'),
+      announced('io.rabby'),
+      announced('com.example.unknown', 'Example Wallet'),
+    ]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets
+          excludeWalletIds={['metamask', 'com.example.unknown']}
+        />
+      </SignUp>,
+    )
+    expect(screen.queryByText('MetaMask')).toBeNull()
+    expect(screen.queryByText('Example Wallet')).toBeNull()
+    expect(screen.getByText('Rabby Wallet')).toBeDefined()
+  })
+
+  it('caps rows at maxWallets, dropping unknown extensions before guide ones', () => {
+    connectors = [
+      announced('com.example.unknown', 'Example Wallet'),
+      announced('io.rabby'),
+      announced('io.metamask'),
+    ]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets maxWallets={2} />
+      </SignUp>,
+    )
+    // Guide order: metamask before rabby; the unknown extension is cut.
+    expect(screen.getByText('MetaMask')).toBeDefined()
+    expect(screen.getByText('Rabby Wallet')).toBeDefined()
+    expect(screen.queryByText('Example Wallet')).toBeNull()
+  })
+
+  it('caps at 4 rows by default', () => {
+    connectors = [
+      announced('io.metamask'),
+      announced('io.rabby'),
+      announced('io.zerion.wallet'),
+      announced('com.okex.wallet'),
+      announced('com.example.unknown', 'Example Wallet'),
+    ]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+    expect(screen.getAllByText('INSTALLED')).toHaveLength(4)
+    // The unknown extension ranks last and is the one cut.
+    expect(screen.queryByText('Example Wallet')).toBeNull()
+  })
+
+  it('connects the clicked connector and closes the flow on success', () => {
+    const metamask = announced('io.metamask')
+    connectors = [metamask, announced('io.rabby')]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    fireEvent.click(screen.getByText('MetaMask'))
+    expect(connect).toHaveBeenCalledTimes(1)
+    expect(connect.mock.calls[0][0]).toEqual({ connector: metamask })
+
+    act(() => connect.mock.calls[0][1].onSuccess())
+    expect(goToStep).toHaveBeenCalledWith(null)
+  })
+
+  it('blocks connect until terms are accepted', () => {
+    connectors = [announced('io.metamask')]
+    render(
+      <SignUp termsAndConditionsUrl="https://example.com/terms">
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    fireEvent.click(screen.getByText('MetaMask'))
+    expect(connect).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByTestId('footer-agree'))
+    fireEvent.click(screen.getByText('MetaMask'))
+    expect(connect).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces connect failures through the error takeover, except user rejection', () => {
+    connectors = [announced('io.metamask')]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    fireEvent.click(screen.getByText('MetaMask'))
+    const rejection = new Error('User rejected the request.')
+    rejection.name = 'UserRejectedRequestError'
+    act(() => connect.mock.calls[0][1].onError(rejection))
+    expect(screen.queryByText('Error occurred')).toBeNull()
+
+    fireEvent.click(screen.getByText('MetaMask'))
+    act(() => connect.mock.calls[1][1].onError(new Error('boom')))
+    expect(screen.getByText('Error occurred')).toBeDefined()
+    expect(screen.getByText('boom')).toBeDefined()
+  })
+
+  it('disables rows while another method is in flight', () => {
+    connectors = [announced('io.metamask')]
+    connectPending = true
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    fireEvent.click(screen.getByText('MetaMask'))
+    expect(connect).not.toHaveBeenCalled()
+  })
+})
