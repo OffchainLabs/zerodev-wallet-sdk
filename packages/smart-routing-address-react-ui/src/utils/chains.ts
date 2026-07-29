@@ -13,12 +13,14 @@ export function getChainById(chainId: number): Chain {
   return chain
 }
 
-/** Block explorer URL for a transaction, or null when no explorer is known */
+/** Block explorer URL for a transaction, or `undefined` when no explorer is
+ * known. Returns `undefined` (not `null`) so the value can be passed straight
+ * to optional link `href` props under `exactOptionalPropertyTypes`. */
 export function getTxUrl(
   chainId: number,
   transactionHash: string,
-): string | null {
+): string | undefined {
   const explorer = CHAINS_BY_ID.get(chainId)?.blockExplorers?.default
-  if (!explorer) return null
+  if (!explorer) return undefined
   return `${explorer.url}/tx/${transactionHash}`
 }

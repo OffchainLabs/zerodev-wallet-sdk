@@ -3,12 +3,12 @@ import {
   DataRow,
   DataRowSkeleton,
   Icon,
+  InfoCard,
+  Section,
   Text,
 } from '@zerodev/react-ui'
 import { type Address, formatEther, type Hex } from 'viem'
 import { shortenHex } from '../../shared/utils/common'
-import { InfoCard } from '../components/InfoCard'
-import { Section } from '../components/Section'
 import { SigningLayout } from '../components/SigningLayout'
 import { useGasEstimate } from '../hooks/useGasEstimate'
 import { formatGasFee } from '../utils/formatGasFee'

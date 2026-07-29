@@ -3,13 +3,13 @@ import {
   DataRow,
   DataRowSkeleton,
   Icon,
+  InfoCard,
+  Section,
   Text,
 } from '@zerodev/react-ui'
 import { type Address, erc20Abi, formatUnits, type Hex } from 'viem'
 import { useReadContract } from 'wagmi'
 import { shortenHex } from '../../shared/utils/common'
-import { InfoCard } from '../components/InfoCard'
-import { Section } from '../components/Section'
 import { SigningLayout } from '../components/SigningLayout'
 import { SigningPageSkeleton } from '../components/SigningPageSkeleton'
 import { useGasEstimate } from '../hooks/useGasEstimate'

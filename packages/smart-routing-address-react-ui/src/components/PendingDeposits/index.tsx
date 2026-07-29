@@ -3,6 +3,7 @@ import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../../iconAssets'
 import type {
   DepositStage,
+  DepositWithTimestamp,
   EstimatedFee,
   SmartRoutingAddressConfig,
 } from '../../types'
@@ -13,16 +14,13 @@ import {
   sourceTokensFromFees,
 } from '../../utils/config'
 import { getDepositStage } from '../../utils/deposits'
-import { findFeeDataByToken } from '../../utils/fees'
+import { findFeeDataByToken, tokenAddressMatches } from '../../utils/fees'
 import {
   formatDisplayAmount,
   formatRelativeTime,
   truncateAddress,
 } from '../../utils/format'
 import { TxnItem, type TxnStatus } from '../TxnItem'
-
-/** `DepositedToken` with the optional `createdAt` some SRA servers ship. */
-type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 export interface PendingDepositsProps {
   deposits: DepositedToken[]
@@ -48,14 +46,6 @@ export function PendingDeposits({
 
   const destChain = resolveDestChain(config)
   const destChainLogo = CHAIN_ICONS[destChain.id]
-  // Hoisted out of the row `.map` — the source-token list depends only on
-  // `estimatedFees` (constant per render), so recomputing it per deposit
-  // was O(n·m) for no benefit.
-  const sourceTokens = sourceTokensFromFees(estimatedFees)
-  const destSymbol = getDestTokenSymbol(config)
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
 
   return (
     <section
@@ -75,16 +65,27 @@ export function PendingDeposits({
           const feeData = findFeeDataByToken(estimatedFees, chainId, token)
 
           // Source pair: reconstruct the SourceToken so we can look up its
-          // symbol + chain icon the same way the trigger pill does.
+          // symbol + chain icon the same way the trigger pill does. Matching
+          // on the on-chain address (via `tokenAddressMatches`) — the
+          // server's `feeData.name` is a display symbol (e.g. "ETH"), not the
+          // TOKEN_TYPE ("NATIVE"), so a direct `t.tokenType === name` compare
+          // misses native tokens.
           const source =
-            sourceTokens.find(
-              (t) => t.chain.id === chainId && t.tokenType === feeData?.name,
+            sourceTokensFromFees(estimatedFees).find(
+              (t) =>
+                t.chain.id === chainId &&
+                tokenAddressMatches(t.tokenType, chainId, token),
             ) ?? null
           const sourceSymbol = source ? getSourceTokenSymbol(source) : ''
           const sourceTokenLogo = sourceSymbol
             ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
+
+          const destSymbol = getDestTokenSymbol(config)
+          const destTokenLogo = destSymbol
+            ? TOKEN_ICONS[destSymbol.toUpperCase()]
+            : undefined
 
           const status = STAGE_TO_STATUS[getDepositStage(deposit)]
           const amountLabel = feeData

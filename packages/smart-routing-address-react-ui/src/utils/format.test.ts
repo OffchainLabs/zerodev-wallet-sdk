@@ -54,6 +54,40 @@ describe('formatDisplayAmount', () => {
   it('falls back to the raw value on invalid input', () => {
     expect(formatDisplayAmount('not-a-number', 6, 'down')).toBe('not-a-number')
   })
+
+  describe("round: 'nearest'", () => {
+    it("resolves the docstring example (249.999676 → '250')", () => {
+      // 249.999676 with 6 decimals — the "you received X" case that
+      // motivated the mode: reads as 250 to a human, not 249.99.
+      expect(formatDisplayAmount('249999676', 6, 'nearest')).toBe('250')
+      // Contrast: 'down' understates it.
+      expect(formatDisplayAmount('249999676', 6, 'down')).toBe('249.99')
+    })
+
+    it('rounds sub-half fractions down and super-half fractions up', () => {
+      // 1.234999 — just below the rounding boundary (123.4999 * 100).
+      // nearest keeps 1.23, up rounds all the way to 1.24.
+      expect(formatDisplayAmount('1234999', 6, 'nearest')).toBe('1.23')
+      expect(formatDisplayAmount('1234999', 6, 'up')).toBe('1.24')
+      // 1.235500 — just above the boundary.
+      expect(formatDisplayAmount('1235500', 6, 'nearest')).toBe('1.24')
+      expect(formatDisplayAmount('1235500', 6, 'down')).toBe('1.23')
+    })
+
+    it("rounds .5 up (JS's default half-to-even is off)", () => {
+      // 1.235 — exact half at the 2-decimal precision. JS Math.round
+      // rounds positive .5 towards +∞, which is what a user expects.
+      expect(formatDisplayAmount('1235000', 6, 'nearest')).toBe('1.24')
+    })
+
+    it('respects sub-unit significant-digit precision', () => {
+      // 0.022499 at 3-fraction precision → boundary at .5 of the 3rd
+      // decimal (22.499 * 1000). nearest floors to 0.022, up ceils to
+      // 0.023.
+      expect(formatDisplayAmount('22499', 6, 'nearest')).toBe('0.022')
+      expect(formatDisplayAmount('22499', 6, 'up')).toBe('0.023')
+    })
+  })
 })
 
 describe('truncateAddress', () => {

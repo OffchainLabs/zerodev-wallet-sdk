@@ -26,15 +26,16 @@ describe('InfoCard', () => {
   })
 
   describe('imageStyle', () => {
-    it('wraps the image in a contained white box by default', () => {
+    it('wraps the image in a contained translucent tile by default', () => {
       const { container } = render(
         <InfoCard title="My Title" imageSource="https://example.com/x.png" />,
       )
-      expect(container.querySelector('.zd\\:bg-white')).not.toBeNull()
+      // Contained variant renders the PairMark tile — translucent white/60
+      // backdrop-blurred wrapper with a circular token disc inside.
+      expect(container.querySelector('.zd\\:bg-white\\/60')).not.toBeNull()
       const img = container.querySelector('img') as HTMLImageElement
       expect(img.src).toBe('https://example.com/x.png')
-      expect(img.className).toContain('w-8')
-      expect(img.className).toContain('h-8')
+      expect(img.className).toContain('size-full')
     })
 
     it('renders a bare image when imageStyle is "filled"', () => {
@@ -45,15 +46,42 @@ describe('InfoCard', () => {
           imageStyle="filled"
         />,
       )
-      expect(container.querySelector('.zd\\:bg-white')).toBeNull()
+      expect(container.querySelector('.zd\\:bg-white\\/60')).toBeNull()
       const img = container.querySelector('img') as HTMLImageElement
-      expect(img.className).toContain('w-11')
-      expect(img.className).toContain('h-11')
+      expect(img.className).toContain('size-full')
     })
 
-    it('does not render an <img> when no imageSource is provided', () => {
+    it('does not render an <img> when no imageSource or chain icon is provided', () => {
       const { container } = render(<InfoCard title="My Title" />)
       expect(container.querySelector('img')).toBeNull()
+    })
+  })
+
+  describe('chainIconUrl', () => {
+    it('renders the chain badge overlay when provided', () => {
+      const { container } = render(
+        <InfoCard
+          title="My Title"
+          imageSource="https://example.com/token.png"
+          chainIconUrl="https://example.com/chain.png"
+        />,
+      )
+      const imgs = Array.from(container.querySelectorAll('img'))
+      expect(imgs.map((i) => (i as HTMLImageElement).src)).toEqual([
+        'https://example.com/token.png',
+        'https://example.com/chain.png',
+      ])
+    })
+
+    it('renders the chain badge even without a token image', () => {
+      const { container } = render(
+        <InfoCard
+          title="My Title"
+          chainIconUrl="https://example.com/chain.png"
+        />,
+      )
+      const img = container.querySelector('img') as HTMLImageElement
+      expect(img.src).toBe('https://example.com/chain.png')
     })
   })
 

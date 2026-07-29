@@ -10,6 +10,7 @@ import type { Chain } from 'viem'
 import { type Address, isAddress } from 'viem'
 import { arbitrum, base, mainnet, optimism, polygon } from 'viem/chains'
 import { MockPanel } from './components/MockPanel'
+import type { MockErrorMode } from './mock'
 
 // Vitalik's address — a valid, well-known target so the widget renders
 // immediately without the user typing anything.
@@ -29,6 +30,18 @@ export default function Home() {
   const [recipient, setRecipient] = useState<Address>(DEFAULT_RECIPIENT)
   const [targetChainId, setTargetChainId] = useState<number>(arbitrum.id)
   const [slippage, setSlippage] = useState<number>(50)
+  // Bumped by `MockControls` after inserting/clearing mock deposits or
+  // toggling error/sponsored modes — re-mounts the widget so freshly-added
+  // deposits re-baseline as past and new mock state takes effect.
+  const [mockNonce, setMockNonce] = useState(0)
+  const regenerate = () => setMockNonce((n) => n + 1)
+  // Toggle state for the "Simulate states" section of MockControls. Lifted
+  // out of MockControls so it survives the widget's re-mounts (bumping
+  // `mockNonce` tears down the whole provider subtree, which used to reset
+  // the local toggle state while the mock's module-level state persisted —
+  // producing a UI ↔ mock mismatch).
+  const [mockErrorMode, setMockErrorMode] = useState<MockErrorMode>('none')
+  const [mockSponsored, setMockSponsored] = useState(false)
 
   const [draftRecipient, setDraftRecipient] =
     useState<string>(DEFAULT_RECIPIENT)
@@ -61,7 +74,7 @@ export default function Home() {
           (including provider state) when the user regenerates — otherwise
           stale addresses can persist across config changes. */}
       <SmartRoutingAddressProvider
-        key={`${recipient}-${targetChainId}-${slippage}`}
+        key={`${recipient}-${targetChainId}-${slippage}-${mockNonce}`}
         config={config}
       >
         {/* Grid uses an arbitrary breakpoint of 900px — Tailwind's default
@@ -78,61 +91,31 @@ export default function Home() {
               </h1>
               <p className="m-0 max-w-[48ch] text-base leading-[1.6] text-muted">
                 A pre-built, customizable React UI for ZeroDev Smart Routing
-                Address — the whole deposit flow, ready to drop into your app.
+                Address — the whole deposit flow, ready to drop into your app
+                and cut the funding friction that hurts onboarding conversion.
               </p>
-              <p className="m-0 max-w-[48ch] text-base leading-[1.6] text-muted">
-                Install it, make it your own, and cut the funding friction that
-                hurts onboarding conversion.
-              </p>
+              {/* "React package coming soon" chip — small pill with a primary
+                  dot on the left, matches the reference demo's `pg__coming`. */}
+              <span className="mt-0.5 inline-flex items-center gap-[7px] self-start rounded-full border border-border-warm bg-white/55 px-[11px] py-[5px] text-xs font-semibold tracking-[0.01em] text-muted">
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 rounded-full bg-primary"
+                />
+                React package coming soon
+              </span>
             </header>
 
-            <ol className="m-0 flex list-none flex-col gap-5 p-0">
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  1
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Choose token &amp; network
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    Fees and arrival time update live as the route changes.
-                  </span>
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  2
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Send to the address
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    Copy it into any wallet. Deposits are detected
-                    automatically.
-                  </span>
-                  {/* Simulated wallet — copy the widget's deposit address into
-                      the input below and click Send to see a fake deposit flow
-                      through the widget's status view. */}
-                  <MockPanel destChainId={targetChainId} />
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  3
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Funds arrive on your chain
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    We swap and bridge in the background, delivering to the
-                    target chain in seconds.
-                  </span>
-                </div>
-              </li>
-            </ol>
+            {/* Simulated wallet — copy the widget's deposit address into the
+                input and click Send to see a fake deposit flow through the
+                widget's status view. */}
+            <MockPanel
+              destChainId={targetChainId}
+              regenerate={regenerate}
+              mockErrorMode={mockErrorMode}
+              setMockErrorMode={setMockErrorMode}
+              mockSponsored={mockSponsored}
+              setMockSponsored={setMockSponsored}
+            />
 
             {/* `group` lets the summary chevron rotate on `[open]` via the
                 `group-open:` variant. `<details>` list styles + webkit marker
