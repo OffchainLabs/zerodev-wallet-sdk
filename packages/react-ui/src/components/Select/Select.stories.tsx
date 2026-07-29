@@ -12,11 +12,11 @@ import {
 } from './index'
 
 const TOKENS = [
-  { id: 'USDC', symbol: 'USDC', logoBg: '#2775CA' },
-  { id: 'WETH', symbol: 'WETH', logoBg: '#627EEA' },
-  { id: 'USDT', symbol: 'USDT', logoBg: '#26A17B' },
-  { id: 'DAI', symbol: 'DAI', logoBg: '#F4B731' },
-  { id: 'WBTC', symbol: 'WBTC', logoBg: '#F09242' },
+  { id: 'USDC', symbol: 'USDC' },
+  { id: 'WETH', symbol: 'WETH' },
+  { id: 'USDT', symbol: 'USDT' },
+  { id: 'DAI', symbol: 'DAI' },
+  { id: 'WBTC', symbol: 'WBTC' },
 ] as const
 
 const meta: Meta = {
@@ -44,7 +44,7 @@ export const Default: Story = {
       return (
         <Select value={value} onValueChange={setValue}>
           <SelectTrigger asChild>
-            <Pill label={selected.symbol} logoBg={selected.logoBg} />
+            <Pill label={selected.symbol} />
           </SelectTrigger>
           <SelectContent align="start">
             {TOKENS.map((t) => (
@@ -70,7 +70,7 @@ export const WidePanel: Story = {
       return (
         <Select value={value} onValueChange={setValue}>
           <SelectTrigger asChild>
-            <Pill label={selected.symbol} logoBg={selected.logoBg} />
+            <Pill label={selected.symbol} />
           </SelectTrigger>
           <SelectContent
             align="start"
@@ -100,7 +100,7 @@ export const Grouped: Story = {
       return (
         <Select value={value} onValueChange={setValue}>
           <SelectTrigger asChild>
-            <Pill label={selected.symbol} logoBg={selected.logoBg} />
+            <Pill label={selected.symbol} />
           </SelectTrigger>
           <SelectContent align="start">
             {TOKENS.slice(0, 2).map((t) => (
@@ -127,7 +127,7 @@ export const Disabled: Story = {
   render: () => (
     <Select value="USDC" disabled>
       <SelectTrigger asChild>
-        <Pill label="USDC" logoBg="#2775CA" disabled />
+        <Pill label="USDC" disabled />
       </SelectTrigger>
       <SelectContent align="start">
         {TOKENS.map((t) => (

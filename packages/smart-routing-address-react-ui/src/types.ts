@@ -1,10 +1,17 @@
 import type {
   CreateSmartRoutingAddressParams,
+  DepositedToken,
   GetSmartRoutingAddressFeeEstimatesReturns,
   SmartRoutingAddressVersion,
   TOKEN_TYPE,
 } from '@zerodev/smart-routing-address'
 import type { Address, Chain } from 'viem'
+
+/** `DepositedToken` with the optional `createdAt` some SRA servers ship
+ * alongside the response. The SDK's public type doesn't include it yet, so
+ * we model it as an optional augmentation here — one canonical shape shared
+ * by the pending/past/detail views. */
+export type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 export type EstimatedFee =
   GetSmartRoutingAddressFeeEstimatesReturns['estimatedFees'][number]
@@ -26,6 +33,12 @@ export type SmartRoutingAddressConfig = {
   projectId?: string
   /** Chain id where funds settle */
   targetChainId: number
+  /**
+   * Display symbol for the token received on the target chain (e.g. `"USDC"`).
+   * Fixed by the configured actions — when omitted the UI joins every possible
+   * target symbol with a separator.
+   */
+  targetTokenSymbol?: string
   /** Smart routing address version, defaults to the latest stable */
   version?: SmartRoutingAddressVersion
   /**
@@ -60,3 +73,25 @@ export type AddressState =
   | { status: 'error'; error: Error }
 
 export type DepositStage = 'pending' | 'bridging' | 'completed' | 'failed'
+
+/**
+ * The route the deposit UI is currently showing (selected source token +
+ * chain + estimated fee), surfaced through context so hosts can mirror it —
+ * e.g. a demo "send" panel that matches the chosen token, or analytics.
+ */
+export type ActiveRoute = {
+  /** Source chain id the deposit would come from */
+  sourceChainId: number
+  /** Source chain display name (e.g. "Base") */
+  sourceChainName: string
+  /** On-chain address of the selected source token */
+  token: Address
+  /** Display symbol of the selected source token (e.g. "USDC", "ETH") */
+  symbol: string
+  /** Decimals of the selected source token */
+  decimals: number
+  /** Estimated all-in fee amount in source-token atomic units, as a
+   * base-10 string (e.g. `"250000"` for 0.25 USDC). Consumers can pass it
+   * straight to `BigInt()` or `parseInt(x, 10)`. */
+  feeAmount: string
+}

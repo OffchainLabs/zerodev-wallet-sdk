@@ -80,7 +80,7 @@ describe('ListItem', () => {
 describe('ListItemSkeleton', () => {
   it('renders skeleton loading state', () => {
     const { container } = render(<ListItemSkeleton />)
-    const skeleton = container.querySelector('.zd\\:animate-pulse')
+    const skeleton = container.querySelector('.zd\\:animate-skel-pulse')
     expect(skeleton).not.toBeNull()
   })
 
