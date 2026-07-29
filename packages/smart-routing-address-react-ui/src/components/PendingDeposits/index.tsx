@@ -3,6 +3,7 @@ import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../../iconAssets'
 import type {
   DepositStage,
+  DepositWithTimestamp,
   EstimatedFee,
   SmartRoutingAddressConfig,
 } from '../../types'
@@ -20,9 +21,6 @@ import {
   truncateAddress,
 } from '../../utils/format'
 import { TxnItem, type TxnStatus } from '../TxnItem'
-
-/** `DepositedToken` with the optional `createdAt` some SRA servers ship. */
-type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 export interface PendingDepositsProps {
   deposits: DepositedToken[]

@@ -5,7 +5,7 @@ import { TxnItem, type TxnStatus } from '../components/TxnItem'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
-import type { DepositStage } from '../types'
+import type { DepositStage, DepositWithTimestamp } from '../types'
 import {
   getDestTokenSymbol,
   getSourceTokenSymbol,
@@ -28,9 +28,6 @@ const STAGE_TO_STATUS: Record<DepositStage, TxnStatus> = {
   completed: 'Received',
   failed: 'Failed',
 }
-
-/** `DepositedToken` with the optional `createdAt` some SRA servers ship. */
-type DepositWithTimestamp = DepositedToken & { createdAt?: string }
 
 type Group = { label: string; sortKey: number; items: DepositWithTimestamp[] }
 
@@ -74,12 +71,19 @@ function groupByDay(deposits: DepositWithTimestamp[]): Group[] {
   return [...buckets.values()].sort((a, b) => b.sortKey - a.sortKey)
 }
 
+export interface PastDepositsProps {
+  /** Fired when a row is tapped — the widget uses this to open the
+   * transaction-details view for the selected deposit. When omitted, rows
+   * render as static (non-interactive). */
+  onSelectDeposit?: (deposit: DepositedToken) => void
+}
+
 /**
  * Past deposits view — full history, grouped by day, newest first. Each row
  * is a `TxnItem`; layout matches the deposit's `PendingDeposits` card so the
  * two views share one visual language.
  */
-export function PastDeposits() {
+export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
   const { config, addressState } = useSmartRoutingAddressContext()
 
   const success = addressState.status === 'success' ? addressState : null
@@ -166,27 +170,40 @@ export function PastDeposits() {
                       : undefined
                     const status = STAGE_TO_STATUS[getDepositStage(deposit)]
 
+                    const row = (
+                      <TxnItem
+                        amount={amountLabel}
+                        address={truncateAddress(transactionHash)}
+                        {...(href && { href })}
+                        timestamp={timestamp}
+                        status={status}
+                        {...(sourceTokenLogo && {
+                          sourceTokenIconUrl: sourceTokenLogo,
+                        })}
+                        {...(sourceChainLogo && {
+                          sourceChainIconUrl: sourceChainLogo,
+                        })}
+                        {...(destTokenLogo && {
+                          destTokenIconUrl: destTokenLogo,
+                        })}
+                        {...(destChainLogo && {
+                          destChainIconUrl: destChainLogo,
+                        })}
+                      />
+                    )
                     return (
                       <li key={transactionHash}>
-                        <TxnItem
-                          amount={amountLabel}
-                          address={truncateAddress(transactionHash)}
-                          {...(href && { href })}
-                          timestamp={timestamp}
-                          status={status}
-                          {...(sourceTokenLogo && {
-                            sourceTokenIconUrl: sourceTokenLogo,
-                          })}
-                          {...(sourceChainLogo && {
-                            sourceChainIconUrl: sourceChainLogo,
-                          })}
-                          {...(destTokenLogo && {
-                            destTokenIconUrl: destTokenLogo,
-                          })}
-                          {...(destChainLogo && {
-                            destChainIconUrl: destChainLogo,
-                          })}
-                        />
+                        {onSelectDeposit ? (
+                          <button
+                            type="button"
+                            onClick={() => onSelectDeposit(deposit)}
+                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:text-left zd:hover:bg-white/30"
+                          >
+                            {row}
+                          </button>
+                        ) : (
+                          row
+                        )}
                       </li>
                     )
                   })}
