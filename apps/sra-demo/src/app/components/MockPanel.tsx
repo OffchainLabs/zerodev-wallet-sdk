@@ -13,6 +13,7 @@ import {
   setMockDeposits,
   uninstallMockFetch,
 } from '../mock'
+import { MockControls } from './MockControls'
 
 // Fallback route used before the widget has seeded a picker selection:
 // 250 USDC on Base. Once `activeRoute` populates from the widget's picker,
@@ -40,7 +41,21 @@ const DOT_COLOR: Record<'idle' | MockStage, string> = {
   completed: 'bg-[#6bb04f]',
 }
 
-export function MockPanel({ destChainId }: { destChainId: number }) {
+export function MockPanel({
+  destChainId,
+  regenerate,
+  mockRouteError,
+  setMockRouteError,
+  mockSponsored,
+  setMockSponsored,
+}: {
+  destChainId: number
+  regenerate: () => void
+  mockRouteError: boolean
+  setMockRouteError: (value: boolean) => void
+  mockSponsored: boolean
+  setMockSponsored: (value: boolean) => void
+}) {
   const { addressState, activeRoute } = useSmartRoutingAddress()
   const route = activeRoute ?? FALLBACK
   const [sim, setSim] = useState<'idle' | MockStage>('idle')
@@ -53,18 +68,26 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
   }, [])
 
   useEffect(() => {
+    // Install once and leave it — the mock stays installed for the demo's
+    // lifetime. Uninstalling on cleanup used to race with the widget's
+    // fresh `ensureAddress` on every regenerate: cleanup cleared `current`
+    // and restored native fetch, and if the widget's create-address call
+    // fired before MockPanel's new-mount effect re-installed the mock,
+    // the widget would poll the real API and see no deposits.
     installMockFetch()
     setMockDeposits(loadPastDeposits())
     return () => {
       clearTimers()
-      uninstallMockFetch()
     }
   }, [clearTimers])
 
   const address =
     addressState.status === 'success' ? addressState.address : undefined
   const pastedOk =
-    isAddress(pasted.trim()) &&
+    // `strict: false` — the mock deliberately flips the returned address's
+    // EIP-55 checksum so real wallets refuse to send to it (see `mock.ts`
+    // `toFakeAddress`). Validate the format only and compare case-insensitively.
+    isAddress(pasted.trim(), { strict: false }) &&
     !!address &&
     pasted.trim().toLowerCase() === address.toLowerCase()
   const running = sim === 'pending' || sim === 'bridging'
@@ -115,62 +138,144 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
           : "That doesn't match your deposit address."
 
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-border-warm bg-white p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-[13px] font-semibold">Simulated wallet</span>
-        <span className="ml-auto rounded-full bg-[#fef1e6] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-primary">
-          Simulated
-        </span>
-      </div>
-
-      <div className="flex items-baseline gap-1.5 rounded-lg bg-[#f7f4ef] px-3.5 py-3">
-        <span className="text-[22px] font-bold tabular-nums">
-          {AMOUNT_WHOLE}
-        </span>
-        <span className="text-sm font-semibold text-muted">{route.symbol}</span>
-        <span className="ml-auto text-[13px] text-muted">
-          on {route.sourceChainName}
-        </span>
-      </div>
-
-      <label className="relative flex flex-col gap-1.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
-          To
-        </span>
-        <input
-          className={`rounded-lg border bg-white px-3 py-2.5 pr-8 font-mono text-[13px] outline-primary ${
-            pastedOk ? 'border-[#6bb04f]' : 'border-border-warm'
-          }`}
-          value={pasted}
-          onChange={(e) => setPasted(e.target.value.trim())}
-          placeholder="Paste your deposit address"
-          spellCheck={false}
-        />
-        {pastedOk && (
-          <span
-            className="absolute right-2.5 top-[30px] font-bold text-[#6bb04f]"
-            aria-hidden="true"
-          >
-            ✓
+    <ol className="m-0 flex list-none flex-col gap-5 p-0">
+      <li className="flex items-start gap-4">
+        <StepNum>1</StepNum>
+        <div className="flex flex-col gap-1 pt-1">
+          <span className="text-[15px] font-semibold">
+            Choose token &amp; network
           </span>
-        )}
-      </label>
+          <span className="text-sm leading-[1.5] text-muted">
+            Fees and arrival time update live as the route changes.
+          </span>
+        </div>
+      </li>
 
-      <button
-        type="button"
-        className="cursor-pointer rounded-lg border border-ink bg-ink px-4 py-3 text-sm font-semibold text-white transition-[opacity,background-color] duration-150 hover:not-disabled:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={simulate}
-        disabled={!pastedOk}
-      >
-        {running ? `Send another ${amountLabel}` : `Send ${amountLabel}`}
-      </button>
+      <li className="flex items-start gap-4">
+        <StepNum>2</StepNum>
+        <div className="flex flex-1 flex-col gap-2 pt-1">
+          <span className="text-[15px] font-semibold">Send to the address</span>
+          <span className="text-sm leading-[1.5] text-muted">
+            Copy it into any wallet. Deposits are detected automatically.
+          </span>
 
-      {hint && (
-        <p className="m-0 flex items-center gap-2 text-[13px] text-muted">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLOR[sim]}`} />
-          {hint}
-        </p>
-      )}
-    </div>
+          {/* Demo-only warning — matches the reference's `pg__warn` banner.
+              Reads as a red-tinted callout so users understand the address
+              can't accept real funds. */}
+          <p className="mt-2 rounded-lg border border-danger/35 bg-danger/10 px-3 py-2.5 text-xs leading-[1.5] text-ink">
+            <b className="text-danger">Demo only.</b> The generated address has
+            an intentionally invalid checksum, so real wallets refuse it — it
+            can't receive real funds. Never send real assets to it; use the
+            simulated wallet below.
+          </p>
+
+          {/* Warm gradient + peach border + orange-tinted shadow — matches
+              the reference's `pg__wallet` styling. The multi-layer gradient
+              is expressed via inline style (Tailwind arbitrary values get
+              unreadable with commas across two gradient layers). */}
+          <div
+            className="mt-2 flex flex-col gap-3.5 rounded-[18px] border border-[#f0d9c6] p-[18px] shadow-[0_10px_30px_-16px_rgba(231,96,0,0.25)]"
+            style={{
+              background:
+                'radial-gradient(120% 80% at 0% 0%, #fff5ec 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, #fffaf5 0%, #ffffff 100%)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex-1 text-sm font-semibold">
+                Simulated wallet
+              </span>
+              {/* Amber "Simulated" tag — separate palette from the primary
+                  orange used elsewhere so it doesn't compete with the CTA. */}
+              <span className="rounded-full bg-[#fbf3e2] px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#b97c10]">
+                Simulated
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 py-0.5">
+              <span className="text-[34px] font-semibold leading-none tabular-nums">
+                {AMOUNT_WHOLE}
+              </span>
+              <span className="text-[17px] font-semibold text-muted">
+                {route.symbol}
+              </span>
+              <span className="ml-auto text-[13px] text-muted">
+                on {route.sourceChainName}
+              </span>
+            </div>
+
+            {/* Inline row: label + input on the same line inside a bordered
+                wrapper, matches `pg__wallet-field`. `data-ok=true` on the
+                wrapper flips the border to green. */}
+            <label
+              data-ok={pastedOk}
+              className="flex items-center gap-2.5 rounded-xl border border-border-warm bg-white px-3.5 py-2.5 transition-colors data-[ok=true]:border-[#2e8b57]"
+            >
+              <span className="text-[13px] font-semibold text-muted">To</span>
+              <input
+                className="min-w-0 flex-1 border-none bg-transparent font-mono text-[13px] text-ink outline-none"
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value.trim())}
+                placeholder="Paste your deposit address"
+                spellCheck={false}
+              />
+              {pastedOk && (
+                <span className="font-bold text-[#2e8b57]" aria-hidden="true">
+                  ✓
+                </span>
+              )}
+            </label>
+
+            <button
+              type="button"
+              className="cursor-pointer rounded-xl bg-ink px-[18px] py-[13px] text-[15px] font-semibold text-white transition-[opacity,background-color] duration-150 hover:not-disabled:bg-[#2a1d12] disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={simulate}
+              disabled={!pastedOk}
+            >
+              {running ? `Send another ${amountLabel}` : `Send ${amountLabel}`}
+            </button>
+
+            {hint && (
+              <p className="m-0 flex items-center gap-2 text-[13px] text-muted">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLOR[sim]}`}
+                />
+                {hint}
+              </p>
+            )}
+          </div>
+        </div>
+      </li>
+
+      <li className="flex items-start gap-4">
+        <StepNum>3</StepNum>
+        <div className="flex flex-1 flex-col gap-2 pt-1">
+          <span className="text-[15px] font-semibold">
+            Try modifying the experience
+          </span>
+          <span className="text-sm leading-[1.5] text-muted">
+            Open <b>Advanced settings</b> below to change the max slippage or
+            destination chain, then use the mock controls to preview how the
+            widget handles errors, sponsored fees and past deposits.
+          </span>
+          <MockControls
+            destChainId={destChainId}
+            regenerate={regenerate}
+            routeError={mockRouteError}
+            setRouteError={setMockRouteError}
+            sponsored={mockSponsored}
+            setSponsored={setMockSponsored}
+          />
+        </div>
+      </li>
+    </ol>
+  )
+}
+
+/** Numbered circle used at the start of each guided-flow step. */
+function StepNum({ children }: { children: string }) {
+  return (
+    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
+      {children}
+    </span>
   )
 }
