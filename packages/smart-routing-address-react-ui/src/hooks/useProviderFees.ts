@@ -5,9 +5,11 @@ import { zeroAddress } from 'viem'
 import type { EstimatedFeeData, SourceToken } from '../types'
 import { resolveTokenAddress } from '../utils/fees'
 import {
+  AcrossSuggestedFeesSchema,
   type FeeBreakdown,
   parseAcrossFees,
   parseRelayFees,
+  RelayQuoteSchema,
 } from '../utils/providerFees'
 
 const ACROSS_API = 'https://app.across.to/api/suggested-fees'
@@ -55,7 +57,19 @@ async function fetchAcross(
   if (!res.ok) return null
   const json = await res.json()
   if (!json || json.error) return null
-  return parseAcrossFees(json, route.symbol, route.decimals)
+  // Validate the response shape before handing it to the parser — if Across
+  // changes their API in a way we don't recognise, we degrade gracefully to
+  // the collapsed fee view instead of computing garbage from missing fields.
+  const parsed = AcrossSuggestedFeesSchema.safeParse(json)
+  if (!parsed.success) {
+    // biome-ignore lint/suspicious/noConsole: schema-drift signal for developers; silent failure is what we're trying to avoid.
+    console.warn(
+      '[useProviderFees] Across response failed schema validation',
+      parsed.error.issues,
+    )
+    return null
+  }
+  return parseAcrossFees(parsed.data, route.symbol, route.decimals)
 }
 
 async function fetchRelay(
@@ -86,7 +100,18 @@ async function fetchRelay(
   if (!res.ok) return null
   const json = await res.json()
   if (!json || json.error) return null
-  return parseRelayFees(json)
+  // See fetchAcross above — schema validation is the last line of defence
+  // between a silently changed API and wrong fees rendered to the user.
+  const parsed = RelayQuoteSchema.safeParse(json)
+  if (!parsed.success) {
+    // biome-ignore lint/suspicious/noConsole: schema-drift signal for developers; silent failure is what we're trying to avoid.
+    console.warn(
+      '[useProviderFees] Relay response failed schema validation',
+      parsed.error.issues,
+    )
+    return null
+  }
+  return parseRelayFees(parsed.data)
 }
 
 /** Pick the cheaper live route by full quoted cost; else the first available */
@@ -166,19 +191,23 @@ export function useProviderFees(
     }
 
     const controller = new AbortController()
-    const safe = (p: Promise<FeeBreakdown | null>) => p.catch(() => null)
+    // Swallow provider failures so one broken provider doesn't take out the
+    // other — but log everything except the expected abort so a real bug
+    // (network, parser regression) doesn't disappear silently.
+    const safe = (label: string, p: Promise<FeeBreakdown | null>) =>
+      p.catch((err) => {
+        if (err?.name !== 'AbortError') {
+          // biome-ignore lint/suspicious/noConsole: surfaces network / parser regressions that would otherwise be invisible.
+          console.warn(`[useProviderFees] ${label} failed`, err)
+        }
+        return null
+      })
     Promise.all([
-      safe(fetchAcross(route, controller.signal)),
-      safe(fetchRelay(route, controller.signal)),
+      safe('Across', fetchAcross(route, controller.signal)),
+      safe('Relay', fetchRelay(route, controller.signal)),
     ])
       .then(([across, relay]) => {
         const chosen = bestRoute([across, relay])
-        if (chosen) {
-          // The USD price of the quoted amount comes from Relay — keep it
-          // even when Across won on fees (used for the min-deposit USD pill
-          // on non-stable tokens).
-          chosen.inputUsd = chosen.inputUsd ?? relay?.inputUsd ?? null
-        }
         if (!controller.signal.aborted) {
           setBreakdown(chosen)
           setLoading(false)

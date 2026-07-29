@@ -1,4 +1,5 @@
 import { formatUnits } from 'viem'
+import { z } from 'zod'
 import type { EstimatedFeeData } from '../types'
 import { formatDisplayAmount, STABLE_SYMBOLS } from './format'
 
@@ -45,8 +46,6 @@ export type FeeBreakdown = {
   totalText: string | null
   /** Estimated fill time in seconds, when the provider reports it */
   fillTimeSec: number | null
-  /** USD value of the quoted amount, when the provider prices it (Relay) */
-  inputUsd: number | null
 }
 
 function sum(values: (number | null)[]): number | null {
@@ -63,16 +62,28 @@ function sum(values: (number | null)[]): number | null {
 // true rates; the relayer gas fee is a fixed destination-gas cost (its pct
 // only looks like a rate because it is gas/amount). totalRelayFee = sum of
 // the three legs.
+//
+// Schemas validate the response at the fetch boundary — the API is external,
+// so a shape change (added required field, renamed leg, changed type) must
+// surface as a failed parse, not silently corrupted numbers. Unknown keys
+// are stripped (Zod default); we only assert what we actually consume.
 // ---------------------------------------------------------------------------
 
-type AcrossLeg = { pct: string; total: string }
-export type AcrossSuggestedFees = {
-  totalRelayFee: AcrossLeg
-  relayerCapitalFee: AcrossLeg
-  relayerGasFee: AcrossLeg
-  lpFee: AcrossLeg
-  estimatedFillTimeSec?: number
-}
+const AcrossLegSchema = z.object({
+  pct: z.string(),
+  total: z.string(),
+})
+
+export const AcrossSuggestedFeesSchema = z.object({
+  totalRelayFee: AcrossLegSchema,
+  relayerCapitalFee: AcrossLegSchema,
+  relayerGasFee: AcrossLegSchema,
+  lpFee: AcrossLegSchema,
+  estimatedFillTimeSec: z.number().optional(),
+})
+
+type AcrossLeg = z.infer<typeof AcrossLegSchema>
+export type AcrossSuggestedFees = z.infer<typeof AcrossSuggestedFeesSchema>
 
 const E18 = 10n ** 18n
 
@@ -138,7 +149,6 @@ export function parseAcrossFees(
       typeof res.estimatedFillTimeSec === 'number'
         ? res.estimatedFillTimeSec
         : null,
-    inputUsd: null,
   }
 }
 
@@ -149,18 +159,30 @@ export function parseAcrossFees(
 // `gas` is the user's origin-chain gas.
 // ---------------------------------------------------------------------------
 
-type RelayFee = { amountUsd?: string }
-export type RelayQuote = {
-  fees?: {
-    gas?: RelayFee
-    relayer?: RelayFee
-    relayerGas?: RelayFee
-    relayerService?: RelayFee
-    app?: RelayFee
-  }
-  details?: { currencyIn?: { amountUsd?: string }; timeEstimate?: number }
-  timeEstimate?: number
-}
+const RelayFeeSchema = z.object({
+  amountUsd: z.string().optional(),
+})
+
+export const RelayQuoteSchema = z.object({
+  fees: z
+    .object({
+      gas: RelayFeeSchema.optional(),
+      relayer: RelayFeeSchema.optional(),
+      relayerGas: RelayFeeSchema.optional(),
+      relayerService: RelayFeeSchema.optional(),
+      app: RelayFeeSchema.optional(),
+    })
+    .optional(),
+  details: z
+    .object({
+      timeEstimate: z.number().optional(),
+    })
+    .optional(),
+  timeEstimate: z.number().optional(),
+})
+
+type RelayFee = z.infer<typeof RelayFeeSchema>
+export type RelayQuote = z.infer<typeof RelayQuoteSchema>
 
 function usdOf(fee?: RelayFee): number | null {
   if (!fee?.amountUsd) return null
@@ -199,30 +221,12 @@ export function parseRelayFees(res: RelayQuote): FeeBreakdown {
     quotedTotalUsd: totalUsd,
     totalText: null,
     fillTimeSec: res.details?.timeEstimate ?? res.timeEstimate ?? null,
-    inputUsd: usdOf(res.details?.currencyIn),
   }
 }
 
 // ---------------------------------------------------------------------------
-// Dispatch + fallback
+// Combine SRA fee + provider legs into the final breakdown
 // ---------------------------------------------------------------------------
-
-/** Detect the provider shape and normalise it; null when unrecognised */
-export function normalizeProviderFees(
-  res: unknown,
-  symbol: string,
-  decimals: number,
-): FeeBreakdown | null {
-  if (!res || typeof res !== 'object') return null
-  const record = res as Record<string, unknown>
-  if (record.totalRelayFee && typeof record.totalRelayFee === 'object') {
-    return parseAcrossFees(res as AcrossSuggestedFees, symbol, decimals)
-  }
-  if (record.fees && typeof record.fees === 'object') {
-    return parseRelayFees(res as RelayQuote)
-  }
-  return null
-}
 
 /**
  * Present the SRA fee as the actual all-in charge, with the provider's
@@ -278,7 +282,6 @@ export function buildFeeBreakdown(
     // Headline fallback for non-stable tokens (e.g. "0.00002 ETH")
     totalText: !feeData.isSponsored && sraUsd === null ? feeToken : null,
     fillTimeSec: provider?.fillTimeSec ?? null,
-    inputUsd: provider?.inputUsd ?? null,
   }
 }
 
