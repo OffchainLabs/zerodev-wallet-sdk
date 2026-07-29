@@ -1,4 +1,4 @@
-import { cn, Icon, Text } from '@zerodev/react-ui'
+import { cn, Icon, Text, Tooltip } from '@zerodev/react-ui'
 import type { ReactNode } from 'react'
 import type { FeeBreakdown, FeeLine } from '../../utils/providerFees'
 import { formatFeePct, formatFeeUsd } from '../../utils/providerFees'
@@ -110,21 +110,27 @@ export function ProviderValue({ provider }: { provider: string }) {
 }
 
 function InfoMark({ info }: { info: string }) {
-  // Wrap in a span so the `title` and `data-zd-tooltip` marker sit on a
-  // hoverable box (browsers ignore `title` on SVG elements). The marker
-  // opts in to the widget's styled tooltip defined in `styles.css`.
+  // Real DOM element so Radix's `Tooltip` (via `asChild`) can attach hover /
+  // focus handlers and wire `aria-describedby` to its content. Focusable so
+  // keyboard users can trigger the tooltip.
   return (
-    <span
-      className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help"
-      data-zd-tooltip=""
-      title={info}
-    >
-      <Icon
-        name="info"
-        className="zd:w-3 zd:h-3 zd:text-greyScale/50"
-        aria-hidden
-      />
-    </span>
+    <Tooltip content={info}>
+      {/* button (not span+tabIndex): natively focusable, so keyboard users
+          can trigger the tooltip; Radix wires aria-describedby to the
+          tooltip copy on hover / focus. `type="button"` keeps it inert
+          inside forms. */}
+      <button
+        type="button"
+        aria-label="More info"
+        className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+      >
+        <Icon
+          name="info"
+          className="zd:w-3 zd:h-3 zd:text-greyScale/50"
+          aria-hidden
+        />
+      </button>
+    </Tooltip>
   )
 }
 
