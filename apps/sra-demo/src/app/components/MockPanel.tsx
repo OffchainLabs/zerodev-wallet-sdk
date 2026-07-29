@@ -8,10 +8,10 @@ import {
   createSimulation,
   installMockFetch,
   loadPastDeposits,
+  type MockErrorMode,
   type MockStage,
   savePastDeposits,
   setMockDeposits,
-  uninstallMockFetch,
 } from '../mock'
 import { MockControls } from './MockControls'
 
@@ -44,15 +44,15 @@ const DOT_COLOR: Record<'idle' | MockStage, string> = {
 export function MockPanel({
   destChainId,
   regenerate,
-  mockRouteError,
-  setMockRouteError,
+  mockErrorMode,
+  setMockErrorMode,
   mockSponsored,
   setMockSponsored,
 }: {
   destChainId: number
   regenerate: () => void
-  mockRouteError: boolean
-  setMockRouteError: (value: boolean) => void
+  mockErrorMode: MockErrorMode
+  setMockErrorMode: (mode: MockErrorMode) => void
   mockSponsored: boolean
   setMockSponsored: (value: boolean) => void
 }) {
@@ -260,8 +260,8 @@ export function MockPanel({
           <MockControls
             destChainId={destChainId}
             regenerate={regenerate}
-            routeError={mockRouteError}
-            setRouteError={setMockRouteError}
+            errorMode={mockErrorMode}
+            setErrorMode={setMockErrorMode}
             sponsored={mockSponsored}
             setSponsored={setMockSponsored}
           />

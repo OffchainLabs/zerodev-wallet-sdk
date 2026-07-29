@@ -5,6 +5,7 @@ import {
   buildMockDeposits,
   clearMockDeposits,
   insertMockDeposits,
+  type MockErrorMode,
   type MockSimulationParams,
   setMockErrorMode,
   setMockSponsored,
@@ -14,7 +15,8 @@ import {
 /**
  * Developer-only controls for exercising the widget against mock data and
  * error states without sending real funds: seed / clear "Past deposits",
- * and preview the "Route not found" and sponsored-fee states.
+ * pick one of the three widget error surfaces to preview, and toggle
+ * sponsored fees.
  *
  * `regenerate` bumps the demo's SRA provider key so any freshly-inserted
  * deposits re-baseline as "past" — the widget only treats deposits seen
@@ -24,8 +26,8 @@ import {
 export function MockControls({
   destChainId,
   regenerate,
-  routeError,
-  setRouteError,
+  errorMode,
+  setErrorMode,
   sponsored,
   setSponsored,
 }: {
@@ -34,8 +36,8 @@ export function MockControls({
   /** Toggle state lifted to the demo root so it survives widget re-mounts.
    * The `set*` handlers also update the mock's module-level state via
    * `setMockErrorMode` / `setMockSponsored`. */
-  routeError: boolean
-  setRouteError: (value: boolean) => void
+  errorMode: MockErrorMode
+  setErrorMode: (mode: MockErrorMode) => void
   sponsored: boolean
   setSponsored: (value: boolean) => void
 }) {
@@ -66,10 +68,12 @@ export function MockControls({
     regenerate()
   }
 
-  const toggleRouteError = () => {
-    const next = !routeError
-    setRouteError(next)
-    setMockErrorMode(next ? 'route-not-found' : 'none')
+  // Radio-style — only one error surface can be active at a time (the mock
+  // branches by mode). Clicking the same option again clears it.
+  const pickErrorMode = (mode: Exclude<MockErrorMode, 'none'>) => {
+    const next = errorMode === mode ? 'none' : mode
+    setErrorMode(next)
+    setMockErrorMode(next)
     regenerate()
   }
 
@@ -118,22 +122,35 @@ export function MockControls({
 
         <section className="flex flex-col gap-2">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[13px] font-semibold">Simulate states</span>
+            <span className="text-[13px] font-semibold">Simulate errors</span>
             <span className="text-xs text-muted">
-              Preview how the widget surfaces errors &amp; perks.
+              Pick one to preview the widget's retry card.
             </span>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 text-[13px]">
-            <input
-              type="checkbox"
-              checked={routeError}
-              onChange={toggleRouteError}
-              className="accent-ink"
-            />
-            <span>
-              <b>Route not found</b> — estimates / bridge quotes fail
-            </span>
-          </label>
+          <ErrorRadio
+            checked={errorMode === 'address-create-failed'}
+            onChange={() => pickErrorMode('address-create-failed')}
+            label="Address creation fails"
+            hint="RPC error on zd_createSmartRoutingAddress"
+          />
+          <ErrorRadio
+            checked={errorMode === 'route-not-found'}
+            onChange={() => pickErrorMode('route-not-found')}
+            label="No routes found"
+            hint="Address created but no bridge quotes"
+          />
+          <ErrorRadio
+            checked={errorMode === 'polling-failed'}
+            onChange={() => pickErrorMode('polling-failed')}
+            label="Deposit polling fails"
+            hint="RPC error on zd_getSmartRoutingAddressStatus"
+          />
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[13px] font-semibold">Simulate perks</span>
+          </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px]">
             <input
               type="checkbox"
@@ -152,6 +169,33 @@ export function MockControls({
         </section>
       </div>
     </details>
+  )
+}
+
+function ErrorRadio({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean
+  onChange: () => void
+  label: string
+  hint: string
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2 text-[13px]">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 accent-ink"
+      />
+      <span className="flex flex-col">
+        <b>{label}</b>
+        <span className="text-xs text-muted">{hint}</span>
+      </span>
+    </label>
   )
 }
 

@@ -10,6 +10,7 @@ import type { Chain } from 'viem'
 import { type Address, isAddress } from 'viem'
 import { arbitrum, base, mainnet, optimism, polygon } from 'viem/chains'
 import { MockPanel } from './components/MockPanel'
+import type { MockErrorMode } from './mock'
 
 // Vitalik's address — a valid, well-known target so the widget renders
 // immediately without the user typing anything.
@@ -39,7 +40,7 @@ export default function Home() {
   // `mockNonce` tears down the whole provider subtree, which used to reset
   // the local toggle state while the mock's module-level state persisted —
   // producing a UI ↔ mock mismatch).
-  const [mockRouteError, setMockRouteError] = useState(false)
+  const [mockErrorMode, setMockErrorMode] = useState<MockErrorMode>('none')
   const [mockSponsored, setMockSponsored] = useState(false)
 
   const [draftRecipient, setDraftRecipient] =
@@ -110,8 +111,8 @@ export default function Home() {
             <MockPanel
               destChainId={targetChainId}
               regenerate={regenerate}
-              mockRouteError={mockRouteError}
-              setMockRouteError={setMockRouteError}
+              mockErrorMode={mockErrorMode}
+              setMockErrorMode={setMockErrorMode}
               mockSponsored={mockSponsored}
               setMockSponsored={setMockSponsored}
             />

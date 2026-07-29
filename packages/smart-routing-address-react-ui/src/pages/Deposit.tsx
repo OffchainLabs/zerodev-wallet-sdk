@@ -15,8 +15,9 @@ import {
   Wrapper,
 } from '@zerodev/react-ui'
 import type { TOKEN_TYPE } from '@zerodev/smart-routing-address'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AddressDisplay } from '../components/AddressDisplay'
+import { ErrorRetryCard } from '../components/ErrorRetryCard'
 import {
   FeeBreakdownRows,
   FeeSummary,
@@ -65,9 +66,10 @@ const FULL_ROW_PANEL_STYLE = {
 }
 
 export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
-  const { config, addressState, recipient, setActiveRoute } =
+  const { config, addressState, recipient, retry, setActiveRoute } =
     useSmartRoutingAddressContext()
   const [feeOpen, setFeeOpen] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   const success = addressState.status === 'success' ? addressState : null
   const address = success?.address
@@ -120,7 +122,12 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
     )
   }, [srcTokens, selectedTokenType, selectedChainId])
 
-  const { deposits, hasLoaded } = useDepositStatus({
+  const {
+    deposits,
+    hasLoaded,
+    error: depositsError,
+    refetch: refetchDeposits,
+  } = useDepositStatus({
     address,
     pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
@@ -229,6 +236,43 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
 
   const pickerDisabled = uniqueTokens.length === 0
   const sourceChainName = source?.chain.name
+
+  // Error surfaces the retry card handles. Only one is shown at a time,
+  // matched top-down in severity order: (1) address creation itself failed,
+  // (2) creation succeeded but no routes came back, (3) deposit polling is
+  // erroring after we already have an address. `hasLoaded` gates the polling
+  // case so first-load latency isn't mistaken for an error.
+  const addressError = addressState.status === 'error'
+  const noRoutesError = !!success && srcTokens.length === 0
+  const pollingError = !!address && !!depositsError && hasLoaded
+  const errorMessage = addressError
+    ? 'Failed to create deposit address...'
+    : noRoutesError
+      ? 'No routes found, try one more time...'
+      : pollingError
+        ? 'Failed to load deposits, try again...'
+        : null
+
+  const handleRetry = useCallback(async () => {
+    if (retrying) return
+    setRetrying(true)
+    try {
+      if (pollingError && !addressError && !noRoutesError) {
+        refetchDeposits()
+      } else {
+        await retry()
+      }
+    } finally {
+      setRetrying(false)
+    }
+  }, [
+    retrying,
+    pollingError,
+    addressError,
+    noRoutesError,
+    refetchDeposits,
+    retry,
+  ])
 
   return (
     <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
@@ -430,6 +474,13 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
                 address={address}
                 onQrClick={onQrClick}
               />
+              {errorMessage && (
+                <ErrorRetryCard
+                  message={errorMessage}
+                  onRetry={handleRetry}
+                  busy={retrying}
+                />
+              )}
               <DataRow
                 label="Min deposit"
                 value={
