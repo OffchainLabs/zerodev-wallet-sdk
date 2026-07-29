@@ -19,6 +19,9 @@ vi.mock('./Google', () => ({
 vi.mock('./Email', () => ({
   SignUpEmail: () => <div data-testid="unit-email" />,
 }))
+vi.mock('./MoreWallets', () => ({
+  SignUpMoreWallets: () => <div data-testid="unit-more-wallets" />,
+}))
 
 vi.mock('../../components/BlobAnimation', () => ({
   BlobAnimation: () => null,
@@ -59,10 +62,12 @@ describe('SignUp.Default', () => {
     const divider = screen.getByText('or')
     const google = screen.getByTestId('unit-google')
     const email = screen.getByTestId('unit-email')
+    const moreWallets = screen.getByTestId('unit-more-wallets')
 
     expect(isBefore(passkey, divider)).toBe(true)
     expect(isBefore(divider, google)).toBe(true)
     expect(isBefore(google, email)).toBe(true)
+    expect(isBefore(email, moreWallets)).toBe(true)
   })
 
   it('forwards consent-gate props to the root like a hand-composed <SignUp>', () => {

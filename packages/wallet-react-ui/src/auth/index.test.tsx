@@ -36,12 +36,6 @@ vi.mock('./pages/ErrorScreen', () => ({
   ErrorScreen: () => <div data-testid="error">Error Page</div>,
 }))
 
-vi.mock('./pages/WalletSelection', () => ({
-  WalletSelection: () => (
-    <div data-testid="wallet-selection">WalletSelection Page</div>
-  ),
-}))
-
 vi.mock('../shared/components/StatusScreen', () => ({
   StatusScreen: ({
     title,
@@ -164,13 +158,6 @@ describe('AuthFlow', () => {
     expect(screen.getByTestId('status-content').textContent).toBe(
       'Please authenticate with your passkey.',
     )
-  })
-
-  it('renders wallet-selection state', () => {
-    mockStep = 'wallet-selection'
-    render(<AuthFlow />)
-
-    expect(screen.getByTestId('wallet-selection')).toBeDefined()
   })
 
   it('renders authenticated state as null', () => {
