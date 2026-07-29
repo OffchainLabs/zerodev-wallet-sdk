@@ -64,6 +64,16 @@ export {
   type TokenListItemIconVariant,
   type TokenListItemProps,
 } from './components/TokenListItem'
+export {
+  Tooltip,
+  TooltipContent,
+  type TooltipContentProps,
+  TooltipPortal,
+  type TooltipProps,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from './components/Tooltip'
 export { TopNav, type TopNavProps } from './components/TopNav'
 export {
   WrappedPressable,
