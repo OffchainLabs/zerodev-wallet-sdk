@@ -53,14 +53,20 @@ export function useDepositStatus({
     }
 
     let cancelled = false
+    // Each `poll()` call bumps `gen`; only the latest generation may write
+    // to state. Prevents a stale interval-driven response from clobbering a
+    // fresh `refetch()` (or vice-versa) when the two overlap in flight.
+    let gen = 0
 
     const poll = async () => {
+      gen += 1
+      const requestGen = gen
       try {
         const result = await getSmartRoutingAddressStatus({
           smartRoutingAddress: address,
           ...(baseUrl && { config: { baseUrl } }),
         })
-        if (cancelled) return
+        if (cancelled || requestGen !== gen) return
         setState({
           deposits: result.deposits,
           totalCount: result.totalCount,
@@ -69,7 +75,7 @@ export function useDepositStatus({
           error: null,
         })
       } catch (error) {
-        if (cancelled) return
+        if (cancelled || requestGen !== gen) return
         setState((previous) => ({
           ...previous,
           isLoading: false,
