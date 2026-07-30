@@ -115,13 +115,9 @@ export function Screen({
           </div>
           {footer && (
             <div
-              // Flex sibling (not absolute) so the scroll container above
-              // physically shrinks to fit — scrolled content stops at the
-              // footer's top edge instead of sliding underneath.
-              //
-              // Edge-to-edge via inline negative margins that back out
-              // Screen's px-4; internal px-4 keeps the footer content at the
-              // original 16px inset. Blurred to match TopNav visually.
+              // Flex sibling so scrolled content stops at the footer's top
+              // edge. Negative margins escape Screen's px-4; internal px-4
+              // keeps the content at the 16px inset.
               className="zd:flex zd:shrink-0 zd:items-center zd:justify-center zd:px-4 zd:pb-4 zd:backdrop-blur-[15px]"
               style={{
                 marginLeft: 'calc(-4 * var(--zd-spacing))',

@@ -34,14 +34,11 @@ export function TopNav({
   return (
     <div
       className={cn(
-        // No `right-0` / `w-full` — those would stretch to the parent's
-        // padded box. Instead we anchor at `left` = -16px (backing out
-        // Screen's px-4) and set an explicit width of `100% + 32px` so the
-        // bar spans the whole card. Internal px-4 keeps the icons at their
-        // original 16px inset.
+        // Anchored at left=-16 with width=100%+32 so the bar spans the
+        // whole card (backs out Screen's px-4); internal px-4 keeps the
+        // icons at the 16px inset.
         'zd:absolute zd:top-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
-        // Opaque frosted bg so scrolled content is masked as it passes under
-        // the nav — without this the title / icons overlap with content.
+        // Frosted bg masks scrolled content passing under the nav.
         'zd:backdrop-blur-[15px]',
         className,
       )}

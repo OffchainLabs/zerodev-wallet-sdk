@@ -387,9 +387,6 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
                         flashKey={breakdown.provider}
                       >
                         <Tooltip content={`Quoted via ${breakdown.provider}`}>
-                          {/* button (not img alone) so Radix Tooltip's asChild
-                              trigger has a natively focusable element for
-                              keyboard hover; icon-only visual. */}
                           <button
                             type="button"
                             aria-label={`Quoted via ${breakdown.provider}`}

@@ -309,10 +309,6 @@ function ProgressStep({
         </Text>
         {info && (
           <Tooltip content={info}>
-            {/* button (not span+tabIndex): natively focusable so keyboard
-                users can trigger the Radix tooltip. `type="button"` keeps it
-                inert inside forms; `bg-transparent` because default button
-                styling shouldn't visually intrude on the row layout. */}
             <button
               type="button"
               aria-label="More info"
