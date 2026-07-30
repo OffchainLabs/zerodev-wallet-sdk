@@ -86,15 +86,15 @@ function TokenListItemSkeleton({
       )}
     >
       <div className="zd:flex zd:flex-row zd:items-center zd:gap-2 zd:min-w-0">
-        <div className="zd:w-11 zd:h-11 zd:shrink-0 zd:rounded-2xl zd:bg-offWhite/40 zd:animate-pulse" />
+        <div className="zd:w-11 zd:h-11 zd:shrink-0 zd:rounded-2xl zd:bg-greyScale/15 zd:animate-skel-pulse" />
         <div className="zd:flex zd:flex-col zd:gap-2">
-          <div className="zd:h-3 zd:w-14 zd:rounded-md zd:bg-offWhite/40 zd:animate-pulse" />
-          <div className="zd:h-3 zd:w-10 zd:rounded-md zd:bg-offWhite/40 zd:animate-pulse" />
+          <div className="zd:h-3 zd:w-14 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
+          <div className="zd:h-3 zd:w-10 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
         </div>
       </div>
       <div className="zd:flex zd:flex-col zd:items-end zd:gap-2 zd:shrink-0">
-        <div className="zd:h-3 zd:w-12 zd:rounded-md zd:bg-offWhite/40 zd:animate-pulse" />
-        <div className="zd:h-3 zd:w-10 zd:rounded-md zd:bg-offWhite/40 zd:animate-pulse" />
+        <div className="zd:h-3 zd:w-12 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
+        <div className="zd:h-3 zd:w-10 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
       </div>
     </div>
   )

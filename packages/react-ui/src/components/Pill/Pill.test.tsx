@@ -68,4 +68,10 @@ describe('Pill', () => {
     render(<Pill label="Arbitrum One" onClick={onClick} disabled />)
     expect(screen.queryByRole('button')).toBeNull()
   })
+
+  it('renders a skeleton and no content when loading', () => {
+    render(<Pill label="USDC" loading onClick={() => {}} />)
+    expect(screen.queryByText('USDC')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
 })

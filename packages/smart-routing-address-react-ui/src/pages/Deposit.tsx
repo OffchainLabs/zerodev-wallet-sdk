@@ -15,12 +15,21 @@ import {
   Wrapper,
 } from '@zerodev/react-ui'
 import type { TOKEN_TYPE } from '@zerodev/smart-routing-address'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AddressDisplay } from '../components/AddressDisplay'
+import { ErrorRetryCard } from '../components/ErrorRetryCard'
+import {
+  FeeBreakdownRows,
+  FeeSummary,
+  LiveValue,
+} from '../components/FeeBreakdown'
+import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { LoadingCard } from '../components/LoadingCard'
+import { PendingDeposits } from '../components/PendingDeposits'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { useNewDeposits } from '../hooks/useNewDeposits'
+import { useProviderFees } from '../hooks/useProviderFees'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { SourceToken } from '../types'
 import {
@@ -32,15 +41,18 @@ import {
   resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
-import { findFeeData } from '../utils/fees'
+import { findFeeData, resolveTokenAddress } from '../utils/fees'
 import {
   formatDisplayAmount,
   formatDuration,
   formatSlippage,
 } from '../utils/format'
+import { buildFeeBreakdown } from '../utils/providerFees'
 
 export interface DepositProps {
   onQrClick?: () => void
+  /** Navigate to the "Past deposits" view. When omitted, the row is hidden. */
+  onViewPastDeposits?: () => void
 }
 
 const SUBTITLE =
@@ -53,8 +65,11 @@ const FULL_ROW_PANEL_STYLE = {
   width: 'calc(var(--radix-select-trigger-width) * 2 + 4px)',
 }
 
-export function Deposit({ onQrClick }: DepositProps) {
-  const { config, addressState } = useSmartRoutingAddressContext()
+export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
+  const { config, addressState, recipient, retry, setActiveRoute } =
+    useSmartRoutingAddressContext()
+  const [feeOpen, setFeeOpen] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   const success = addressState.status === 'success' ? addressState : null
   const address = success?.address
@@ -107,15 +122,21 @@ export function Deposit({ onQrClick }: DepositProps) {
     )
   }, [srcTokens, selectedTokenType, selectedChainId])
 
-  const { deposits, hasLoaded } = useDepositStatus({
+  const {
+    deposits,
+    hasLoaded,
+    error: depositsError,
+    refetch: refetchDeposits,
+  } = useDepositStatus({
     address,
     pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
   })
-  useNewDeposits(deposits, hasLoaded)
+  const newDeposits = useNewDeposits(deposits, hasLoaded)
+  const pastDepositsCount = deposits.length - newDeposits.length
 
   const destChain = resolveDestChain(config)
-  const destSymbol = source ? getDestTokenSymbol(config, source) : undefined
+  const destSymbol = getDestTokenSymbol(config)
   const sourceSymbol = source ? getSourceTokenSymbol(source) : undefined
   const sourceTokenLogo = sourceSymbol
     ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
@@ -131,6 +152,43 @@ export function Deposit({ onQrClick }: DepositProps) {
   const fillTime = formatDuration(
     resolveFillTimeSeconds(config, source?.chain.id ?? destChain.id),
   )
+
+  // Live bridge quotes from Across / Relay, keyed off the selected route.
+  // Enriches the SRA fee estimate with the itemised legs it doesn't expose.
+  const providerFees = useProviderFees(source, destChain, feeData, recipient)
+  const breakdown =
+    feeData && sourceSymbol
+      ? buildFeeBreakdown(feeData, sourceSymbol, providerFees.fees)
+      : null
+
+  // Publish the current picker selection so hosts (e.g. a demo "send" panel)
+  // can mirror the widget's route. Cleared when the picker is empty so
+  // downstream mocks show their fallback instead of stale state.
+  useEffect(() => {
+    if (!source || !feeData || !sourceSymbol) {
+      setActiveRoute(null)
+      return
+    }
+    const token = resolveTokenAddress(source.tokenType, source.chain.id)
+    if (!token) {
+      setActiveRoute(null)
+      return
+    }
+    setActiveRoute({
+      sourceChainId: source.chain.id,
+      sourceChainName: source.chain.name,
+      token,
+      symbol: sourceSymbol,
+      decimals: feeData.decimal,
+      // `feeData.fee` is a `Hex` string from the SDK — normalise to a
+      // decimal atomic-units string here so `activeRoute.feeAmount` has
+      // one consistent representation across every write path (see
+      // `ActiveRoute.feeAmount` — the demo's fallback uses decimals too).
+      // Hosts using `BigInt()` work either way, but `Number()` /
+      // `parseInt(x, 10)` would silently misread the hex form.
+      feeAmount: BigInt(feeData.fee).toString(),
+    })
+  }, [source, feeData, sourceSymbol, setActiveRoute])
 
   // Deduped list of routable token types — the token picker's rows. Chain
   // count per token drives the subtitle. Kept as SourceToken (not a bespoke
@@ -164,18 +222,57 @@ export function Deposit({ onQrClick }: DepositProps) {
   const slippage =
     typeof config.slippage === 'number' ? formatSlippage(config.slippage) : '—'
 
-  const estimatedFee =
-    feeData && sourceSymbol
-      ? `${formatDisplayAmount(feeData.fee, feeData.decimal, 'up')} ${sourceSymbol}`
-      : '—'
-
   const minDepositAmount =
     feeData && sourceSymbol
       ? `${formatDisplayAmount(feeData.minDeposit, feeData.decimal, 'up')} ${sourceSymbol}`
       : null
 
+  // Flash key re-triggers the LiveValue animation on the estimated-fee row
+  // when the underlying quote changes; combining every meaningful component
+  // catches all updates in one dependency.
+  const feeFlashKey = breakdown
+    ? `${breakdown.totalText ?? ''}|${breakdown.ratePct ?? ''}|${breakdown.flatUsd ?? ''}`
+    : ''
+
   const pickerDisabled = uniqueTokens.length === 0
   const sourceChainName = source?.chain.name
+
+  // Error surfaces the retry card handles. Only one is shown at a time,
+  // matched top-down in severity order: (1) address creation itself failed,
+  // (2) creation succeeded but no routes came back, (3) deposit polling is
+  // erroring after we already have an address. `hasLoaded` gates the polling
+  // case so first-load latency isn't mistaken for an error.
+  const addressError = addressState.status === 'error'
+  const noRoutesError = !!success && srcTokens.length === 0
+  const pollingError = !!address && !!depositsError && hasLoaded
+  const errorMessage = addressError
+    ? 'Failed to create deposit address...'
+    : noRoutesError
+      ? 'No routes found, try one more time...'
+      : pollingError
+        ? 'Failed to load deposits, try again...'
+        : null
+
+  const handleRetry = useCallback(async () => {
+    if (retrying) return
+    setRetrying(true)
+    try {
+      if (pollingError && !addressError && !noRoutesError) {
+        refetchDeposits()
+      } else {
+        await retry()
+      }
+    } finally {
+      setRetrying(false)
+    }
+  }, [
+    retrying,
+    pollingError,
+    addressError,
+    noRoutesError,
+    refetchDeposits,
+    retry,
+  ])
 
   return (
     <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
@@ -200,9 +297,10 @@ export function Deposit({ onQrClick }: DepositProps) {
                   >
                     <SelectTrigger asChild>
                       <Pill
-                        label={sourceSymbol ?? '—'}
+                        label={sourceSymbol ?? ''}
                         {...(sourceTokenLogo && { logoUri: sourceTokenLogo })}
                         disabled={pickerDisabled}
+                        loading={!sourceSymbol}
                         trailingIcon={!pickerDisabled && <SelectIcon />}
                       />
                     </SelectTrigger>
@@ -246,9 +344,10 @@ export function Deposit({ onQrClick }: DepositProps) {
                   >
                     <SelectTrigger asChild>
                       <Pill
-                        label={sourceChainName ?? '—'}
+                        label={sourceChainName ?? ''}
                         {...(sourceChainLogo && { logoUri: sourceChainLogo })}
                         disabled={pickerDisabled}
+                        loading={!sourceChainName}
                         trailingIcon={!pickerDisabled && <SelectIcon />}
                       />
                     </SelectTrigger>
@@ -275,18 +374,67 @@ export function Deposit({ onQrClick }: DepositProps) {
                 }
               />
               <div className="zd:flex zd:w-full zd:flex-col zd:items-start zd:gap-2 zd:px-2 zd:py-4">
-                <DataRow label="Max slippage" value={slippage} info />
                 <DataRow
-                  label="Estimated fee"
-                  value={estimatedFee}
+                  label="Max slippage"
+                  value={slippage}
                   info
+                  infoTooltip={FEE_INFO.maxSlippage}
                   trailing={
-                    <Icon
-                      name="chevronDown"
-                      className="zd:w-3.5 zd:h-3.5 zd:text-greyScale"
-                    />
+                    breakdown?.provider ? (
+                      <LiveValue
+                        loading={providerFees.loading}
+                        flashKey={breakdown.provider}
+                      >
+                        <span
+                          className="zd:inline-flex zd:items-center zd:rounded-full zd:bg-greyScale/10 zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
+                          title={`Quoted via ${breakdown.provider}`}
+                        >
+                          {breakdown.provider}
+                        </span>
+                      </LiveValue>
+                    ) : null
                   }
                 />
+                <DataRow
+                  label="Estimated fee"
+                  value={
+                    breakdown ? (
+                      <LiveValue
+                        loading={providerFees.loading}
+                        flashKey={feeFlashKey}
+                      >
+                        <FeeSummary breakdown={breakdown} />
+                      </LiveValue>
+                    ) : (
+                      // Match Min deposit's skeleton so both loading
+                      // affordances share one visual language.
+                      <div className="zd:h-3.5 zd:w-20 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse" />
+                    )
+                  }
+                  info
+                  infoTooltip={FEE_INFO.estimatedFee}
+                  trailing={
+                    breakdown ? (
+                      <button
+                        type="button"
+                        onClick={() => setFeeOpen((prev) => !prev)}
+                        aria-expanded={feeOpen}
+                        aria-label={
+                          feeOpen ? 'Hide fee details' : 'Show fee details'
+                        }
+                        className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-pointer"
+                      >
+                        <Icon
+                          name={feeOpen ? 'chevronUp' : 'chevronDown'}
+                          className="zd:w-3.5 zd:h-3.5 zd:text-greyScale"
+                        />
+                      </button>
+                    ) : null
+                  }
+                />
+                {feeOpen && breakdown && (
+                  <FeeBreakdownRows breakdown={breakdown} />
+                )}
               </div>
             </Wrapper>
           }
@@ -299,9 +447,10 @@ export function Deposit({ onQrClick }: DepositProps) {
               <PillRow
                 left={
                   <Pill
-                    label={destSymbol ?? '—'}
+                    label={destSymbol ?? ''}
                     {...(destTokenLogo && { logoUri: destTokenLogo })}
                     disabled
+                    loading={!destSymbol}
                   />
                 }
                 right={
@@ -313,32 +462,104 @@ export function Deposit({ onQrClick }: DepositProps) {
                 }
               />
               <div className="zd:flex zd:w-full zd:flex-col zd:items-start zd:px-2">
-                <DataRow label="Ready in" value={fillTime} info />
+                <DataRow
+                  label="Ready in"
+                  value={fillTime}
+                  info
+                  infoTooltip={FEE_INFO.readyIn}
+                />
               </div>
               <AddressDisplay
                 status={addressState.status}
                 address={address}
                 onQrClick={onQrClick}
               />
-              {minDepositAmount && (
-                <DataRow
-                  label="Minimum deposit"
-                  value={minDepositAmount}
-                  info
-                  variant="warning"
+              {errorMessage && (
+                <ErrorRetryCard
+                  message={errorMessage}
+                  onRetry={handleRetry}
+                  busy={retrying}
                 />
               )}
+              <DataRow
+                label="Min deposit"
+                value={
+                  minDepositAmount ?? (
+                    // Match PillSkeleton's greyish pulse so all loading
+                    // affordances in this card share one visual language.
+                    // `<output>` gets an implicit `role="status"` — biome's
+                    // `useSemanticElements` prefers it over `<div role>`.
+                    // `aria-busy` + `aria-label` so screen readers hear
+                    // "loading" instead of landing on an empty region.
+                    <output
+                      aria-busy="true"
+                      aria-label="Loading minimum deposit"
+                      className="zd:block zd:h-3.5 zd:w-20 zd:rounded-md zd:bg-greyScale/15 zd:animate-skel-pulse"
+                    />
+                  )
+                }
+                info
+                infoTooltip={FEE_INFO.minDeposit}
+                variant="warning"
+              />
             </Wrapper>
           }
         />
 
-        <LoadingCard
-          text={
-            source
-              ? `Watching for your deposit on ${source.chain.name}…`
-              : 'Watching for your deposit…'
-          }
-        />
+        {newDeposits.length > 0 ? (
+          <PendingDeposits
+            deposits={newDeposits}
+            estimatedFees={estimatedFees}
+            config={config}
+          />
+        ) : (
+          <LoadingCard
+            text={
+              source
+                ? `Watching for your deposit on ${source.chain.name}…`
+                : 'Watching for your deposit…'
+            }
+          />
+        )}
+
+        {pastDepositsCount > 0 &&
+          (onViewPastDeposits ? (
+            <button
+              type="button"
+              onClick={onViewPastDeposits}
+              className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4 zd:cursor-pointer"
+            >
+              <Icon
+                name="clock"
+                className="zd:size-4 zd:text-greyScale/50"
+                aria-hidden
+              />
+              <Text className="zd:flex-1 zd:text-left zd:text-body1">
+                Past deposits ({pastDepositsCount})
+              </Text>
+              <Icon
+                name="chevronRight"
+                className="zd:size-4 zd:text-greyScale/50"
+                aria-hidden
+              />
+            </button>
+          ) : (
+            <div className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4">
+              <Icon
+                name="clock"
+                className="zd:size-4 zd:text-greyScale/50"
+                aria-hidden
+              />
+              <Text className="zd:flex-1 zd:text-left zd:text-body1">
+                Past deposits ({pastDepositsCount})
+              </Text>
+              <Icon
+                name="chevronRight"
+                className="zd:size-4 zd:text-greyScale/50"
+                aria-hidden
+              />
+            </div>
+          ))}
       </div>
 
       <PoweredBy className="zd:justify-center" />

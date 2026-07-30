@@ -92,18 +92,15 @@ export interface AddressDisplayProps {
 
 /**
  * State-driven wrapper around `AddressDisplayUI`. Picks the right variant
- * (nothing / loading / ready / error) based on the SRA address-generation
- * status so the parent page just passes the raw state through.
+ * (loading / ready) based on the SRA address-generation status; the parent
+ * page renders `ErrorRetryCard` in the error case instead of this component.
  */
 export function AddressDisplay({
   status,
   address,
   onQrClick,
 }: AddressDisplayProps) {
-  if (status === 'idle') return null
-  if (status === 'error') {
-    return <AddressDisplayUI loadingText="Failed to generate address" />
-  }
+  if (status === 'error') return null
   if (status === 'success' && address !== undefined) {
     return <AddressDisplayUI address={address} onQrClick={onQrClick} />
   }
