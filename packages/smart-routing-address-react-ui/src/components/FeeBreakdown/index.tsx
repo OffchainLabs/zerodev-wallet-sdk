@@ -1,5 +1,6 @@
 import { cn, Icon, Text, Tooltip } from '@zerodev/react-ui'
 import type { ReactNode } from 'react'
+import { PROVIDER_ICONS } from '../../iconAssets'
 import type { FeeBreakdown, FeeLine } from '../../utils/providerFees'
 import { formatFeePct, formatFeeUsd } from '../../utils/providerFees'
 import { FEE_INFO } from './feeInfo'
@@ -90,13 +91,28 @@ export function FeeSummary({ breakdown }: { breakdown: FeeBreakdown }) {
   )
 }
 
-/** Provider name, linked to the provider's site when known */
+/** Provider name + brand icon, linked to the provider's site when known */
 export function ProviderValue({ provider }: { provider: string }) {
   const url = PROVIDER_URLS[provider]
-  const label = (
-    <Text className="zd:whitespace-nowrap zd:font-medium">{provider}</Text>
+  const iconUrl = PROVIDER_ICONS[provider]
+  const inner = (
+    <>
+      <Text className="zd:whitespace-nowrap zd:font-medium">{provider}</Text>
+      {iconUrl && (
+        <img
+          src={iconUrl}
+          alt=""
+          aria-hidden
+          className="zd:size-3.5 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
+        />
+      )}
+    </>
   )
-  if (!url) return label
+  if (!url) {
+    return (
+      <span className="zd:inline-flex zd:items-center zd:gap-1">{inner}</span>
+    )
+  }
   return (
     <a
       className="zd:inline-flex zd:items-center zd:gap-1 zd:text-greyScale zd:hover:underline"
@@ -104,7 +120,7 @@ export function ProviderValue({ provider }: { provider: string }) {
       target="_blank"
       rel="noreferrer"
     >
-      {label}
+      {inner}
     </a>
   )
 }

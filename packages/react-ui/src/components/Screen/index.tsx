@@ -14,9 +14,7 @@ import {
 } from './MultiRadialBackground'
 
 const CONTENT_PADDING_TOP = TOP_NAV_HEIGHT + 16
-/** Reserved footer band height (52px): matches the TopNav's visible chrome
- * so the pinned top and bottom bands feel balanced. */
-const FOOTER_HEIGHT = 40
+const FOOTER_HEIGHT = 56
 
 // Container for card-scoped overlays (bottom sheets, dialogs, etc.). Consumers
 // portal into this element via `Radix Dialog.Portal container={...}` so the
@@ -128,7 +126,7 @@ export function Screen({
               style={{
                 marginLeft: 'calc(-4 * var(--zd-spacing))',
                 marginRight: 'calc(-4 * var(--zd-spacing))',
-                height: `calc(${(FOOTER_HEIGHT + 16) / 4} * var(--zd-spacing))`,
+                height: `calc(${FOOTER_HEIGHT / 4} * var(--zd-spacing))`,
               }}
             >
               {footer}

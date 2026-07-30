@@ -6,6 +6,7 @@ import {
   InfoCard,
   Section,
   Text,
+  Tooltip,
 } from '@zerodev/react-ui'
 import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
@@ -307,17 +308,23 @@ function ProgressStep({
           {label}
         </Text>
         {info && (
-          <span
-            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help"
-            data-zd-tooltip=""
-            title={info}
-          >
-            <Icon
-              name="info"
-              className="zd:w-3 zd:h-3 zd:text-greyScale/50"
-              aria-hidden
-            />
-          </span>
+          <Tooltip content={info}>
+            {/* button (not span+tabIndex): natively focusable so keyboard
+                users can trigger the Radix tooltip. `type="button"` keeps it
+                inert inside forms; `bg-transparent` because default button
+                styling shouldn't visually intrude on the row layout. */}
+            <button
+              type="button"
+              aria-label="More info"
+              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+            >
+              <Icon
+                name="info"
+                className="zd:w-3 zd:h-3 zd:text-greyScale/50"
+                aria-hidden
+              />
+            </button>
+          </Tooltip>
         )}
       </div>
       <div className="zd:flex zd:shrink-0 zd:items-center">{right}</div>
