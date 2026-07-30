@@ -174,40 +174,38 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Build and start demo apps
-        working-directory: apps/zerodev-signer-demo
+      - name: Build and start QA lab
+        working-directory: apps/qa-lab-testing
         run: |
-          NEXT_DIST_DIR=.next-e2e-magic-link pnpm build
-          NEXT_DIST_DIR=.next-e2e-magic-link pnpm start --port 3000 &
-          NEXT_DIST_DIR=.next-e2e-otp NEXT_PUBLIC_ZERODEV_PROJECT_ID="$ZD_OTP_PROJECT_ID" pnpm build
-          NEXT_DIST_DIR=.next-e2e-otp NEXT_PUBLIC_ZERODEV_PROJECT_ID="$ZD_OTP_PROJECT_ID" pnpm start --port 3001 &
+          pnpm build
+          pnpm start &
         env:
-          NEXT_PUBLIC_ZERODEV_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
-          ZD_OTP_PROJECT_ID: ${{ secrets.ZD_OTP_PROJECT_ID }}
+          # Both ids are inlined so a URL param can select the flavor per test,
+          # instead of building the app twice as the signer demo does.
+          NEXT_PUBLIC_ZD_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
+          NEXT_PUBLIC_ZD_OTP_PROJECT_ID: ${{ secrets.ZD_OTP_PROJECT_ID }}
           NEXT_PUBLIC_KMS_PROXY_BASE_URL: https://kms.staging.zerodev.app/api/v1
           # Pin the bundler/paymaster to staging so the AA stack matches the
           # staging KMS above (the SDK default host is prod).
           NEXT_PUBLIC_ZERODEV_AA_HOST: https://staging-meta-aa-provider.onrender.com
 
-      - name: Wait for demo apps
+      - name: Wait for QA lab
         run: |
           for i in $(seq 1 15); do
-            if curl -sf http://localhost:3000 > /dev/null 2>&1 && curl -sf http://localhost:3001 > /dev/null 2>&1; then
-              echo "Both demo apps are ready"
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "QA lab is ready"
               exit 0
             fi
-            echo "Waiting for demo apps... ($i/15)"
+            echo "Waiting for QA lab... ($i/15)"
             sleep 2
           done
-          echo "A demo app failed to start"
+          echo "QA lab failed to start"
           exit 1
 
       - name: Run E2E tests
         run: pnpm exec playwright test --config e2e/playwright.config.ts
         env:
-          DEMO_APP_URL: http://localhost:3000
-          OTP_DEMO_APP_URL: http://localhost:3001
-          ZD_OTP_PROJECT_ID: ${{ secrets.ZD_OTP_PROJECT_ID }}
+          LAB_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
