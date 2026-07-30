@@ -1,4 +1,4 @@
-import { Screen, TopNav } from '@zerodev/react-ui'
+import { PoweredBy, Screen, TopNav } from '@zerodev/react-ui'
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { type ReactNode, useEffect, useState } from 'react'
 import type { Address } from 'viem'
@@ -143,6 +143,7 @@ export function SmartRoutingAddress({
           onRightButtonClick={onClose}
         />
       }
+      footer={<PoweredBy />}
     >
       {renderStep(step, {
         onQrClick: handleQrClick,

@@ -42,7 +42,7 @@ export function TopNav({
         'zd:absolute zd:top-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
         // Opaque frosted bg so scrolled content is masked as it passes under
         // the nav — without this the title / icons overlap with content.
-        'zd:bg-offWhite/85 zd:backdrop-blur-[15px]',
+        'zd:backdrop-blur-[15px]',
         className,
       )}
       // Scale via --zd-spacing (the 4px base) like every spacing utility, so

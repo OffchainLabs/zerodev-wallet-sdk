@@ -4,7 +4,6 @@ import {
   DataRow,
   Icon,
   InfoCard,
-  PoweredBy,
   Section,
   Text,
 } from '@zerodev/react-ui'
@@ -248,8 +247,6 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
           />
         )}
       </Section>
-
-      <PoweredBy className="zd:mt-auto zd:justify-center zd:pt-2" />
     </div>
   )
 }

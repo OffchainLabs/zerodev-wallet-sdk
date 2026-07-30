@@ -14,6 +14,9 @@ import {
 } from './MultiRadialBackground'
 
 const CONTENT_PADDING_TOP = TOP_NAV_HEIGHT + 16
+/** Reserved footer band height (52px): matches the TopNav's visible chrome
+ * so the pinned top and bottom bands feel balanced. */
+const FOOTER_HEIGHT = 40
 
 // Container for card-scoped overlays (bottom sheets, dialogs, etc.). Consumers
 // portal into this element via `Radix Dialog.Portal container={...}` so the
@@ -35,6 +38,7 @@ export function Screen({
   size = 'lg',
   style,
   topNav,
+  footer,
   overlay,
 }: {
   children: ReactNode
@@ -43,6 +47,9 @@ export function Screen({
   size?: 'sm' | 'md' | 'lg' | undefined
   style?: CSSProperties | undefined
   topNav?: ReactNode
+  /** Pinned bottom band — mirrors `topNav`. Same edge-to-edge, blurred
+   * background treatment; scrolled content passes behind it. */
+  footer?: ReactNode
   overlay?: ReactNode
 }) {
   // Overlay container ref goes into state so children re-render once the DOM
@@ -108,6 +115,25 @@ export function Screen({
               {children}
             </ScreenOverlayContext.Provider>
           </div>
+          {footer && (
+            <div
+              // Flex sibling (not absolute) so the scroll container above
+              // physically shrinks to fit — scrolled content stops at the
+              // footer's top edge instead of sliding underneath.
+              //
+              // Edge-to-edge via inline negative margins that back out
+              // Screen's px-4; internal px-4 keeps the footer content at the
+              // original 16px inset. Blurred to match TopNav visually.
+              className="zd:flex zd:shrink-0 zd:items-center zd:justify-center zd:px-4 zd:pb-4 zd:backdrop-blur-[15px]"
+              style={{
+                marginLeft: 'calc(-4 * var(--zd-spacing))',
+                marginRight: 'calc(-4 * var(--zd-spacing))',
+                height: `calc(${(FOOTER_HEIGHT + 16) / 4} * var(--zd-spacing))`,
+              }}
+            >
+              {footer}
+            </div>
+          )}
         </div>
       </div>
       {/* Overlay is a sibling of the inner card, not a child — so it escapes

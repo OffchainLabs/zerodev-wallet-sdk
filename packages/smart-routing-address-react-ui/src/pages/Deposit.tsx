@@ -4,7 +4,6 @@ import {
   DataRow,
   Icon,
   Pill,
-  PoweredBy,
   Select,
   SelectContent,
   SelectIcon,
@@ -561,8 +560,6 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
             </div>
           ))}
       </div>
-
-      <PoweredBy className="zd:justify-center" />
     </div>
   )
 }
