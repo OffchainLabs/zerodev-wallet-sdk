@@ -1,11 +1,5 @@
 # @zerodev/wallet-core
 
-## 0.0.3
-
-### Patch Changes
-
-- 8769b2c: fix: register passkeys as discoverable (resident) credentials so passkey login can find them. register() now sets authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' }, matching the username-less login flow (empty allowCredentials).
-
 ## 0.0.2
 
 ### Patch Changes
