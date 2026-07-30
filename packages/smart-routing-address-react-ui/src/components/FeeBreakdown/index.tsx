@@ -153,9 +153,7 @@ function InfoMark({ info }: { info: string }) {
 function LineValue({ line }: { line: FeeLine }) {
   if (line.sponsored) {
     return (
-      <Text className="zd:whitespace-nowrap zd:font-medium zd:text-positive">
-        Sponsored
-      </Text>
+      <Text className="zd:whitespace-nowrap zd:font-medium">Sponsored</Text>
     )
   }
   // Rates are amount-invariant → show percent; flat costs → show USD; fall
