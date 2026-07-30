@@ -40,6 +40,7 @@ function renderStep(
         <Deposit
           {...(onQrClick && { onQrClick })}
           {...(onViewPastDeposits && { onViewPastDeposits })}
+          {...(onSelectDeposit && { onSelectDeposit })}
         />
       )
     case 'past':

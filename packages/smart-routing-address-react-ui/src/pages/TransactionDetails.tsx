@@ -12,7 +12,8 @@ import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
-import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
+import { useProviderFees } from '../hooks/useProviderFees'
+import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositWithTimestamp } from '../types'
 import { getTxUrl } from '../utils/chains'
 import {
@@ -53,7 +54,7 @@ function formatDate(iso?: string): string | null {
  * route metadata, and a "Transaction Progress" `Section` with the step trail.
  */
 export function TransactionDetails({ deposit }: TransactionDetailsProps) {
-  const { config, addressState } = useSmartRoutingAddressContext()
+  const { config, addressState, recipient } = useSmartRoutingAddressContext()
   const estimatedFees =
     addressState.status === 'success' ? addressState.estimatedFees : []
 
@@ -117,8 +118,15 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
     ? getTxUrl(destChain.id, execution.transactionHash)
     : undefined
 
+  // Refetch current Across / Relay quotes for the same route so the "Routing"
+  // step can show which provider was used. The historic provider isn't
+  // stored server-side; the assumption is the route hasn't changed materially
+  // and current quotes still name the same winning provider.
+  const providerFees = useProviderFees(source, destChain, feeData, recipient)
   const breakdown =
-    feeData && sourceSymbol ? buildFeeBreakdown(feeData, sourceSymbol) : null
+    feeData && sourceSymbol
+      ? buildFeeBreakdown(feeData, sourceSymbol, providerFees.fees)
+      : null
   const [feeOpen, setFeeOpen] = useState(false)
 
   const date = formatDate(deposit.createdAt)
@@ -213,7 +221,9 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
           // an inert pending circle above the "Failed" row.
           done={stage === 'bridging' || stage === 'completed' || failed}
           right={
-            breakdown?.provider ? (
+            providerFees.loading ? (
+              <ProviderChipSkeleton />
+            ) : breakdown?.provider ? (
               <ProviderChip provider={breakdown.provider} />
             ) : (
               <StatusText>—</StatusText>
@@ -394,12 +404,32 @@ function StatusText({
 }
 
 function ProviderChip({ provider }: { provider: string }) {
+  const iconUrl = PROVIDER_ICONS[provider]
   return (
     <span
-      className="zd:inline-flex zd:items-center zd:gap-1 zd:rounded-full zd:bg-greyScale/10 zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
+      className="zd:inline-flex zd:items-center zd:gap-1 zd:rounded-full zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
       title={`Quoted via ${provider}`}
     >
       {provider}
+      {iconUrl && (
+        <img
+          src={iconUrl}
+          alt=""
+          aria-hidden
+          className="zd:size-3.5 zd:shrink-0 zd:rounded-sm zd:object-cover"
+        />
+      )}
     </span>
+  )
+}
+
+/** Skeleton placeholder shown while `useProviderFees` is fetching quotes. */
+function ProviderChipSkeleton() {
+  return (
+    <output
+      aria-busy="true"
+      aria-label="Loading provider"
+      className="zd:block zd:h-4 zd:w-16 zd:rounded-full zd:bg-greyScale/15 zd:animate-skel-pulse"
+    />
   )
 }
