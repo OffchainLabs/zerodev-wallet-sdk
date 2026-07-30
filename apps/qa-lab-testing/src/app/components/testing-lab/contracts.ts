@@ -1,5 +1,5 @@
 import { type Abi, type Address, parseAbi } from "viem";
-import { arbitrumSepolia } from "viem/chains";
+import { arbitrumSepolia, sepolia } from "viem/chains";
 
 /**
  * Registry of test contracts deployed for the Testing Lab.
@@ -122,6 +122,25 @@ export const TEST_HELLO_WORLD = {
   address: "0x675b6783E57FbE73207da8b73dDDad7CAd74d6f1" as Address,
   chainId: TEST_CONTRACTS_CHAIN.id,
   abi: helloWorldAbi,
+};
+
+/**
+ * The NFT `zerodev-signer-demo` mints against, kept so the lab exercises the
+ * same target the demo did rather than only the lab's own ERC721.
+ *
+ * Deliberately outside `TEST_CONTRACTS`: that registry is single-chain
+ * (`TEST_CONTRACTS_CHAIN`) and this is deployed per chain, so it can't be
+ * described by a `TestContract` entry.
+ */
+export const demoNftAbi = parseAbi([
+  "function balanceOf(address owner) external view returns (uint256 balance)",
+  "function mint(address _to) public",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+]);
+
+export const DEMO_NFT_ADDRESSES: Record<number, Address> = {
+  [sepolia.id]: "0x34bE7f35132E97915633BC1fc020364EA5134863" as Address,
+  [arbitrumSepolia.id]: "0x4eae0b2130d5c3be154ebc851cd1dc0cc694b808" as Address,
 };
 
 /** All deployed test contracts. Add new deployments here. */
