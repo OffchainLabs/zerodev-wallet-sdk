@@ -132,7 +132,10 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   const date = formatDate(deposit.createdAt)
 
   return (
-    <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:gap-3 zd:pt-4 zd:pb-6">
+    // No `h-full` — the page takes its natural content height so the
+    // Screen's scroll container can activate scrolling when the fee
+    // breakdown is expanded and content exceeds the viewport.
+    <div className="zd:flex zd:w-full zd:flex-col zd:gap-3 zd:pt-4 zd:pb-6">
       <ArrowCardPair
         topCard={
           <InfoCard
