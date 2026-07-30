@@ -156,7 +156,10 @@ export function Erc721ContractTest() {
   };
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
+    <div
+      className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5"
+      data-testid="case-erc721"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-gray-900">
@@ -188,6 +191,7 @@ export function Erc721ContractTest() {
         <select
           value={fn}
           onChange={(e) => handleFnChange(e.target.value as Fn)}
+          data-testid="erc721-function"
           className={cn(
             "w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 cursor-pointer",
             "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
@@ -250,6 +254,7 @@ export function Erc721ContractTest() {
       <div aria-hidden className="grow" />
       <button
         onClick={handleExecute}
+        data-testid="erc721-submit"
         className={cn(
           "mt-4 w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 cursor-pointer",
           "border border-gray-950 bg-gray-950 text-white hover:bg-black hover:shadow-sm",
