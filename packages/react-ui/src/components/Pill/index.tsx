@@ -73,9 +73,6 @@ export function Pill({
         onKeyDown: handleKeyDown,
       })}
     >
-      {/* min-w-0 (no flex-1) lets long labels shrink to fit when the outer
-          container is genuinely too narrow — but keeps short labels at their
-          intrinsic width so they don't get truncated with room to spare. */}
       <div className="zd:flex zd:min-w-0 zd:items-center zd:gap-1.5">
         {/* 44×44 logo well with a 34×34 centered inner disc. Figma places the
             image with translate-1/2 offsets so the smaller disc sits inside
