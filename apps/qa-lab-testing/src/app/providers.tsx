@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { useMemo } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { installMocksIfEnabled } from './components/mocks/installMocks'
 import { pickConfigParams, resolveWalletConfig } from './lib/config-params'
 import { createWalletConfig } from './wagmi-config'
 
@@ -21,11 +20,6 @@ import { createWalletConfig } from './wagmi-config'
  * unrelated param (say `?probe=1`) doesn't tear down the wallet.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Synchronous, before the config below builds the connector: `reconnectOnMount`
-  // means it can start requesting the moment WagmiProvider mounts, which is
-  // earlier than any effect would run. No-op unless NEXT_PUBLIC_ENABLE_MOCKS=1.
-  installMocksIfEnabled()
-
   const searchParams = useSearchParams()
   const configKey = pickConfigParams(searchParams).toString()
 
