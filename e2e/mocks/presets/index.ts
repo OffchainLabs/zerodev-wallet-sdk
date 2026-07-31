@@ -1,13 +1,13 @@
 import type { MockRequest } from '../types.js'
-import { example } from './example.js'
+import { authMethod } from './authMethod.js'
 
 /**
- * Named preset registry. Both `withMocks` (Playwright) and the manual runner
- * (`mock:dev --preset <name>`) resolve presets from here. Keeping it a single
- * discoverable map is also the seam a future `/mock-server` skill drives.
+ * Named preset registry. Resolved from here by `withMocks` (Playwright), the
+ * manual runner (`mock:dev --preset <name>`) and the lab's in-app scenario
+ * picker, so a preset added here shows up in all three.
  */
 export const presets = {
-  example,
+  authMethod,
 } satisfies Record<string, MockRequest[]>
 
 export type PresetName = keyof typeof presets
