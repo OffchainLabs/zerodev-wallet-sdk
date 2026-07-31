@@ -43,8 +43,6 @@
   />
   ```
 
-### Patch Changes
-
 - Updated dependencies [8769b2c]
   - @zerodev/wallet-core@0.0.3
   - @zerodev/wallet-react@0.0.5
