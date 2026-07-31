@@ -261,7 +261,7 @@ describe('mock server', () => {
     expect(JSON.parse(res.body)).toEqual({ from: 'real-backend' })
   })
 
-  it('matches a mock whose url is a RegExp (used by presets like example)', async () => {
+  it('matches a mock whose url is a RegExp (how definitions match any host)', async () => {
     await applyMocks(
       server,
       [{ url: /\/rpc\/.+$/, method: 'GET', response: { matched: true } }],

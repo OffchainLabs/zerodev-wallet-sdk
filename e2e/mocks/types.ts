@@ -40,7 +40,7 @@ export interface MockRequest {
 }
 
 export interface WithMockOptions {
-  /** Compose presets by spreading, e.g. `[...happyPath, myOverride]`. */
+  /** Compose by spreading, e.g. `[...happyPath, myOverride]`. */
   mocks: MockRequest[]
   /** Defaults to `passthrough`. */
   unmatched?: UnmatchedPolicy

@@ -6,12 +6,12 @@
  * `auth-method.mocked.spec.ts` is the harness or the app.
  */
 import { expect } from '@playwright/test'
-import { presets } from '../../mocks/presets/index.js'
+import { authMethod } from '../../mocks/definitions/authMethod.js'
 import { test } from '../../mocks/test.js'
 import { withMocks } from '../../mocks/withMocks.js'
 
 test('harness applies mocks and the proxied app loads', async ({ page }) => {
-  await withMocks({ mocks: presets.authMethod }, async ({ mockServer }) => {
+  await withMocks({ mocks: authMethod }, async ({ mockServer }) => {
     // Mocks (plus the passthrough fallback) are registered on the live proxy.
     expect((await mockServer.getMockedEndpoints()).length).toBeGreaterThan(0)
 

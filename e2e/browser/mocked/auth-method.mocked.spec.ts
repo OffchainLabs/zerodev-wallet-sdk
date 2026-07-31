@@ -14,7 +14,7 @@ import { loginWithOtp } from '../../helpers/ui-login.js'
 import {
   authMethod,
   MOCK_AUTH_METHOD_LABEL,
-} from '../../mocks/presets/authMethod.js'
+} from '../../mocks/definitions/authMethod.js'
 import { test } from '../../mocks/test.js'
 import { withMocks } from '../../mocks/withMocks.js'
 

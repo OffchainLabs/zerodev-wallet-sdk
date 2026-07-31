@@ -10,7 +10,7 @@
  * A preset is authored with some fixed `id`, but a client correlates a reply to
  * its call by that field — viem rejects a mismatch, and it surfaces as a vague
  * transport error rather than anything mentioning ids. Copies rather than
- * mutates: presets are shared module state, reused across requests.
+ * mutates: a definition is shared module state, reused across requests.
  */
 export function echoJsonRpcId(response: object, requestBody: string): object {
   if (

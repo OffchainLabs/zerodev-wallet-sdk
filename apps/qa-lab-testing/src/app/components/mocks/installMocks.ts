@@ -11,9 +11,10 @@ import { MOCKS_ENABLED } from './mockFlag'
  * mounts; an effect runs *after* children mount and would lose that race,
  * leaving the first calls of a session unmocked.
  *
- * No mocks are active until something calls `setMocks` — installing only puts
- * the interceptor in place, and with no rules everything passes through. So this
- * is inert until a scenario is picked.
+ * No mocks are active until something calls `setMocks` — installing only puts the
+ * interceptor in place, and with no rules everything passes through. That call is
+ * the seam left for whatever drives mocks by hand later; until then this is
+ * boilerplate that changes nothing at runtime.
  */
 export function installMocksIfEnabled(): void {
   if (!MOCKS_ENABLED) return
