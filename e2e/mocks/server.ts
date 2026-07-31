@@ -4,6 +4,7 @@ import {
   type Mockttp,
   type RequestRuleBuilder,
 } from 'mockttp'
+import { echoJsonRpcId } from './jsonRpc.js'
 import { orderMocks } from './orderMocks.js'
 import type { MockRequest, UnmatchedPolicy } from './types.js'
 
@@ -49,6 +50,25 @@ function ruleFor(server: Mockttp, mock: MockRequest): RequestRuleBuilder {
 }
 
 /**
+ * Sent with every mocked response.
+ *
+ * Without these the browser discards a mocked cross-origin reply — the page is
+ * on localhost while the backends are not, so every intercepted response is
+ * cross-origin. It fails as "CallExecutionError: HTTP request failed", which
+ * reads like the mock never matched rather than like a CORS rejection.
+ *
+ * Preflights are not mocked: they fall through to the real host, which answers
+ * them. A run with `unmatched: 'block'` would therefore need OPTIONS handled
+ * too.
+ */
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': '*',
+  'access-control-allow-headers': '*',
+  'access-control-expose-headers': '*',
+} as const
+
+/**
  * Register `mocks` as proxy rules (highest priority first, so first-match-wins
  * lets an override beat a preset baseline), then a fallback for everything
  * else per `unmatched`.
@@ -62,7 +82,18 @@ export async function applyMocks(
     let rule = ruleFor(server, mock)
     if (mock.payload) rule = rule.withJsonBodyIncluding(mock.payload)
     if (mock.bodyIncludes) rule = rule.withBodyIncluding(mock.bodyIncludes)
-    await rule.thenJson(mock.status ?? 200, mock.response)
+    // thenCallback, not thenJson, so a JSON-RPC reply can carry the request's
+    // own id — see `echoJsonRpcId`.
+    const status = mock.status ?? 200
+    const response = mock.response
+    await rule.thenCallback(async (req) => {
+      const body = await req.body.getText().catch(() => '')
+      return {
+        statusCode: status,
+        headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+        json: echoJsonRpcId(response, body ?? ''),
+      }
+    })
   }
 
   if (unmatched === 'block') {

@@ -15,6 +15,7 @@
  * `node:http` into the client bundle.
  */
 
+import { echoJsonRpcId } from './jsonRpc.js'
 import { orderMocks } from './orderMocks.js'
 import type { MockRequest, UnmatchedPolicy } from './types.js'
 
@@ -95,34 +96,6 @@ export function matchMock(
   })
 }
 
-/**
- * Build the response body. A static JSON-RPC response would otherwise reply
- * with whatever `id` the preset was written with; callers that correlate
- * responses by id would reject it, so the request's own id wins. The preset is
- * copied rather than mutated — it is shared module state.
- */
-function responseBody(mock: MockRequest, requestBody: string): object {
-  const response = mock.response
-  if (
-    response === null ||
-    typeof response !== 'object' ||
-    Array.isArray(response) ||
-    !('jsonrpc' in response)
-  ) {
-    return response
-  }
-
-  try {
-    const parsed = JSON.parse(requestBody) as { id?: unknown }
-    if (parsed && typeof parsed === 'object' && 'id' in parsed) {
-      return { ...response, id: parsed.id }
-    }
-  } catch {
-    // Not JSON — leave the response as authored.
-  }
-  return response
-}
-
 function jsonResponse(body: object, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -176,7 +149,10 @@ export function installMockFetch(options?: {
     const mock = matchMock(active, request)
 
     if (mock) {
-      return jsonResponse(responseBody(mock, request.body), mock.status ?? 200)
+      return jsonResponse(
+        echoJsonRpcId(mock.response, request.body),
+        mock.status ?? 200,
+      )
     }
 
     if (unmatchedPolicy === 'block') {
