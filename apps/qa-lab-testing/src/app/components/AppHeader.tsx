@@ -4,6 +4,7 @@ import { ZeroDevLogo } from "@zerodev/react-ui";
 import { Settings2, SlidersHorizontal } from "lucide-react";
 import { useResolvedConfig } from "../lib/use-wallet-config";
 import { ConfigLink } from "./ConfigLink";
+import { MockScenarioSelect } from "./mocks/MockScenarioSelect";
 
 export function AppHeader() {
   const { applied } = useResolvedConfig();
@@ -27,6 +28,8 @@ export function AppHeader() {
         </ConfigLink>
 
         <div className="flex items-center gap-2">
+          <MockScenarioSelect />
+
           {/*
             Config lives only in the URL, so a link that drops the query string
             silently reverts to defaults. This badge makes that visible: if it

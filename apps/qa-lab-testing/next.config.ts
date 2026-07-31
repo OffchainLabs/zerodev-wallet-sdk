@@ -3,6 +3,12 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The mock definitions live in `e2e/mocks/`, outside this app, so that the
+  // Playwright proxy and this app share one set. Next refuses to compile
+  // outside its root without this.
+  experimental: {
+    externalDir: true,
+  },
   transpilePackages: [
     '@zerodev/wallet-react',
     '@zerodev/wallet-react-ui',
@@ -30,8 +36,21 @@ const nextConfig: NextConfig = {
       { module: /node_modules\/ox\/_esm\/tempo\// },
     ]
 
+    // `e2e/mocks` is written for Node's ESM resolution, so its internal imports
+    // carry `.js` extensions that point at `.ts` files on disk. Webpack needs to
+    // be told; tsconfig `paths` only covers typechecking.
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js'],
+    }
+
     config.resolve.alias = {
       ...config.resolve.alias,
+      // Shared mock definitions. Import leaf modules only (`@mocks/presets/...`,
+      // `@mocks/installMockFetch.js`) — there is deliberately no barrel, because
+      // one would pull the Node-only `server.ts` (mockttp, node:http) into the
+      // client bundle.
+      '@mocks': path.resolve(__dirname, '../../e2e/mocks'),
       wagmi: path.resolve(__dirname, 'node_modules/wagmi'),
       '@wagmi/core': path.resolve(__dirname, 'node_modules/@wagmi/core'),
       '@tanstack/react-query': path.resolve(
