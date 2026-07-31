@@ -3,14 +3,14 @@
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AuthFlow } from './index'
+import { ConnectWallet } from './index'
 import type { AuthStep } from './types'
 
 afterEach(() => {
   cleanup()
 })
 
-// Mock all page components. AuthFlow renders `SignUp.Default` by default,
+// Mock all page components. ConnectWallet renders `SignUp.Default` by default,
 // so the mock needs the compound shape.
 vi.mock('./pages/SignUp', () => ({
   SignUp: Object.assign(() => <div data-testid="sign-up">SignUp Page</div>, {
@@ -75,17 +75,17 @@ vi.mock('./hooks/useAuth', () => ({
   }),
 }))
 
-describe('AuthFlow', () => {
+describe('ConnectWallet', () => {
   it('renders nothing when step is null', () => {
     mockStep = null
-    const { container } = render(<AuthFlow />)
+    const { container } = render(<ConnectWallet />)
 
     expect(container.firstChild).toBeNull()
   })
 
   it('renders sign-up page', () => {
     mockStep = 'sign-up'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('sign-up')).toBeDefined()
     expect(screen.getByText('SignUp Page')).toBeDefined()
@@ -94,20 +94,20 @@ describe('AuthFlow', () => {
   it('shows the logo only on the sign-up step', () => {
     mockStep = 'sign-up'
     const { unmount } = render(
-      <AuthFlow logo={<div data-testid="brand-logo" />} />,
+      <ConnectWallet logo={<div data-testid="brand-logo" />} />,
     )
     expect(screen.getByTestId('brand-logo')).toBeDefined()
     unmount()
 
     mockStep = 'otp-input'
-    render(<AuthFlow logo={<div data-testid="brand-logo" />} />)
+    render(<ConnectWallet logo={<div data-testid="brand-logo" />} />)
     expect(screen.queryByTestId('brand-logo')).toBeNull()
   })
 
   it('renders custom sign-up content via renderSignUp', () => {
     mockStep = 'sign-up'
     render(
-      <AuthFlow
+      <ConnectWallet
         renderSignUp={() => <div data-testid="custom-sign-up">Custom</div>}
       />,
     )
@@ -118,7 +118,7 @@ describe('AuthFlow', () => {
 
   it('renders email-verification page', () => {
     mockStep = 'email-verification'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('email-verification')).toBeDefined()
     expect(screen.getByText('EmailVerification Page')).toBeDefined()
@@ -126,7 +126,7 @@ describe('AuthFlow', () => {
 
   it('renders otp-input page', () => {
     mockStep = 'otp-input'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('otp-input')).toBeDefined()
     expect(screen.getByText('OtpInput Page')).toBeDefined()
@@ -134,7 +134,7 @@ describe('AuthFlow', () => {
 
   it('renders verifying-otp page', () => {
     mockStep = 'verifying-otp'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('verifying')).toBeDefined()
     expect(screen.getByText('Verifying Page')).toBeDefined()
@@ -142,7 +142,7 @@ describe('AuthFlow', () => {
 
   it('renders oauth-in-progress state', () => {
     mockStep = 'oauth-in-progress'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('status-view')).toBeDefined()
     expect(screen.getByTestId('status-title').textContent).toBe(
@@ -155,7 +155,7 @@ describe('AuthFlow', () => {
 
   it('renders passkey-prompt state', () => {
     mockStep = 'passkey-prompt'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('status-view')).toBeDefined()
     expect(screen.getByTestId('status-title').textContent).toBe(
@@ -168,21 +168,21 @@ describe('AuthFlow', () => {
 
   it('renders wallet-selection state', () => {
     mockStep = 'wallet-selection'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('wallet-selection')).toBeDefined()
   })
 
   it('renders authenticated state as null', () => {
     mockStep = 'authenticated'
-    const { container } = render(<AuthFlow />)
+    const { container } = render(<ConnectWallet />)
 
     expect(container.firstChild).toBeNull()
   })
 
   it('renders error page', () => {
     mockStep = 'error'
-    render(<AuthFlow />)
+    render(<ConnectWallet />)
 
     expect(screen.getByTestId('error')).toBeDefined()
     expect(screen.getByText('Error Page')).toBeDefined()
@@ -190,7 +190,7 @@ describe('AuthFlow', () => {
 
   it('handles unknown step gracefully', () => {
     mockStep = 'unknown-step' as AuthStep
-    const { container } = render(<AuthFlow />)
+    const { container } = render(<ConnectWallet />)
 
     expect(container.firstChild).toBeNull()
   })

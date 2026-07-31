@@ -1,6 +1,6 @@
 'use client'
 
-import { AuthFlow, useAuth } from '@zerodev/wallet-react-ui'
+import { ConnectWallet, useAuth } from '@zerodev/wallet-react-ui'
 import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useAccount, useConnect } from 'wagmi'
@@ -16,7 +16,7 @@ export function LoginScreen() {
   const { isConnected, status: accountStatus } = useAccount()
   const { step: authStep } = useAuth()
 
-  // Auth has succeeded (AuthFlow unmounts once step hits `authenticated`) but
+  // Auth has succeeded (ConnectWallet unmounts once step hits `authenticated`) but
   // wagmi hasn't flipped `isConnected` yet. Cover that window with a loader so
   // the column doesn't sit blank before the lab swaps in.
   const isSettling = isConnected || authStep === 'authenticated'
@@ -24,7 +24,7 @@ export function LoginScreen() {
   // misleading CTA.
   const showReconnect =
     !isConnected && authStep === null && connectStatus === 'error'
-  // AuthFlow renders nothing until it has a `step`, so any time we're not
+  // ConnectWallet renders nothing until it has a `step`, so any time we're not
   // connected and have no step yet — initial session probe, auto-connect in
   // flight, or landing back here right after logout — show the loader.
   const showLoading =
@@ -64,7 +64,7 @@ export function LoginScreen() {
             <p className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.22em] text-[#9c958c]">
               Sign in to open the QA Lab
             </p>
-            <AuthFlow size="md" />
+            <ConnectWallet size="md" />
           </>
         )}
       </main>
