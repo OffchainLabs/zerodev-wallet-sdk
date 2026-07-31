@@ -1,8 +1,8 @@
 # @zerodev/wallet-react-ui
 
-## 0.1.0
+## 0.0.7
 
-### Minor Changes
+### Patch Changes
 
 - 483abc2: feat: composable sign-up via `<SignUp>` and rename `AuthFlow` → `ConnectWallet`
 
