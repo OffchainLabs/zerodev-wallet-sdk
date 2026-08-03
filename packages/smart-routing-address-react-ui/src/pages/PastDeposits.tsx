@@ -194,10 +194,14 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                     return (
                       <li key={transactionHash}>
                         {onSelectDeposit ? (
+                          // -mx-1 + px-1 + a wider explicit width extend the
+                          // hover surface 4px past the row content on each
+                          // side, so the highlight has visible breathing
+                          // room without shifting the TxnItem's position.
                           <button
                             type="button"
                             onClick={() => onSelectDeposit(deposit)}
-                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:text-left zd:hover:bg-white/30"
+                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
                           >
                             {row}
                           </button>

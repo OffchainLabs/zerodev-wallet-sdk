@@ -14,7 +14,7 @@ import {
   Tooltip,
   Wrapper,
 } from '@zerodev/react-ui'
-import type { TOKEN_TYPE } from '@zerodev/smart-routing-address'
+import type { DepositedToken, TOKEN_TYPE } from '@zerodev/smart-routing-address'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AddressDisplay } from '../components/AddressDisplay'
 import { ErrorRetryCard } from '../components/ErrorRetryCard'
@@ -53,6 +53,10 @@ export interface DepositProps {
   onQrClick?: () => void
   /** Navigate to the "Past deposits" view. When omitted, the row is hidden. */
   onViewPastDeposits?: () => void
+  /** Fired when a pending-deposit row is tapped. Wires through to
+   * `PendingDeposits` so an in-flight deposit opens the transaction-details
+   * view, matching the past-deposits behaviour. */
+  onSelectDeposit?: (deposit: DepositedToken) => void
 }
 
 const SUBTITLE =
@@ -65,7 +69,11 @@ const FULL_ROW_PANEL_STYLE = {
   width: 'calc(var(--radix-select-trigger-width) * 2 + 4px)',
 }
 
-export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
+export function Deposit({
+  onQrClick,
+  onViewPastDeposits,
+  onSelectDeposit,
+}: DepositProps) {
   const { config, addressState, recipient, retry, setActiveRoute } =
     useSmartRoutingAddressContext()
   const [feeOpen, setFeeOpen] = useState(false)
@@ -520,6 +528,7 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
             deposits={newDeposits}
             estimatedFees={estimatedFees}
             config={config}
+            {...(onSelectDeposit && { onSelectDeposit })}
           />
         ) : (
           <LoadingCard
