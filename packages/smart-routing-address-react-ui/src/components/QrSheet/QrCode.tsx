@@ -43,7 +43,7 @@ export function QrCode({
   // `uqr` returns a 2D boolean matrix (`data[row][col]`) and the module count
   // per side. Same information as `qrcode`, just shaped differently — the
   // pill/finder rendering below is unchanged.
-  const qr = encode(value, { ecc: errorCorrectionLevel })
+  const qr = encode(value, { ecc: errorCorrectionLevel, border: 0 })
   const matrix = qr.data
   const moduleCount = qr.size
   const cellSize = size / moduleCount
