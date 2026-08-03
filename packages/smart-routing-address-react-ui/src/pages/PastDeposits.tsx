@@ -1,4 +1,4 @@
-import { cn, PoweredBy, Text } from '@zerodev/react-ui'
+import { cn, Text } from '@zerodev/react-ui'
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { useMemo } from 'react'
 import { TxnItem, type TxnStatus } from '../components/TxnItem'
@@ -213,8 +213,6 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
           </div>
         )}
       </section>
-
-      <PoweredBy className="zd:justify-center" />
     </div>
   )
 }

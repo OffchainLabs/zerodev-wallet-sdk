@@ -73,7 +73,7 @@ export function Pill({
         onKeyDown: handleKeyDown,
       })}
     >
-      <div className="zd:flex zd:items-center zd:gap-1.5">
+      <div className="zd:flex zd:min-w-0 zd:items-center zd:gap-1.5">
         {/* 44×44 logo well with a 34×34 centered inner disc. Figma places the
             image with translate-1/2 offsets so the smaller disc sits inside
             the larger well — the 10px reveal reads as the pill's "logo pad". */}
@@ -109,11 +109,13 @@ export function Pill({
             ) : null}
           </div>
         </div>
-        <Text className="zd:whitespace-nowrap zd:text-body1">{label}</Text>
+        <Text className="zd:min-w-0 zd:truncate zd:text-body1" title={label}>
+          {label}
+        </Text>
       </div>
       {trailingIcon && (
         <div
-          className="zd:flex zd:shrink-0 zd:items-center zd:rounded-full zd:p-2"
+          className="zd:flex zd:shrink-0 zd:items-center zd:rounded-full zd:p-1"
           data-testid="pill-trailing-icon"
         >
           {trailingIcon}

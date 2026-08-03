@@ -4,9 +4,9 @@ import {
   DataRow,
   Icon,
   InfoCard,
-  PoweredBy,
   Section,
   Text,
+  Tooltip,
 } from '@zerodev/react-ui'
 import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
@@ -248,8 +248,6 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
           />
         )}
       </Section>
-
-      <PoweredBy className="zd:mt-auto zd:justify-center zd:pt-2" />
     </div>
   )
 }
@@ -310,17 +308,19 @@ function ProgressStep({
           {label}
         </Text>
         {info && (
-          <span
-            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help"
-            data-zd-tooltip=""
-            title={info}
-          >
-            <Icon
-              name="info"
-              className="zd:w-3 zd:h-3 zd:text-greyScale/50"
-              aria-hidden
-            />
-          </span>
+          <Tooltip content={info}>
+            <button
+              type="button"
+              aria-label="More info"
+              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+            >
+              <Icon
+                name="info"
+                className="zd:w-3 zd:h-3 zd:text-greyScale/50"
+                aria-hidden
+              />
+            </button>
+          </Tooltip>
         )}
       </div>
       <div className="zd:flex zd:shrink-0 zd:items-center">{right}</div>
