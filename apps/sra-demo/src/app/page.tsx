@@ -64,7 +64,8 @@ export default function Home() {
   }
 
   const config = useMemo<SmartRoutingAddressConfig>(
-    () => ({ targetChainId, targetTokenSymbol: 'USDC', slippage }),
+    // targetTokenSymbol defaults to 'USDC' when omitted.
+    () => ({ targetChainId, slippage }),
     [targetChainId, slippage],
   )
 

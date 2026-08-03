@@ -35,8 +35,9 @@ export type SmartRoutingAddressConfig = {
   targetChainId: number
   /**
    * Display symbol for the token received on the target chain (e.g. `"USDC"`).
-   * Fixed by the configured actions — when omitted the UI joins every possible
-   * target symbol with a separator.
+   * Fixed by the configured actions — the single asset all deposits swap /
+   * bridge into, regardless of what the user sends. Defaults to `"USDC"`
+   * when omitted.
    */
   targetTokenSymbol?: string
   /** Smart routing address version, defaults to the latest stable */
