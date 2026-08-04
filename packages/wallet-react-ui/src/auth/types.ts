@@ -11,12 +11,3 @@ export type AuthStep =
   | 'error'
 
 export type EmailAuthMethod = 'magicLink' | 'otp'
-
-export interface AuthConfig {
-  enabledMethods: AuthMethod[]
-  emailAuthMethod?: EmailAuthMethod
-  termsAndConditionsUrl?: string
-  privacyPolicyUrl?: string
-  onSuccess?: () => void
-  onError?: (error: unknown) => void
-}

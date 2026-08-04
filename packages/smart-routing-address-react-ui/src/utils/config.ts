@@ -161,23 +161,16 @@ export function getSourceTokenSymbol(source: SourceToken): string {
   return source.tokenType
 }
 
+/** Default destination-token symbol when the consumer doesn't set one — the
+ * most common SRA settlement asset by a wide margin. */
+const DEFAULT_TARGET_TOKEN_SYMBOL = 'USDC'
+
 /**
  * Display symbol for the token received on the target chain. The settlement
  * token is fixed by configuration (`targetTokenSymbol`) — it is the single
  * asset the funds are swapped/bridged into, regardless of what the user sends.
- * Without an explicit setting, every possible target token is joined with a
- * separator (used only before a destination token is configured).
+ * Falls back to `'USDC'` when unset.
  */
 export function getDestTokenSymbol(config: SmartRoutingAddressConfig): string {
-  if (config.targetTokenSymbol) return config.targetTokenSymbol
-
-  const destChain = resolveDestChain(config)
-  const tokenTypes = uniqueTokenTypes(resolveSourceTokens(config))
-  // Distinct token types can share a display symbol (WRAPPED_NATIVE vs WETH)
-  const symbols = new Set(
-    tokenTypes.map((tokenType) =>
-      getSourceTokenSymbol({ tokenType, chain: destChain }),
-    ),
-  )
-  return [...symbols].join(' / ')
+  return config.targetTokenSymbol ?? DEFAULT_TARGET_TOKEN_SYMBOL
 }

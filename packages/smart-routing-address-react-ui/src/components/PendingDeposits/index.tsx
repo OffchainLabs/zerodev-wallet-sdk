@@ -26,6 +26,10 @@ export interface PendingDepositsProps {
   deposits: DepositedToken[]
   estimatedFees: EstimatedFee[]
   config: SmartRoutingAddressConfig
+  /** Fired when a row is tapped — the widget uses this to open the
+   * transaction-details view for the selected deposit. When omitted, rows
+   * render as static (non-interactive). */
+  onSelectDeposit?: (deposit: DepositedToken) => void
   className?: string
 }
 
@@ -40,6 +44,7 @@ export function PendingDeposits({
   deposits,
   estimatedFees,
   config,
+  onSelectDeposit,
   className,
 }: PendingDepositsProps) {
   if (deposits.length === 0) return null
@@ -103,23 +108,41 @@ export function PendingDeposits({
             ? `${explorerBase}/tx/${transactionHash}`
             : undefined
 
+          const row = (
+            <TxnItem
+              amount={amountLabel}
+              address={truncateAddress(transactionHash)}
+              {...(href && { href })}
+              timestamp={timestamp}
+              status={status}
+              {...(sourceTokenLogo && {
+                sourceTokenIconUrl: sourceTokenLogo,
+              })}
+              {...(sourceChainLogo && {
+                sourceChainIconUrl: sourceChainLogo,
+              })}
+              {...(destTokenLogo && { destTokenIconUrl: destTokenLogo })}
+              {...(destChainLogo && { destChainIconUrl: destChainLogo })}
+            />
+          )
+
           return (
             <li key={transactionHash}>
-              <TxnItem
-                amount={amountLabel}
-                address={truncateAddress(transactionHash)}
-                {...(href && { href })}
-                timestamp={timestamp}
-                status={status}
-                {...(sourceTokenLogo && {
-                  sourceTokenIconUrl: sourceTokenLogo,
-                })}
-                {...(sourceChainLogo && {
-                  sourceChainIconUrl: sourceChainLogo,
-                })}
-                {...(destTokenLogo && { destTokenIconUrl: destTokenLogo })}
-                {...(destChainLogo && { destChainIconUrl: destChainLogo })}
-              />
+              {onSelectDeposit ? (
+                // -mx-1 + px-1 + a wider explicit width extend the hover
+                // surface 4px past the row content on each side, so the
+                // highlight has visible breathing room without shifting the
+                // TxnItem's visual position.
+                <button
+                  type="button"
+                  onClick={() => onSelectDeposit(deposit)}
+                  className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
+                >
+                  {row}
+                </button>
+              ) : (
+                row
+              )}
             </li>
           )
         })}
