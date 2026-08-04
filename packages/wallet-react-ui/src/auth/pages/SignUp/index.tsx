@@ -66,9 +66,11 @@ function SignUpRoot({
         </div>
       )}
       {/* Kept mounted (hidden) during the error takeover so unit state — the
-          typed email, pending flags — survives "Try again". */}
+          typed email, pending flags — survives "Try again".
+          `-mx-4` cancels Screen's scroll-container padding so this page
+          owns its own; inner blocks re-add `zd:px-4` where they need it. */}
       <div
-        className={`zd:flex-1 zd:flex zd:flex-col zd:justify-between zd:pb-4 zd:overflow-y-auto zd:overflow-x-hidden${
+        className={`zd:-mx-4 zd:flex-1 zd:flex zd:flex-col zd:justify-between zd:pb-4 zd:overflow-y-auto zd:overflow-x-hidden${
           error !== null ? ' zd:hidden' : ''
         }`}
       >
