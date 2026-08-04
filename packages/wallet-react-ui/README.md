@@ -135,9 +135,15 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
 - `<SignUp>` (the root) owns the shared page state and the consent gate: when
   either terms URL is set, a checkbox appears and every method is blocked
   until the user agrees. `emailAuthMethod` picks the email verification flow.
-- Units: `SignUp.Passkey`, `SignUp.Google`, `SignUp.Email`, `SignUp.Divider`.
-  Order and presence are yours; while one method is in flight, the others
-  disable themselves.
+- Units: `SignUp.Passkey`, `SignUp.Google`, `SignUp.Email`, `SignUp.Wallet`,
+  `SignUp.MoreWallets`, `SignUp.Divider`. Order and presence are yours; while
+  one method is in flight, the others disable themselves.
+- `SignUp.Wallet` pins one external wallet as its own row. `walletId` is the
+  `WalletId` union (e.g. `'metamask'`, `'coinbase'`, `'rabby'`); the row
+  connects the wallet when a live connector claims it (browser extension or a
+  configured SDK connector) and is a link to the vendor's download page
+  otherwise. `SignUp.MoreWallets` opens the full wallet-selection step
+  instead.
 - `SignUp.Default` is the canonical composition; it accepts the same props as
   the root and forwards them.
 - Auth success/failure surfaces through wagmi — await `connect`, or watch
@@ -154,7 +160,8 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
 
 ### Types
 
-`AuthMethod`, `AuthStep`, `EmailAuthMethod`, `ZeroDevKitConnectorParams`.
+`AuthMethod`, `AuthStep`, `EmailAuthMethod`, `WalletId`,
+`ZeroDevKitConnectorParams`.
 
 ## Development
 

@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { matchesWallet, WALLET_GUIDE } from './walletGuide'
 
-const metaMask = WALLET_GUIDE.find((w) => w.id === 'metaMask')
-if (!metaMask) throw new Error('metaMask missing from WALLET_GUIDE')
+const metamask = WALLET_GUIDE.find((w) => w.id === 'metamask')
+if (!metamask) throw new Error('metamask missing from WALLET_GUIDE')
 
 describe('matchesWallet', () => {
   it('matches an announced connector by id', () => {
-    expect(matchesWallet({ id: 'io.metamask' }, metaMask)).toBe(true)
+    expect(matchesWallet({ id: 'io.metamask' }, metamask)).toBe(true)
   })
 
   it('matches a configured connector claiming rdns as a string', () => {
     expect(
-      matchesWallet({ id: 'metaMaskSDK', rdns: 'io.metamask' }, metaMask),
+      matchesWallet({ id: 'metaMaskSDK', rdns: 'io.metamask' }, metamask),
     ).toBe(true)
   })
 
@@ -19,14 +19,14 @@ describe('matchesWallet', () => {
     expect(
       matchesWallet(
         { id: 'metaMaskSDK', rdns: ['io.metamask', 'io.metamask.mobile'] },
-        metaMask,
+        metamask,
       ),
     ).toBe(true)
   })
 
   it('rejects a connector with a different rdns', () => {
     expect(
-      matchesWallet({ id: 'com.other', rdns: 'com.other' }, metaMask),
+      matchesWallet({ id: 'com.other', rdns: 'com.other' }, metamask),
     ).toBe(false)
   })
 
