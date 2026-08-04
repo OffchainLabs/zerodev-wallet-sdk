@@ -37,6 +37,7 @@ export default defineConfig({
         'packages/*/src/**/types.ts',
         'packages/*/src/**/types/**',
         'packages/*/src/**/*.stories.tsx',
+        'packages/*/src/**/*.d.ts',
       ],
     },
     include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],
