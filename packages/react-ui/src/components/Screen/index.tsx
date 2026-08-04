@@ -33,7 +33,6 @@ export function Screen({
   children,
   className,
   contentClassName,
-  bodyClassName,
   size = 'lg',
   style,
   topNav,
@@ -44,12 +43,10 @@ export function Screen({
   className?: string | undefined
   /** className merged onto the inner card wrapper (background, border ring,
    * clip-path). Use this to fully re-skin the card in storybook decorators
-   * or specialised hosts. */
+   * or specialised hosts. Pages own their own scroll-body padding — if you
+   * need edge-to-edge content on a specific page, add `zd:-mx-4` on that
+   * page's outer wrapper to escape the scroll container's default `px-4`. */
   contentClassName?: string | undefined
-  /** className merged onto the scroll container that wraps `children`.
-   * Defaults to `zd:px-4`; pass `zd:px-0` for edge-to-edge scroll content
-   * while keeping TopNav / footer at their standard 16px icon inset. */
-  bodyClassName?: string | undefined
   size?: 'sm' | 'md' | 'lg' | undefined
   style?: CSSProperties | undefined
   topNav?: ReactNode
@@ -118,11 +115,10 @@ export function Screen({
             // The scrollbar naturally sits at the container's right edge —
             // which is the card's right edge, since the card has no px —
             // so the "scrollbar in a gutter beyond the content" effect is
-            // preserved without any negative-margin trickery.
-            className={cn(
-              'zd:flex zd:flex-1 zd:flex-col zd:min-h-0 zd:overflow-y-auto zd:overflow-x-hidden zd:px-4',
-              bodyClassName,
-            )}
+            // preserved without any negative-margin trickery. Pages that
+            // need edge-to-edge content escape with `zd:-mx-4` on their
+            // own outer wrapper.
+            className="zd:flex zd:flex-1 zd:flex-col zd:min-h-0 zd:overflow-y-auto zd:overflow-x-hidden zd:px-4"
             // Scale via --zd-spacing (matches TopNav's scaled height) so the
             // top padding shrinks with the frame — otherwise the fixed 68px
             // eats a disproportionate share at smaller sizes and overflows.

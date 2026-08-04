@@ -66,9 +66,13 @@ function SignUpRoot({
         </div>
       )}
       {/* Kept mounted (hidden) during the error takeover so unit state — the
-          typed email, pending flags — survives "Try again". */}
+          typed email, pending flags — survives "Try again".
+          `-mx-4` cancels Screen's default `zd:px-4` on the scroll container
+          so this page is edge-to-edge; every inner block re-adds `zd:px-4`
+          where it wants a 16px inset, and elements that intentionally reach
+          the card edge (e.g. SignUpDivider) work without further escapes. */}
       <div
-        className={`zd:flex-1 zd:flex zd:flex-col zd:justify-between zd:pb-4 zd:overflow-y-auto zd:overflow-x-hidden${
+        className={`zd:-mx-4 zd:flex-1 zd:flex zd:flex-col zd:justify-between zd:pb-4 zd:overflow-y-auto zd:overflow-x-hidden${
           error !== null ? ' zd:hidden' : ''
         }`}
       >
