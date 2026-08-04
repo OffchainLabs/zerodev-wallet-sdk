@@ -110,7 +110,7 @@ export function TransactionDetails({
   const sourceChainLogo = CHAIN_ICONS[chainId]
 
   const destChain = resolveDestChain(config)
-  const destSymbol = getDestTokenSymbol(config)
+  const destSymbol = getDestTokenSymbol(config, sourceSymbol || undefined)
   const destTokenLogo = destSymbol
     ? TOKEN_ICONS[destSymbol.toUpperCase()]
     : undefined
