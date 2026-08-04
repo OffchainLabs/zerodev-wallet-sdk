@@ -6,7 +6,6 @@ import { isAddress, parseUnits } from 'viem'
 import { base } from 'viem/chains'
 import {
   createSimulation,
-  installMockFetch,
   loadPastDeposits,
   type MockErrorMode,
   type MockStage,
@@ -68,13 +67,9 @@ export function MockPanel({
   }, [])
 
   useEffect(() => {
-    // Install once and leave it — the mock stays installed for the demo's
-    // lifetime. Uninstalling on cleanup used to race with the widget's
-    // fresh `ensureAddress` on every regenerate: cleanup cleared `current`
-    // and restored native fetch, and if the widget's create-address call
-    // fired before MockPanel's new-mount effect re-installed the mock,
-    // the widget would poll the real API and see no deposits.
-    installMockFetch()
+    // Mock fetch lifecycle is owned by the page (installed on simulated
+    // mode, uninstalled on mainnet). Here we just seed the widget with any
+    // past deposits already persisted from a prior simulation run.
     setMockDeposits(loadPastDeposits())
     return () => {
       clearTimers()
