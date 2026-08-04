@@ -6,7 +6,10 @@ import type { EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
+import { SignUpInstalledWallets } from './InstalledWallets'
+import { SignUpMoreWallets } from './MoreWallets'
 import { SignUpPasskey } from './Passkey'
+import { SignUpWallet } from './Wallet'
 
 type SignUpRootProps = {
   children: ReactNode
@@ -134,5 +137,8 @@ export const SignUp = Object.assign(SignUpRoot, {
   Passkey: SignUpPasskey,
   Google: SignUpGoogle,
   Email: SignUpEmail,
+  Wallet: SignUpWallet,
+  InstalledWallets: SignUpInstalledWallets,
+  MoreWallets: SignUpMoreWallets,
   Divider: SignUpDivider,
 })
