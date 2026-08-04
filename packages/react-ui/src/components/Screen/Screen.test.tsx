@@ -84,8 +84,13 @@ describe('Screen', () => {
       const contentWrapper = container.querySelector('.zd\\:m-1\\.5')
       expect(contentWrapper).not.toBeNull()
       expect(contentWrapper?.className).toContain('rounded-4xl')
-      expect(contentWrapper?.className).toContain('px-4')
       expect(contentWrapper?.className).toContain('overflow-hidden')
+      // Horizontal padding lives on the scroll container, not the card
+      // wrapper — so TopNav / footer can span edge-to-edge without
+      // negative-margin escapes.
+      expect(contentWrapper?.className).not.toContain('px-4')
+      const scrollBody = container.querySelector('.zd\\:overflow-y-auto')
+      expect(scrollBody?.className).toContain('px-4')
       // No opaque offWhite card — content frosts the gradient directly
       expect(container.querySelector('.bg-offWhite\\/80')).toBeNull()
     })

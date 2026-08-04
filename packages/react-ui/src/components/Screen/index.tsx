@@ -41,11 +41,6 @@ export function Screen({
 }: {
   children: ReactNode
   className?: string | undefined
-  /** className merged onto the inner card wrapper (background, border ring,
-   * clip-path). Use this to fully re-skin the card in storybook decorators
-   * or specialised hosts. Pages own their own scroll-body padding — if you
-   * need edge-to-edge content on a specific page, add `zd:-mx-4` on that
-   * page's outer wrapper to escape the scroll container's default `px-4`. */
   contentClassName?: string | undefined
   size?: 'sm' | 'md' | 'lg' | undefined
   style?: CSSProperties | undefined
@@ -93,11 +88,8 @@ export function Screen({
           // gradient border ring thins with the size variants. (Corner radii
           // stay fixed, so at smaller sizes the ring is marginally non-uniform
           // at the corners — a minor cosmetic trade-off.)
-          //
-          // No horizontal padding on the card — the scroll container owns it
-          // (via `bodyClassName`), so TopNav and footer can span edge-to-edge
-          // without negative-margin escapes that break when consumers switch
-          // the padding off.
+          // Horizontal padding lives on the scroll container so TopNav and
+          // footer can span edge-to-edge without escape offsets.
           'zd:flex zd:flex-1 zd:flex-col zd:m-1.5 zd:overflow-hidden zd:rounded-4xl zd:relative',
           contentClassName,
         )}
@@ -111,13 +103,8 @@ export function Screen({
         <div className="zd:relative zd:z-10 zd:flex zd:flex-1 zd:flex-col zd:min-h-0">
           {topNav}
           <div
-            // Scroll container owns horizontal padding (was on the card).
-            // The scrollbar naturally sits at the container's right edge —
-            // which is the card's right edge, since the card has no px —
-            // so the "scrollbar in a gutter beyond the content" effect is
-            // preserved without any negative-margin trickery. Pages that
-            // need edge-to-edge content escape with `zd:-mx-4` on their
-            // own outer wrapper.
+            // Owns horizontal padding — pages needing edge-to-edge content
+            // escape via `zd:-mx-4` on their own outer wrapper.
             className="zd:flex zd:flex-1 zd:flex-col zd:min-h-0 zd:overflow-y-auto zd:overflow-x-hidden zd:px-4"
             // Scale via --zd-spacing (matches TopNav's scaled height) so the
             // top padding shrinks with the frame — otherwise the fixed 68px
@@ -133,9 +120,7 @@ export function Screen({
           {footer && (
             <div
               // Flex sibling so scrolled content stops at the footer's top
-              // edge. Spans the card edge-to-edge naturally (no negative
-              // margins) because the card no longer has horizontal padding;
-              // internal px-4 keeps the footer content at the 16px inset.
+              // edge; internal px-4 keeps the content at the 16px inset.
               className="zd:flex zd:shrink-0 zd:items-center zd:justify-center zd:px-4 zd:pb-4 zd:backdrop-blur-[15px]"
               style={{
                 height: `calc(${FOOTER_HEIGHT / 4} * var(--zd-spacing))`,
