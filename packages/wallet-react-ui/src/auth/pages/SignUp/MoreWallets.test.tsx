@@ -129,9 +129,6 @@ describe('SignUp.MoreWallets', () => {
     renderMoreWallets()
     openSheet()
 
-    // Announced → INSTALLED badge on the tile.
-    expect(screen.getByText('INSTALLED')).toBeDefined()
-
     fireEvent.click(screen.getByText('MetaMask'))
     expect(connect).toHaveBeenCalledTimes(1)
     expect(connect.mock.calls[0][0]).toEqual({ connector: announced })
@@ -158,12 +155,11 @@ describe('SignUp.MoreWallets', () => {
     openSpy.mockRestore()
   })
 
-  it('connects an SDK connector claiming the rdns, without a badge', () => {
+  it('connects an SDK connector claiming the rdns', () => {
     connectors = [{ id: 'coinbaseWalletSDK', rdns: 'com.coinbase.wallet' }]
     renderMoreWallets()
     openSheet()
 
-    expect(screen.queryByText('INSTALLED')).toBeNull()
     fireEvent.click(screen.getByText('Coinbase Wallet'))
     expect(connect).toHaveBeenCalledTimes(1)
   })

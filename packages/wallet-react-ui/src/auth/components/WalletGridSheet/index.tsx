@@ -11,7 +11,6 @@ export type WalletTileData = {
   key: string
   name: string
   icon?: string | undefined
-  installed: boolean
   onSelect: () => void
 }
 

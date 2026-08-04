@@ -30,12 +30,6 @@ export function SignUpMoreWallets({
     (c) => c.id !== 'zerodev-wallet' && c.type !== 'walletConnect',
   )
 
-  // A 6963 announcement (connector id === rdns) proves a live extension; a
-  // configured SDK connector merely claims the rdns and exists regardless of
-  // installation — only announcements earn the INSTALLED badge.
-  const isAnnounced = (rdns: string | undefined) =>
-    !!rdns && walletConnectors.some((c) => c.id === rdns)
-
   const startConnect = (connector: (typeof connectors)[number]) => {
     setOpen(false)
     setError(null)
@@ -62,7 +56,6 @@ export function SignUpMoreWallets({
       key: wallet.id,
       name: wallet.name,
       icon: wallet.icon,
-      installed: isAnnounced(wallet.rdns),
       onSelect: () => {
         if (installed) {
           startConnect(installed)
@@ -82,7 +75,6 @@ export function SignUpMoreWallets({
       key: connector.uid,
       name: connector.name,
       icon: connector.icon,
-      installed: connector.type === 'injected',
       onSelect: () => startConnect(connector),
     }))
 
