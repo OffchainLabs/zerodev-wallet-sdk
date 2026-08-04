@@ -62,12 +62,12 @@ describe('SignUp.Default', () => {
     const divider = screen.getByText('or')
     const google = screen.getByTestId('unit-google')
     const email = screen.getByTestId('unit-email')
-    const moreWallets = screen.getByTestId('unit-more-wallets')
 
     expect(isBefore(passkey, divider)).toBe(true)
     expect(isBefore(divider, google)).toBe(true)
     expect(isBefore(google, email)).toBe(true)
-    expect(isBefore(email, moreWallets)).toBe(true)
+    // Wallet units are compose-only — the canonical page has none.
+    expect(screen.queryByTestId('unit-more-wallets')).toBeNull()
   })
 
   it('forwards consent-gate props to the root like a hand-composed <SignUp>', () => {
