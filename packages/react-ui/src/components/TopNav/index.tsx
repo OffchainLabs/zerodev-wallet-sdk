@@ -34,10 +34,8 @@ export function TopNav({
   return (
     <div
       className={cn(
-        // Spans the card edge-to-edge naturally (`left/right-0`) — the
-        // Screen's card no longer has horizontal padding, so no offset
-        // dance is needed. Internal px-4 keeps the icons at the 16px
-        // inset that matches the scroll container's content padding.
+        // Spans the card edge-to-edge; internal px-4 aligns icons with
+        // the scroll container's 16px inset.
         'zd:absolute zd:top-0 zd:left-0 zd:right-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
         // Frosted bg masks scrolled content passing under the nav.
         'zd:backdrop-blur-[15px]',
