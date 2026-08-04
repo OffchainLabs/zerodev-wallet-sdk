@@ -108,16 +108,26 @@ export function SmartRoutingAddressProvider({
     [config],
   )
 
+  const retry = useCallback(async () => {
+    const current = recipientRef.current
+    if (!current) return
+    // Force a fresh request even if we still have a settled one cached
+    pendingRef.current = null
+    recipientRef.current = null
+    await ensureAddress(current)
+  }, [ensureAddress])
+
   const value = useMemo(
     () => ({
       config,
       addressState,
       recipient,
       ensureAddress,
+      retry,
       activeRoute,
       setActiveRoute,
     }),
-    [config, addressState, recipient, ensureAddress, activeRoute],
+    [config, addressState, recipient, ensureAddress, retry, activeRoute],
   )
 
   return (

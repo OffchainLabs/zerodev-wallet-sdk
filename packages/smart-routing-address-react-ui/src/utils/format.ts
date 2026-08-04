@@ -16,8 +16,11 @@ export function formatTokenAmount(
   }
 }
 
-/** Rounding direction for display amounts */
-export type RoundDirection = 'up' | 'down'
+/** Rounding direction for display amounts. `'up'` / `'down'` are ceil / floor
+ * — use them for values where over- or under-stating is unsafe (fees, min
+ * deposit). `'nearest'` is `Math.round` — use for values the user reads as a
+ * final quantity ("you received X") so 249.9996… reads as 250.00. */
+export type RoundDirection = 'up' | 'down' | 'nearest'
 
 function displayFractionDigits(value: number): number {
   if (value >= 1000) return 0
@@ -50,10 +53,9 @@ export function formatDisplayAmount(
 
   const digits = displayFractionDigits(amount)
   const factor = 10 ** digits
-  const rounded =
-    (round === 'up'
-      ? Math.ceil(amount * factor)
-      : Math.floor(amount * factor)) / factor
+  const roundFn =
+    round === 'up' ? Math.ceil : round === 'down' ? Math.floor : Math.round
+  const rounded = roundFn(amount * factor) / factor
   return rounded.toLocaleString('en-US', {
     maximumFractionDigits: digits,
   })
@@ -72,6 +74,15 @@ export function formatDuration(seconds: number): string {
   if (seconds < 60) return `~${Math.max(1, Math.round(seconds))} sec`
   return `~${Math.round(seconds / 60)} min`
 }
+
+/** Symbols treated as ~$1, so a USD equivalent can be shown for their amounts */
+export const STABLE_SYMBOLS = new Set([
+  'USDC',
+  'USDT',
+  'DAI',
+  'USDBC',
+  'USDC.E',
+])
 
 /** ISO timestamp → compact "N unit ago" ("just now", "2 m ago", "3 h ago",
  * "5 d ago", "2 mo ago", "1 y ago"). Returns `null` on invalid input. */

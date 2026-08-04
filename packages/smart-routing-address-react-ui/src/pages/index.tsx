@@ -1,32 +1,56 @@
-import { Screen, TopNav } from '@zerodev/react-ui'
+import { PoweredBy, Screen, TopNav } from '@zerodev/react-ui'
+import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { type ReactNode, useEffect, useState } from 'react'
 import type { Address } from 'viem'
 import { QrSheet } from '../components/QrSheet'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { Deposit } from './Deposit'
+import { PastDeposits } from './PastDeposits'
+import { TransactionDetails } from './TransactionDetails'
 
 /**
- * Steps rendered by `SmartRoutingAddress`. Only "deposit" is implemented for
- * this pass; QR / active-deposits / history / error screens will land as
- * additional cases once their Figma is wired.
+ * Steps rendered by `SmartRoutingAddress`. Sub-views advance/rewind local
+ * step state; the widget owns navigation and the `TopNav` chrome accordingly.
  */
-export type SmartRoutingAddressStep = 'deposit'
+export type SmartRoutingAddressStep = 'deposit' | 'past' | 'transaction'
 
 const TITLE_BY_STEP: Record<SmartRoutingAddressStep, string> = {
   deposit: 'Deposit funds',
+  past: 'Past deposits',
+  transaction: 'Transaction details',
 }
 
 function renderStep(
   step: SmartRoutingAddressStep,
   {
     onQrClick,
+    onViewPastDeposits,
+    onSelectDeposit,
+    selectedDeposit,
   }: {
     onQrClick?: (() => void) | undefined
+    onViewPastDeposits?: (() => void) | undefined
+    onSelectDeposit?: ((deposit: DepositedToken) => void) | undefined
+    selectedDeposit?: DepositedToken | undefined
   },
 ): ReactNode {
   switch (step) {
     case 'deposit':
-      return <Deposit {...(onQrClick && { onQrClick })} />
+      return (
+        <Deposit
+          {...(onQrClick && { onQrClick })}
+          {...(onViewPastDeposits && { onViewPastDeposits })}
+          {...(onSelectDeposit && { onSelectDeposit })}
+        />
+      )
+    case 'past':
+      return <PastDeposits {...(onSelectDeposit && { onSelectDeposit })} />
+    case 'transaction':
+      // `selectedDeposit` is set by the past-deposits row-click handler
+      // before advancing the step, so this branch always has a deposit.
+      return selectedDeposit ? (
+        <TransactionDetails deposit={selectedDeposit} />
+      ) : null
     default:
       return null
   }
@@ -46,7 +70,7 @@ export interface SmartRoutingAddressProps {
   recipient: Address
   /** Called when the top-right × close button is clicked. */
   onClose: () => void
-  /** Called when the top-left ? help button is clicked. Optional. */
+  /** Called when the top-left ? help button is clicked on the deposit step. */
   onHelp?: () => void
   className?: string
   size?: 'sm' | 'md' | 'lg'
@@ -61,6 +85,10 @@ export function SmartRoutingAddress({
 }: SmartRoutingAddressProps) {
   const { addressState, ensureAddress } = useSmartRoutingAddressContext()
   const [qrOpen, setQrOpen] = useState(false)
+  const [step, setStep] = useState<SmartRoutingAddressStep>('deposit')
+  const [selectedDeposit, setSelectedDeposit] = useState<
+    DepositedToken | undefined
+  >(undefined)
 
   useEffect(() => {
     // Errors surface via `addressState.status === 'error'`; swallow rejection
@@ -68,9 +96,6 @@ export function SmartRoutingAddress({
     ensureAddress(recipient).catch(() => {})
   }, [recipient, ensureAddress])
 
-  // Only one step is implemented for now; add state (e.g. from context or a
-  // local machine) here when the flow grows to multiple screens.
-  const step: SmartRoutingAddressStep = 'deposit'
   const title = TITLE_BY_STEP[step]
 
   const address =
@@ -91,6 +116,20 @@ export function SmartRoutingAddress({
     setQrOpen(false)
   }
 
+  // Sub-view chrome — sub-views swap the left slot for a back chevron that
+  // returns to the parent step. Root (deposit) step keeps the optional
+  // help (?) icon.
+  const goBack =
+    step === 'transaction'
+      ? () => setStep('past')
+      : step === 'past'
+        ? () => setStep('deposit')
+        : undefined
+  const leftClick = goBack ?? onHelp ?? undefined
+  const leftIcon: 'chevronLeft' | 'question' = goBack
+    ? 'chevronLeft'
+    : 'question'
+
   return (
     <Screen
       className={className}
@@ -98,16 +137,23 @@ export function SmartRoutingAddress({
       topNav={
         <TopNav
           title={title}
-          {...(onHelp && {
-            onLeftButtonClick: onHelp,
-            leftButtonIcon: 'question',
+          {...(leftClick && {
+            onLeftButtonClick: leftClick,
+            leftButtonIcon: leftIcon,
           })}
           onRightButtonClick={onClose}
         />
       }
+      footer={<PoweredBy />}
     >
       {renderStep(step, {
         onQrClick: handleQrClick,
+        onViewPastDeposits: () => setStep('past'),
+        onSelectDeposit: (deposit) => {
+          setSelectedDeposit(deposit)
+          setStep('transaction')
+        },
+        selectedDeposit,
       })}
       {/* QrSheet renders itself via `useScreenOverlayContainer()` + portal, so
         it stays inside the card frame while composing at this level rather

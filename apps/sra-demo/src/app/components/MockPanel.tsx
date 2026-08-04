@@ -6,13 +6,13 @@ import { isAddress, parseUnits } from 'viem'
 import { base } from 'viem/chains'
 import {
   createSimulation,
-  installMockFetch,
   loadPastDeposits,
+  type MockErrorMode,
   type MockStage,
   savePastDeposits,
   setMockDeposits,
-  uninstallMockFetch,
 } from '../mock'
+import { MockControls } from './MockControls'
 
 // Fallback route used before the widget has seeded a picker selection:
 // 250 USDC on Base. Once `activeRoute` populates from the widget's picker,
@@ -33,7 +33,28 @@ const STEP_LABELS: Record<MockStage, string> = {
   completed: 'Sent — track it in the widget.',
 }
 
-export function MockPanel({ destChainId }: { destChainId: number }) {
+const DOT_COLOR: Record<'idle' | MockStage, string> = {
+  idle: 'bg-muted',
+  pending: 'bg-primary animate-mock-pulse',
+  bridging: 'bg-primary animate-mock-pulse',
+  completed: 'bg-[#6bb04f]',
+}
+
+export function MockPanel({
+  destChainId,
+  regenerate,
+  mockErrorMode,
+  setMockErrorMode,
+  mockSponsored,
+  setMockSponsored,
+}: {
+  destChainId: number
+  regenerate: () => void
+  mockErrorMode: MockErrorMode
+  setMockErrorMode: (mode: MockErrorMode) => void
+  mockSponsored: boolean
+  setMockSponsored: (value: boolean) => void
+}) {
   const { addressState, activeRoute } = useSmartRoutingAddress()
   const route = activeRoute ?? FALLBACK
   const [sim, setSim] = useState<'idle' | MockStage>('idle')
@@ -46,18 +67,22 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
   }, [])
 
   useEffect(() => {
-    installMockFetch()
+    // Mock fetch lifecycle is owned by the page (installed on simulated
+    // mode, uninstalled on mainnet). Here we just seed the widget with any
+    // past deposits already persisted from a prior simulation run.
     setMockDeposits(loadPastDeposits())
     return () => {
       clearTimers()
-      uninstallMockFetch()
     }
   }, [clearTimers])
 
   const address =
     addressState.status === 'success' ? addressState.address : undefined
   const pastedOk =
-    isAddress(pasted.trim()) &&
+    // `strict: false` — the mock deliberately flips the returned address's
+    // EIP-55 checksum so real wallets refuse to send to it (see `mock.ts`
+    // `toFakeAddress`). Validate the format only and compare case-insensitively.
+    isAddress(pasted.trim(), { strict: false }) &&
     !!address &&
     pasted.trim().toLowerCase() === address.toLowerCase()
   const running = sim === 'pending' || sim === 'bridging'
@@ -108,49 +133,144 @@ export function MockPanel({ destChainId }: { destChainId: number }) {
           : "That doesn't match your deposit address."
 
   return (
-    <div className="pg__wallet">
-      <div className="pg__wallet-head">
-        <span className="pg__wallet-title">Simulated wallet</span>
-        <span className="pg__wallet-tag">Simulated</span>
-      </div>
-
-      <div className="pg__wallet-amount">
-        <span className="pg__wallet-value">{AMOUNT_WHOLE}</span>
-        <span className="pg__wallet-symbol">{route.symbol}</span>
-        <span className="pg__wallet-net">on {route.sourceChainName}</span>
-      </div>
-
-      <label className="pg__wallet-field" data-ok={pastedOk}>
-        <span className="pg__wallet-field-label">To</span>
-        <input
-          className="pg__wallet-input"
-          value={pasted}
-          onChange={(e) => setPasted(e.target.value.trim())}
-          placeholder="Paste your deposit address"
-          spellCheck={false}
-        />
-        {pastedOk && (
-          <span className="pg__wallet-ok" aria-hidden="true">
-            ✓
+    <ol className="m-0 flex list-none flex-col gap-5 p-0">
+      <li className="flex items-start gap-4">
+        <StepNum>1</StepNum>
+        <div className="flex flex-col gap-1 pt-1">
+          <span className="text-[15px] font-semibold">
+            Choose token &amp; network
           </span>
-        )}
-      </label>
+          <span className="text-sm leading-[1.5] text-muted">
+            Fees and arrival time update live as the route changes.
+          </span>
+        </div>
+      </li>
 
-      <button
-        type="button"
-        className="pg__wallet-send"
-        onClick={simulate}
-        disabled={!pastedOk}
-      >
-        {running ? `Send another ${amountLabel}` : `Send ${amountLabel}`}
-      </button>
+      <li className="flex items-start gap-4">
+        <StepNum>2</StepNum>
+        <div className="flex flex-1 flex-col gap-2 pt-1">
+          <span className="text-[15px] font-semibold">Send to the address</span>
+          <span className="text-sm leading-[1.5] text-muted">
+            Copy it into any wallet. Deposits are detected automatically.
+          </span>
 
-      {hint && (
-        <p className="pg__mock-status" data-stage={sim}>
-          <span className="pg__mock-dot" />
-          {hint}
-        </p>
-      )}
-    </div>
+          {/* Demo-only warning — matches the reference's `pg__warn` banner.
+              Reads as a red-tinted callout so users understand the address
+              can't accept real funds. */}
+          <p className="mt-2 rounded-lg border border-danger/35 bg-danger/10 px-3 py-2.5 text-xs leading-[1.5] text-ink">
+            <b className="text-danger">Demo only.</b> The generated address has
+            an intentionally invalid checksum, so real wallets refuse it — it
+            can't receive real funds. Never send real assets to it; use the
+            simulated wallet below.
+          </p>
+
+          {/* Warm gradient + peach border + orange-tinted shadow — matches
+              the reference's `pg__wallet` styling. The multi-layer gradient
+              is expressed via inline style (Tailwind arbitrary values get
+              unreadable with commas across two gradient layers). */}
+          <div
+            className="mt-2 flex flex-col gap-3.5 rounded-[18px] border border-[#f0d9c6] p-[18px] shadow-[0_10px_30px_-16px_rgba(231,96,0,0.25)]"
+            style={{
+              background:
+                'radial-gradient(120% 80% at 0% 0%, #fff5ec 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, #fffaf5 0%, #ffffff 100%)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex-1 text-sm font-semibold">
+                Simulated wallet
+              </span>
+              {/* Amber "Simulated" tag — separate palette from the primary
+                  orange used elsewhere so it doesn't compete with the CTA. */}
+              <span className="rounded-full bg-[#fbf3e2] px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#b97c10]">
+                Simulated
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 py-0.5">
+              <span className="text-[34px] font-semibold leading-none tabular-nums">
+                {AMOUNT_WHOLE}
+              </span>
+              <span className="text-[17px] font-semibold text-muted">
+                {route.symbol}
+              </span>
+              <span className="ml-auto text-[13px] text-muted">
+                on {route.sourceChainName}
+              </span>
+            </div>
+
+            {/* Inline row: label + input on the same line inside a bordered
+                wrapper, matches `pg__wallet-field`. `data-ok=true` on the
+                wrapper flips the border to green. */}
+            <label
+              data-ok={pastedOk}
+              className="flex items-center gap-2.5 rounded-xl border border-border-warm bg-white px-3.5 py-2.5 transition-colors data-[ok=true]:border-[#2e8b57]"
+            >
+              <span className="text-[13px] font-semibold text-muted">To</span>
+              <input
+                className="min-w-0 flex-1 border-none bg-transparent font-mono text-[13px] text-ink outline-none"
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value.trim())}
+                placeholder="Paste your deposit address"
+                spellCheck={false}
+              />
+              {pastedOk && (
+                <span className="font-bold text-[#2e8b57]" aria-hidden="true">
+                  ✓
+                </span>
+              )}
+            </label>
+
+            <button
+              type="button"
+              className="cursor-pointer rounded-xl bg-ink px-[18px] py-[13px] text-[15px] font-semibold text-white transition-[opacity,background-color] duration-150 hover:not-disabled:bg-[#2a1d12] disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={simulate}
+              disabled={!pastedOk}
+            >
+              {running ? `Send another ${amountLabel}` : `Send ${amountLabel}`}
+            </button>
+
+            {hint && (
+              <p className="m-0 flex items-center gap-2 text-[13px] text-muted">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLOR[sim]}`}
+                />
+                {hint}
+              </p>
+            )}
+          </div>
+        </div>
+      </li>
+
+      <li className="flex items-start gap-4">
+        <StepNum>3</StepNum>
+        <div className="flex flex-1 flex-col gap-2 pt-1">
+          <span className="text-[15px] font-semibold">
+            Try modifying the experience
+          </span>
+          <span className="text-sm leading-[1.5] text-muted">
+            Open <b>Advanced settings</b> below to change the max slippage or
+            destination chain, then use the mock controls to preview how the
+            widget handles errors, sponsored fees and past deposits.
+          </span>
+          <MockControls
+            destChainId={destChainId}
+            regenerate={regenerate}
+            errorMode={mockErrorMode}
+            setErrorMode={setMockErrorMode}
+            sponsored={mockSponsored}
+            setSponsored={setMockSponsored}
+          />
+        </div>
+      </li>
+    </ol>
+  )
+}
+
+/** Numbered circle used at the start of each guided-flow step. */
+function StepNum({ children }: { children: string }) {
+  return (
+    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
+      {children}
+    </span>
   )
 }

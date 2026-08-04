@@ -18,6 +18,7 @@ export const TEST_PROJECT_ID = 'test-project-id'
 export const TEST_CONFIG: SmartRoutingAddressConfig = {
   projectId: TEST_PROJECT_ID,
   targetChainId: base.id,
+  targetTokenSymbol: 'USDC',
   slippage: 50,
   pollingInterval: 25,
 }

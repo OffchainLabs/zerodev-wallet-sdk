@@ -83,6 +83,46 @@ describe('DataRow', () => {
     expect(onInfoClick).toHaveBeenCalledTimes(1)
   })
 
+  it('folds the tooltip copy into the button aria-label when both are set', () => {
+    render(
+      <DataRow
+        label="Max slippage"
+        value="0.50%"
+        info
+        infoTooltip="Highest price movement tolerated"
+        onInfoClick={() => {}}
+      />,
+    )
+    expect(
+      screen.getByRole('button', {
+        name: 'Max slippage — Highest price movement tolerated',
+      }),
+    ).toBeDefined()
+  })
+
+  it('makes the info icon focusable when a tooltip is provided', () => {
+    // Focus + hover trigger the Radix tooltip; aria-describedby is wired by
+    // Radix itself, so we just assert the span joins the tab order.
+    render(
+      <DataRow
+        label="Max slippage"
+        value="0.50%"
+        info
+        infoTooltip="Highest price movement tolerated"
+      />,
+    )
+    expect(screen.getByTestId('data-row-info').getAttribute('tabindex')).toBe(
+      '0',
+    )
+  })
+
+  it('does not make the info icon focusable when no tooltip is provided', () => {
+    render(<DataRow label="Max slippage" value="0.50%" info />)
+    expect(screen.getByTestId('data-row-info').getAttribute('tabindex')).toBe(
+      '-1',
+    )
+  })
+
   it('renders leading content inside the value group, before the value', () => {
     render(
       <DataRow

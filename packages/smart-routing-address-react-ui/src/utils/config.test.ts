@@ -28,6 +28,7 @@ import {
 /** Minimal config without routes, exercising the defaults */
 const BARE_CONFIG: SmartRoutingAddressConfig = {
   targetChainId: base.id,
+  targetTokenSymbol: 'USDC',
 }
 
 describe('resolveVersion', () => {
@@ -134,7 +135,10 @@ describe('resolveSourceTokens', () => {
 
   it('keeps only stables for a destination chain without native support', () => {
     // bsc only maps USDC/USDT and is not in NATIVE_TOKENS_SUPPORTED
-    const sources = resolveSourceTokens({ targetChainId: bsc.id })
+    const sources = resolveSourceTokens({
+      targetChainId: bsc.id,
+      targetTokenSymbol: 'USDC',
+    })
     const tokenTypes = new Set(sources.map((source) => source.tokenType))
     expect([...tokenTypes].sort()).toEqual(['USDC', 'USDT'])
   })
@@ -186,16 +190,14 @@ describe('token symbols', () => {
     ).toBe('WETH')
   })
 
-  it('uses the configured target token, regardless of source', () => {
+  it('returns the configured target token', () => {
     expect(
-      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'USDC' }),
-    ).toBe('USDC')
+      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'ETH' }),
+    ).toBe('ETH')
   })
 
-  it('derives the destination symbol from the defaults', () => {
-    // WBTC is excluded because base has no WBTC token address
-    expect(getDestTokenSymbol(BARE_CONFIG)).toBe(
-      'ETH / USDC / WETH / USDT / DAI / EURC',
-    )
+  it("defaults to 'USDC' when targetTokenSymbol is omitted", () => {
+    const { targetTokenSymbol: _drop, ...withoutSymbol } = BARE_CONFIG
+    expect(getDestTokenSymbol(withoutSymbol)).toBe('USDC')
   })
 })

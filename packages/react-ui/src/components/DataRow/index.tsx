@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { cn } from '../../utils/common'
 import { Icon } from '../Icon'
 import { Text } from '../Text'
+import { Tooltip } from '../Tooltip'
 
 export interface DataRowProps {
   /** Label rendered on the left (e.g., "Max slippage"). */
@@ -16,6 +17,10 @@ export interface DataRowProps {
   /** Handler for the info icon; when supplied, the icon becomes a keyboard-
    * accessible button. Requires `info` to be true. */
   onInfoClick?: () => void
+  /** Tooltip text shown on hover / focus over the info icon. Rendered via
+   * `Tooltip` (Radix), so it collides / portals correctly. Ignored when
+   * `info` is false. */
+  infoTooltip?: string
   /** Content rendered inside the value group, before the value. Typically a
    * small decorative or status icon (e.g. warning). */
   leading?: ReactNode
@@ -33,6 +38,7 @@ export function DataRow({
   value,
   info,
   onInfoClick,
+  infoTooltip,
   leading,
   trailing,
   variant = 'default',
@@ -64,35 +70,55 @@ export function DataRow({
       <Text className={cn('zd:whitespace-nowrap', textColorClass)}>
         {label}
       </Text>
-      {info &&
-        (onInfoClick ? (
-          <button
-            type="button"
-            onClick={onInfoClick}
-            aria-label={`${label} — more info`}
-            className="zd:flex zd:items-center zd:justify-center zd:cursor-pointer"
-            data-testid="data-row-info"
-          >
-            <Icon
-              name="info"
+      {info && (
+        <Tooltip content={infoTooltip}>
+          {onInfoClick ? (
+            <button
+              type="button"
+              onClick={onInfoClick}
+              aria-label={
+                infoTooltip
+                  ? `${label} — ${infoTooltip}`
+                  : `${label} — more info`
+              }
+              className="zd:flex zd:items-center zd:justify-center zd:cursor-pointer"
+              data-testid="data-row-info"
+            >
+              <Icon
+                name="info"
+                className={cn(
+                  'zd:w-3.5 zd:h-3.5',
+                  isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
+                )}
+                aria-hidden
+              />
+            </button>
+          ) : (
+            // Real DOM element so Radix's `Tooltip` trigger (via `asChild`)
+            // can attach hover / focus handlers and wire `aria-describedby`
+            // to its content — no manual aria-label needed on the span.
+            // Focusable only when there's a tooltip; otherwise this is a
+            // decorative info icon and shouldn't land in the tab order.
+            <span
+              tabIndex={infoTooltip ? 0 : -1}
               className={cn(
-                'zd:w-3.5 zd:h-3.5',
-                isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
+                'zd:inline-flex zd:items-center zd:justify-center',
+                infoTooltip && 'zd:cursor-help zd:outline-none',
               )}
-              aria-hidden
-            />
-          </button>
-        ) : (
-          <Icon
-            name="info"
-            className={cn(
-              'zd:w-3.5 zd:h-3.5',
-              isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
-            )}
-            data-testid="data-row-info"
-            aria-hidden
-          />
-        ))}
+              data-testid="data-row-info"
+            >
+              <Icon
+                name="info"
+                className={cn(
+                  'zd:w-3.5 zd:h-3.5',
+                  isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
+                )}
+                aria-hidden
+              />
+            </span>
+          )}
+        </Tooltip>
+      )}
       {/* Spacer pushes the value to the right end. min-w-0 so the label and
           value can shrink independently if the container is narrow. */}
       <div className="zd:min-w-0 zd:flex-1" />

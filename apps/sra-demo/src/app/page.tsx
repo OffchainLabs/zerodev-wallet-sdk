@@ -5,35 +5,101 @@ import {
   type SmartRoutingAddressConfig,
   SmartRoutingAddressProvider,
 } from '@zerodev/smart-routing-address-react-ui'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Chain } from 'viem'
 import { type Address, isAddress } from 'viem'
 import { arbitrum, base, mainnet, optimism, polygon } from 'viem/chains'
 import { MockPanel } from './components/MockPanel'
+import {
+  installMockFetch,
+  loadPastDeposits,
+  type MockErrorMode,
+  setMockDeposits,
+  uninstallMockFetch,
+} from './mock'
 
-// Vitalik's address — a valid, well-known target so the widget renders
-// immediately without the user typing anything.
-const DEFAULT_RECIPIENT: Address = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+// Vitalik's address — a valid, well-known target used only as a default in
+// SIMULATED mode so the widget renders immediately without the user typing
+// anything. In MAINNET mode we clear the recipient so the user is forced to
+// enter their own address before any real deposit address is generated.
+const SIMULATED_DEFAULT_RECIPIENT: Address =
+  '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
 
 // Destination chains offered in the "Advanced settings" configurator.
 const CHAINS: Chain[] = [arbitrum, base, optimism, polygon, mainnet]
+
+/** Demo run mode. In `simulated` the mock fetch layer intercepts every SRA
+ * server call so the widget can be exercised without any real network / funds
+ * / project ID. In `mainnet` the mock is disabled and the widget speaks to
+ * the live SRA server — real deposit addresses, real routing, real funds. */
+type DemoMode = 'simulated' | 'mainnet'
 
 function shortAddress(value: string): string {
   return `${value.slice(0, 6)}…${value.slice(-4)}`
 }
 
 export default function Home() {
+  // Run mode drives every safety-relevant behaviour below (mock fetch
+  // install, default recipient, whether the widget renders at all).
+  const [mode, setMode] = useState<DemoMode>('simulated')
+
   // Applied config drives the widget. Draft state below is edited freely and
   // only applied (regenerating the routing address) when "Save & regenerate"
   // is clicked.
-  const [recipient, setRecipient] = useState<Address>(DEFAULT_RECIPIENT)
+  // In mainnet mode `recipient` starts empty so the widget doesn't render
+  // until the user enters their own address (safety default).
+  const [recipient, setRecipient] = useState<Address | ''>(
+    SIMULATED_DEFAULT_RECIPIENT,
+  )
   const [targetChainId, setTargetChainId] = useState<number>(arbitrum.id)
   const [slippage, setSlippage] = useState<number>(50)
+  // Bumped by `MockControls` after inserting/clearing mock deposits or
+  // toggling error/sponsored modes — re-mounts the widget so freshly-added
+  // deposits re-baseline as past and new mock state takes effect.
+  const [mockNonce, setMockNonce] = useState(0)
+  const regenerate = () => setMockNonce((n) => n + 1)
+  // Toggle state for the "Simulate states" section of MockControls. Lifted
+  // out of MockControls so it survives the widget's re-mounts (bumping
+  // `mockNonce` tears down the whole provider subtree, which used to reset
+  // the local toggle state while the mock's module-level state persisted —
+  // producing a UI ↔ mock mismatch).
+  const [mockErrorMode, setMockErrorMode] = useState<MockErrorMode>('none')
+  const [mockSponsored, setMockSponsored] = useState(false)
 
-  const [draftRecipient, setDraftRecipient] =
-    useState<string>(DEFAULT_RECIPIENT)
+  const [draftRecipient, setDraftRecipient] = useState<string>(
+    SIMULATED_DEFAULT_RECIPIENT,
+  )
   const [draftChain, setDraftChain] = useState<number>(targetChainId)
   const [draftSlippage, setDraftSlippage] = useState<number>(slippage)
+
+  // Mock lifecycle owned at page level so the toggle can flip it cleanly.
+  // Simulated → install the fetch interceptor + seed past-deposits from
+  // localStorage. Mainnet → uninstall so the widget hits the live SRA
+  // server. Runs on every mode change.
+  useEffect(() => {
+    if (mode === 'simulated') {
+      installMockFetch()
+      setMockDeposits(loadPastDeposits())
+    } else {
+      uninstallMockFetch()
+    }
+  }, [mode])
+
+  // Reset recipient defaults when the run mode changes. Simulated re-seeds
+  // Vitalik's address so the widget works without input; mainnet clears the
+  // recipient so the user MUST enter their own address before a real deposit
+  // address is generated.
+  const switchMode = (next: DemoMode) => {
+    if (next === mode) return
+    setMode(next)
+    if (next === 'simulated') {
+      setRecipient(SIMULATED_DEFAULT_RECIPIENT)
+      setDraftRecipient(SIMULATED_DEFAULT_RECIPIENT)
+    } else {
+      setRecipient('')
+      setDraftRecipient('')
+    }
+  }
 
   const draftValid = isAddress(draftRecipient)
   const showError = draftRecipient !== '' && !draftValid
@@ -51,17 +117,29 @@ export default function Home() {
   }
 
   const config = useMemo<SmartRoutingAddressConfig>(
-    () => ({ targetChainId, targetTokenSymbol: 'USDC', slippage }),
+    // targetTokenSymbol defaults to 'USDC' when omitted.
+    () => ({ targetChainId, slippage }),
     [targetChainId, slippage],
   )
 
+  const recipientReady = isAddress(recipient)
+
   return (
     <main>
-      {/* Key on recipient+chain+slippage so the whole SRA subtree resets
-          (including provider state) when the user regenerates — otherwise
-          stale addresses can persist across config changes. */}
+      {/* Persistent warning strip on mainnet mode — reminder that this is a
+          live SRA path and any deposit sent to the generated address is real. */}
+      {mode === 'mainnet' && (
+        <div className="w-full bg-danger/10 px-8 py-2.5 text-center text-[13px] font-semibold text-danger">
+          Live SRA — real funds will be routed. Verify the delivery address
+          before sending.
+        </div>
+      )}
+
+      {/* Key on recipient+chain+slippage+mode so the whole SRA subtree resets
+          (including provider state) when the user regenerates or flips modes —
+          otherwise stale addresses can persist across config changes. */}
       <SmartRoutingAddressProvider
-        key={`${recipient}-${targetChainId}-${slippage}`}
+        key={`${mode}-${recipient}-${targetChainId}-${slippage}-${mockNonce}`}
         config={config}
       >
         {/* Grid uses an arbitrary breakpoint of 900px — Tailwind's default
@@ -69,6 +147,34 @@ export default function Home() {
             two-column ↔ stacked flip. */}
         <div className="mx-auto grid max-w-[1120px] grid-cols-1 items-start justify-items-center gap-10 px-8 pt-12 pb-16 min-[900px]:grid-cols-[minmax(0,1fr)_400px] min-[900px]:gap-16 min-[900px]:justify-items-stretch">
           <section className="flex max-w-[480px] flex-col gap-8">
+            {/* Mode toggle — segmented control. Default is `simulated`; the
+                user has to explicitly flip to `mainnet` to unlock the real
+                SRA path. Kept above the header so it's the first thing seen. */}
+            <div className="inline-flex self-start rounded-full border border-border-warm bg-white/55 p-1 text-sm font-semibold">
+              <button
+                type="button"
+                onClick={() => switchMode('simulated')}
+                className={`cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
+                  mode === 'simulated'
+                    ? 'bg-ink text-white'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Simulated
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('mainnet')}
+                className={`cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
+                  mode === 'mainnet'
+                    ? 'bg-danger text-white'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Mainnet
+              </button>
+            </div>
+
             <header className="flex flex-col gap-3">
               <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9c958c]">
                 Interactive demo
@@ -78,61 +184,70 @@ export default function Home() {
               </h1>
               <p className="m-0 max-w-[48ch] text-base leading-[1.6] text-muted">
                 A pre-built, customizable React UI for ZeroDev Smart Routing
-                Address — the whole deposit flow, ready to drop into your app.
+                Address — the whole deposit flow, ready to drop into your app
+                and cut the funding friction that hurts onboarding conversion.
               </p>
-              <p className="m-0 max-w-[48ch] text-base leading-[1.6] text-muted">
-                Install it, make it your own, and cut the funding friction that
-                hurts onboarding conversion.
-              </p>
+              {/* "React package coming soon" chip — only shown in simulated
+                  mode so nothing implies the mainnet flow is a prototype. */}
+              {mode === 'simulated' && (
+                <span className="mt-0.5 inline-flex items-center gap-[7px] self-start rounded-full border border-border-warm bg-white/55 px-[11px] py-[5px] text-xs font-semibold tracking-[0.01em] text-muted">
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full bg-primary"
+                  />
+                  React package coming soon
+                </span>
+              )}
             </header>
 
-            <ol className="m-0 flex list-none flex-col gap-5 p-0">
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  1
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Choose token &amp; network
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    Fees and arrival time update live as the route changes.
-                  </span>
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  2
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Send to the address
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    Copy it into any wallet. Deposits are detected
-                    automatically.
-                  </span>
-                  {/* Simulated wallet — copy the widget's deposit address into
-                      the input below and click Send to see a fake deposit flow
-                      through the widget's status view. */}
-                  <MockPanel destChainId={targetChainId} />
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
-                  3
-                </span>
-                <div className="flex flex-col gap-1 pt-1">
-                  <span className="text-[15px] font-semibold">
-                    Funds arrive on your chain
-                  </span>
-                  <span className="text-sm leading-[1.5] text-muted">
-                    We swap and bridge in the background, delivering to the
-                    target chain in seconds.
+            {/* Simulated wallet — mock fetch layer intercepts every SRA
+                server call, so this whole path drives fake deposits through
+                the widget. Only mounted in simulated mode so its banner
+                (which claims the address can't receive real funds) can't
+                mislead mainnet users. */}
+            {mode === 'simulated' && (
+              <MockPanel
+                destChainId={targetChainId}
+                regenerate={regenerate}
+                mockErrorMode={mockErrorMode}
+                setMockErrorMode={setMockErrorMode}
+                mockSponsored={mockSponsored}
+                setMockSponsored={setMockSponsored}
+              />
+            )}
+
+            {/* Mainnet mode primer — a compact info card that replaces the
+                Simulated wallet. Reminds the user to set their own delivery
+                address and send only from the source chain the widget picked. */}
+            {mode === 'mainnet' && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-danger/35 bg-danger/5 p-5">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-danger" />
+                  <span className="text-sm font-semibold text-danger">
+                    Live mode
                   </span>
                 </div>
-              </li>
-            </ol>
+                <p className="m-0 text-sm leading-[1.5] text-ink">
+                  The widget now speaks to the live SRA server. Any address it
+                  generates is a real deposit address — funds sent to it are
+                  routed on-chain.
+                </p>
+                <ol className="m-0 ml-4 flex list-decimal flex-col gap-1 text-sm leading-[1.5] text-ink">
+                  <li>
+                    Open <b>Advanced settings</b> below and set{' '}
+                    <b>Delivery address</b> to your own address.
+                  </li>
+                  <li>
+                    Click <b>Save &amp; regenerate address</b>.
+                  </li>
+                  <li>
+                    Send only from the source chain the widget selected under{' '}
+                    <b>Send</b>, at least the shown <b>Min deposit</b>.
+                  </li>
+                  <li>Start with a small test amount.</li>
+                </ol>
+              </div>
+            )}
 
             {/* `group` lets the summary chevron rotate on `[open]` via the
                 `group-open:` variant. `<details>` list styles + webkit marker
@@ -162,7 +277,9 @@ export default function Home() {
                   >
                     {showError
                       ? 'Not a valid address'
-                      : 'Generated deposit addresses route funds to this account.'}
+                      : mode === 'mainnet'
+                        ? 'Real funds sent to the generated address are routed to this account. Use your own address.'
+                        : 'Generated deposit addresses route funds to this account.'}
                   </span>
                 </label>
 
@@ -240,15 +357,28 @@ export default function Home() {
           </section>
 
           <aside className="justify-self-center min-[900px]:justify-self-end">
-            <SmartRoutingAddress
-              recipient={recipient}
-              onClose={() => {
-                /* no-op — this demo has nowhere to navigate to */
-              }}
-              onHelp={() => {
-                /* no-op — surfaces the ? icon in TopNav's left slot */
-              }}
-            />
+            {recipientReady ? (
+              <SmartRoutingAddress
+                recipient={recipient as Address}
+                onClose={() => {
+                  /* no-op — this demo has nowhere to navigate to */
+                }}
+                onHelp={() => {
+                  /* no-op — surfaces the ? icon in TopNav's left slot */
+                }}
+              />
+            ) : (
+              // Mainnet mode without a recipient — refuse to render the
+              // widget so we can't accidentally generate a real deposit
+              // address bound to an empty / dummy recipient.
+              <div className="flex h-[600px] w-[400px] max-w-full items-center justify-center rounded-4xl border border-border-warm bg-white/55 p-8">
+                <p className="text-center text-sm text-muted">
+                  Enter a delivery address in{' '}
+                  <b className="text-ink">Advanced settings</b> to generate your
+                  deposit address.
+                </p>
+              </div>
+            )}
           </aside>
         </div>
       </SmartRoutingAddressProvider>
