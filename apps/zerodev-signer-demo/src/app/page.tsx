@@ -4,15 +4,23 @@ import {ZeroDevLogo} from '@zerodev/react-ui'
 import {ConnectWallet, SignUp, useAuth} from '@zerodev/wallet-react-ui'
 import {KeyRound, Layers, Loader2, Sparkles} from 'lucide-react'
 import {useRouter} from 'next/navigation'
-import {Suspense, useEffect} from 'react'
+import {Suspense, useEffect, useState} from 'react'
 import {useAccount, useConnect} from 'wagmi'
 import { AppHeader } from './components/AppHeader'
+import { Playground } from './components/playground/Playground'
+import {
+  DEFAULT_ITEMS,
+  DEFAULT_SETTINGS,
+  emailMethod,
+  type PlaygroundItem,
+  type PlaygroundSettings,
+} from './components/playground/utils/snippet'
 
 export const dynamic = 'force-dynamic'
 
 // Email auth method choice, set by the browser E2E specs (stored in localStorage).
-// Read at render time — ConnectWallet renders SignUp only after user interaction,
-// so this always runs client-side with the current value.
+// Read in a mount effect (specs set the key before load) — kept out of render
+// so the SSR pass and first client render match.
 function getEmailAuthMethod(): 'otp' | 'magicLink' {
   if (typeof window === 'undefined') return 'otp'
   return localStorage.getItem('zd:emailAuthMethod') === 'magicLink'
@@ -30,6 +38,9 @@ export default function LandingPage() {
 
 function LandingPageInner() {
   const router = useRouter()
+
+  const [items, setItems] = useState<PlaygroundItem[]>(DEFAULT_ITEMS)
+  const [settings, setSettings] = useState<PlaygroundSettings>(DEFAULT_SETTINGS)
 
   const {connect, connectors, status: connectStatus} = useConnect()
   const {isConnected, status: accountStatus} = useAccount()
@@ -57,6 +68,11 @@ function LandingPageInner() {
 
   useEffect(() => {
     localStorage.removeItem('zd:loggedOut')
+    // Seed the Email unit's method from the E2E localStorage toggle.
+    const method = getEmailAuthMethod()
+    setItems((prev) =>
+      prev.map((i) => (i.type === 'email' ? { ...i, method } : i)),
+    )
   }, [])
 
   useEffect(() => {
@@ -135,22 +151,26 @@ function LandingPageInner() {
               </button>
             </div>
           ) : (
-
-              // Using renderSignUp for demo purposes, although using <ConnectWallet /> on its own would be enough
-              // because SignUp has a default
+              // Live preview of the playground's composition. With no units
+              // selected, renderSignUp is omitted and ConnectWallet falls back
+              // to <SignUp.Default />.
               <ConnectWallet
                 size="md"
                 logo={<ZeroDevLogo variant="mark" tone="color" className="zd:h-8 zd:w-auto" />}
-                renderSignUp={() =>
-                  <SignUp emailAuthMethod={getEmailAuthMethod()}>
-                    <SignUp.Passkey />
-                    <SignUp.Divider />
-                    <SignUp.Google />
-                    <SignUp.Email />
-                  </SignUp>
+                renderSignUp={
+                  items.length === 0
+                    ? undefined
+                    : () => (
+                        <SignUp
+                          emailAuthMethod={emailMethod(items)}
+                          termsAndConditionsUrl={settings.termsUrl || undefined}
+                          privacyPolicyUrl={settings.privacyUrl || undefined}
+                        >
+                          {items.map(renderSignUpItem)}
+                        </SignUp>
+                      )
                 }
               />
-
           )}
 
           <p className="mt-3 max-w-[360px] text-center text-xs leading-5 text-[var(--muted)]">
@@ -176,8 +196,28 @@ function LandingPageInner() {
           </p>
         </div>
       </main>
+
+      <Playground
+        items={items}
+        onChange={setItems}
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
     </div>
   )
+}
+
+function renderSignUpItem(item: PlaygroundItem) {
+  switch (item.type) {
+    case 'passkey':
+      return <SignUp.Passkey key={item.key} />
+    case 'google':
+      return <SignUp.Google key={item.key} />
+    case 'email':
+      return <SignUp.Email key={item.key} />
+    case 'divider':
+      return <SignUp.Divider key={item.key} />
+  }
 }
 
 function DemoStep({
