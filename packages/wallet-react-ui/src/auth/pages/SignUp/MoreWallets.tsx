@@ -87,7 +87,7 @@ export function SignUpMoreWallets({
   return (
     <>
       <ListItem
-        icon={<ListItemIcon name="walletOutline" />}
+        icon={<ListItemIcon name="walletOutline" className="zd:w-5 zd:h-5" />}
         title={title}
         trailing={<ListItemChevron />}
         disabled={authPending}
