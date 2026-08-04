@@ -24,7 +24,8 @@ export default defineConfig({
     environment: 'happy-dom',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      // `lcov` (coverage/lcov.info) is what Codecov ingests in CI.
+      reporter: ['text', 'html', 'lcov'],
       include: ['packages/*/src/**/*.ts', 'packages/*/src/**/*.tsx'],
       exclude: [
         'packages/*/src/**/*.test.ts',
