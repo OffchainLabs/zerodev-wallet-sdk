@@ -75,7 +75,9 @@ export function SignUpInstalledWallets({
         <ListItem
           key={connector.uid}
           title={name}
-          icon={<img src={icon} alt="" className="zd:w-6 zd:h-6" />}
+          icon={
+            icon ? <img src={icon} alt="" className="zd:w-6 zd:h-6" /> : null
+          }
           subtitle={<Badge text="INSTALLED" />}
           trailing={<ListItemChevron />}
           disabled={authPending}
