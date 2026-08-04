@@ -29,3 +29,4 @@ makes it the active wagmi connection and closes the embedded-wallet flow.
   <SignUp.InstalledWallets excludeWalletIds={['metamask']} />
   <SignUp.MoreWallets />
 </SignUp>
+```

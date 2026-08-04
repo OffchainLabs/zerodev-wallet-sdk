@@ -31,6 +31,8 @@ export function SignUpMoreWallets({
   )
 
   const startConnect = (connector: (typeof connectors)[number]) => {
+    if (authPending) return
+    if (!guardAgreement()) return
     setOpen(false)
     setError(null)
     connect(
