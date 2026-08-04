@@ -1,18 +1,15 @@
 /**
- * In-process adapter for the same `MockRequest[]` the Mockttp proxy consumes.
+ * In-app adapter: serves `MockRequest[]` by patching `fetch` inside the page.
  *
- * Two ways to serve one set of mock definitions. The proxy (`server.ts`) sits
- * outside the browser and catches everything, including the hosts the SDK
- * hardcodes; this one patches `fetch` inside the page, so it needs no second
- * process and no CA, but only sees requests the page itself makes.
+ * The counterpart to `routeMocks`, which serves the same definitions to
+ * Playwright via browser-level interception. This one exists for driving the app
+ * by hand — it needs no test runner, just the app itself.
  *
- * Matching MUST stay in step with `applyMocks` or the same preset would behave
- * differently depending on which adapter served it — the reason `orderMocks` is
- * shared rather than reimplemented here.
+ * `matchMock` here is the shared matcher both adapters use, so a definition
+ * behaves the same either way. Keep it that way; two matchers would drift.
  *
- * Node-free on purpose: this runs in the browser, so it may only import
- * `types.ts` and `orderMocks.ts`. Importing `server.ts` would pull mockttp and
- * `node:http` into the client bundle.
+ * Runs in the browser, so it must stay free of anything Node-only — importing
+ * such a module here would drag it into the client bundle.
  */
 
 import { echoJsonRpcId } from './jsonRpc.js'
@@ -44,8 +41,8 @@ export function getActiveMocks(): readonly MockRequest[] {
 /**
  * True when every key in `expected` is present in `actual` with a deep-equal
  * value. Extra keys on `actual` are ignored — the same subset semantics as
- * Mockttp's `withJsonBodyIncluding`, so `{ method: 'eth_call' }` matches any
- * JSON-RPC envelope for that method.
+ * subset semantics, so `{ method: 'eth_call' }` matches any JSON-RPC envelope
+ * for that method.
  */
 export function jsonBodyIncludes(actual: unknown, expected: unknown): boolean {
   if (expected === null || typeof expected !== 'object') {
@@ -72,7 +69,7 @@ function urlMatches(pattern: string | RegExp, url: string): boolean {
   return typeof pattern === 'string' ? pattern === url : pattern.test(url)
 }
 
-/** First match wins, mirroring Mockttp's rule semantics. */
+/** First match wins, after `orderMocks` has sorted by priority. */
 export function matchMock(
   mocks: readonly MockRequest[],
   request: { url: string; method: string; body: string },

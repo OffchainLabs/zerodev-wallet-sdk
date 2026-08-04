@@ -1,5 +1,3 @@
-import type { Mockttp } from 'mockttp'
-
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 /**
@@ -13,7 +11,7 @@ export type UnmatchedPolicy = 'passthrough' | 'block'
 export interface MockRequest {
   /**
    * Matched against the request's REAL full URL (host + path), because the
-   * browser is routed through Mockttp as a proxy. Exact string or RegExp.
+   * request is intercepted in the browser, not in the app. Exact string or RegExp.
    */
   url: string | RegExp
   method: HttpMethod
@@ -38,16 +36,3 @@ export interface MockRequest {
   /** Higher wins when multiple mocks match. Defaults to 0. */
   priority?: number
 }
-
-export interface WithMockOptions {
-  /** Compose by spreading, e.g. `[...happyPath, myOverride]`. */
-  mocks: MockRequest[]
-  /** Defaults to `passthrough`. */
-  unmatched?: UnmatchedPolicy
-}
-
-export interface TestSuiteParams {
-  mockServer: Mockttp
-}
-
-export type TestSuiteFunction = (params: TestSuiteParams) => Promise<void>

@@ -7,10 +7,6 @@ const labAppDir = path.resolve(__dirname, '../apps/qa-lab-testing')
 
 export default defineConfig({
   testDir: './browser',
-  // `browser/mocked/` belongs to playwright.mocked.config.ts. Without this they
-  // are collected here too, where nothing routes the browser through the proxy —
-  // they pass, but prove nothing.
-  testIgnore: '**/mocked/**',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
