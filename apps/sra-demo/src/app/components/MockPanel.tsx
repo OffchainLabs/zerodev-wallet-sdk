@@ -79,9 +79,8 @@ export function MockPanel({
   const address =
     addressState.status === 'success' ? addressState.address : undefined
   const pastedOk =
-    // `strict: false` — the mock deliberately flips the returned address's
-    // EIP-55 checksum so real wallets refuse to send to it (see `mock.ts`
-    // `toFakeAddress`). Validate the format only and compare case-insensitively.
+    // Compare case-insensitively so pastes from mixed-case sources still
+    // match. `strict: false` accepts either form.
     isAddress(pasted.trim(), { strict: false }) &&
     !!address &&
     pasted.trim().toLowerCase() === address.toLowerCase()
@@ -155,13 +154,13 @@ export function MockPanel({
           </span>
 
           {/* Demo-only warning — matches the reference's `pg__warn` banner.
-              Reads as a red-tinted callout so users understand the address
-              can't accept real funds. */}
+              Red-tinted callout: the simulated demo returns a real SRA
+              address (server passthrough), so real funds sent to it would
+              route. Only status updates below are mocked. */}
           <p className="mt-2 rounded-lg border border-danger/35 bg-danger/10 px-3 py-2.5 text-xs leading-[1.5] text-ink">
-            <b className="text-danger">Demo only.</b> The generated address has
-            an intentionally invalid checksum, so real wallets refuse it — it
-            can't receive real funds. Never send real assets to it; use the
-            simulated wallet below.
+            <b className="text-danger">Demo only.</b> This is a real deposit
+            address — the demo only mocks the status updates below. Never send
+            real assets to it; use the simulated wallet to preview the flow.
           </p>
 
           {/* Warm gradient + peach border + orange-tinted shadow — matches
