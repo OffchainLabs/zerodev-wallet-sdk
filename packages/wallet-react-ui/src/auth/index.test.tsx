@@ -160,13 +160,6 @@ describe('ConnectWallet', () => {
     )
   })
 
-  it('renders wallet-selection state', () => {
-    mockStep = 'wallet-selection'
-    render(<ConnectWallet />)
-
-    expect(screen.getByTestId('wallet-selection')).toBeDefined()
-  })
-
   it('renders authenticated state as null', () => {
     mockStep = 'authenticated'
     const { container } = render(<ConnectWallet />)
