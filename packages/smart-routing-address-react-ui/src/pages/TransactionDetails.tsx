@@ -410,7 +410,7 @@ function ProviderChip({ provider }: { provider: string }) {
   const iconUrl = PROVIDER_ICONS[provider]
   return (
     <span
-      className="zd:inline-flex zd:items-center zd:gap-1 zd:rounded-full zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
+      className="zd:inline-flex zd:items-center zd:gap-1 zd:text-body3 zd:text-greyScale"
       title={`Quoted via ${provider}`}
     >
       {provider}

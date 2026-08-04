@@ -1,4 +1,4 @@
-import { cn, Text } from '@zerodev/react-ui'
+import { cn, Icon, Text } from '@zerodev/react-ui'
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { useMemo } from 'react'
 import { TxnItem, type TxnStatus } from '../components/TxnItem'
@@ -90,7 +90,7 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
   const address = success?.address
   const estimatedFees = success?.estimatedFees ?? []
 
-  const { deposits } = useDepositStatus({
+  const { deposits, hasLoaded } = useDepositStatus({
     address,
     pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
@@ -118,7 +118,18 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
           'zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]',
         )}
       >
-        {deposits.length === 0 ? (
+        {!hasLoaded ? (
+          <output
+            aria-label="Loading past deposits"
+            className="zd:flex zd:flex-1 zd:items-center zd:justify-center zd:py-8"
+          >
+            <Icon
+              name="loading"
+              className="zd:size-5 zd:animate-spin zd:text-orange"
+              aria-hidden
+            />
+          </output>
+        ) : deposits.length === 0 ? (
           <div className="zd:flex zd:flex-1 zd:items-center zd:justify-center zd:py-8">
             <Text className="zd:text-greyScale/50">No deposits yet</Text>
           </div>
