@@ -34,10 +34,11 @@ export function TopNav({
   return (
     <div
       className={cn(
-        // Anchored at left=-16 with width=100%+32 so the bar spans the
-        // whole card (backs out Screen's px-4); internal px-4 keeps the
-        // icons at the 16px inset.
-        'zd:absolute zd:top-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
+        // Spans the card edge-to-edge naturally (`left/right-0`) — the
+        // Screen's card no longer has horizontal padding, so no offset
+        // dance is needed. Internal px-4 keeps the icons at the 16px
+        // inset that matches the scroll container's content padding.
+        'zd:absolute zd:top-0 zd:left-0 zd:right-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
         // Frosted bg masks scrolled content passing under the nav.
         'zd:backdrop-blur-[15px]',
         className,
@@ -46,8 +47,6 @@ export function TopNav({
       // the nav height tracks the density variants and doesn't eat a
       // disproportionate share of the shrunken frame at smaller sizes.
       style={{
-        left: 'calc(-4 * var(--zd-spacing))',
-        width: 'calc(100% + calc(8 * var(--zd-spacing)))',
         height: `calc(${(TOP_NAV_HEIGHT + 24) / 4} * var(--zd-spacing))`,
       }}
     >
