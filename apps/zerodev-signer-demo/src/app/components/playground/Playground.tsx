@@ -1,6 +1,6 @@
 'use client'
 
-import type { EmailAuthMethod } from '@zerodev/wallet-react-ui'
+import type { EmailAuthMethod, WalletId } from '@zerodev/wallet-react-ui'
 import {
   Check,
   ChevronDown,
@@ -16,7 +16,10 @@ import {
   Mail,
   Minus,
   Plus,
+  ScanSearch,
   SlidersHorizontal,
+  Wallet,
+  WalletCards,
   X,
 } from 'lucide-react'
 import {
@@ -28,6 +31,7 @@ import {
 } from 'react'
 import {
   buildSnippet,
+  PINNED_WALLETS,
   type PlaygroundItem,
   type PlaygroundSettings,
   type SnippetToken,
@@ -49,6 +53,9 @@ const UNIT_ICON: Record<UnitType, LucideIcon> = {
   passkey: Fingerprint,
   google: Chrome,
   email: Mail,
+  wallet: Wallet,
+  installedWallets: ScanSearch,
+  moreWallets: WalletCards,
   divider: Minus,
 }
 
@@ -91,16 +98,50 @@ export function Playground({
     }
   }, [open])
 
+  const walletCount = items.filter((i) => i.type === 'wallet').length
+
   const handleChipClick = (type: UnitType, multi: boolean) => {
     if (!multi && items.some((i) => i.type === type)) {
       onChange((prev) => prev.filter((i) => i.type !== type))
       return
     }
     const key = `pg-${++keyCounter.current}`
+    onChange((prev) => {
+      if (type === 'email') {
+        return [...prev, { key, type: 'email', method: 'otp' }]
+      }
+      if (type === 'wallet') {
+        const used = new Set(
+          prev.flatMap((i) => (i.type === 'wallet' ? [i.walletId] : [])),
+        )
+        const free = PINNED_WALLETS.find((w) => !used.has(w.id))
+        if (!free) return prev
+        return [...prev, { key, type: 'wallet', walletId: free.id }]
+      }
+      if (type === 'installedWallets') {
+        return [
+          ...prev,
+          { key, type: 'installedWallets', exclude: '', maxWallets: null },
+        ]
+      }
+      return [...prev, { key, type }]
+    })
+  }
+
+  const setWalletId = (key: string, walletId: WalletId) => {
     onChange((prev) =>
-      type === 'email'
-        ? [...prev, { key, type: 'email', method: 'otp' }]
-        : [...prev, { key, type }],
+      prev.map((i) => (i.key === key ? { ...i, walletId } : i)),
+    )
+  }
+
+  const patchInstalled = (
+    key: string,
+    patch: Partial<{ exclude: string; maxWallets: number | null }>,
+  ) => {
+    onChange((prev) =>
+      prev.map((i) =>
+        i.key === key && i.type === 'installedWallets' ? { ...i, ...patch } : i,
+      ),
     )
   }
 
@@ -262,14 +303,18 @@ export function Playground({
                 {UNIT_DEFS.map((def) => {
                   const used = items.some((i) => i.type === def.type)
                   const active = !def.multi && used
+                  const disabled =
+                    def.type === 'wallet' &&
+                    walletCount >= PINNED_WALLETS.length
                   const UnitIcon = UNIT_ICON[def.type]
                   return (
                     <button
                       key={def.type}
                       type="button"
+                      disabled={disabled}
                       aria-pressed={active}
                       onClick={() => handleChipClick(def.type, def.multi)}
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-default disabled:opacity-40 ${
                         active
                           ? 'border-[var(--accent-warm)]/40 bg-[var(--accent-warm)]/5 text-[#c2410c]'
                           : 'border-[var(--border-warm)] bg-white text-[var(--ink)] hover:border-[var(--accent-warm)]/60 hover:text-[#c2410c]'
@@ -305,6 +350,13 @@ export function Playground({
                     {items.map((item, idx) => {
                       const dragging = draggingKey === item.key
                       const RowIcon = UNIT_ICON[item.type]
+                      const usedWalletIds = new Set(
+                        items.flatMap((i) =>
+                          i.type === 'wallet' && i.key !== item.key
+                            ? [i.walletId]
+                            : [],
+                        ),
+                      )
                       return (
                         <li
                           key={item.key}
@@ -312,87 +364,152 @@ export function Playground({
                             if (el) rowRefs.current.set(item.key, el)
                             else rowRefs.current.delete(item.key)
                           }}
-                          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 transition-shadow ${
+                          className={`rounded-lg px-2 py-1.5 transition-shadow ${
                             dragging
                               ? 'bg-white shadow-md ring-1 ring-[var(--accent-warm)]'
                               : 'hover:bg-white hover:shadow-sm'
                           }`}
                         >
-                          <button
-                            type="button"
-                            aria-label={`Drag ${unitLabel(item)} to reorder`}
-                            onPointerDown={(e) => startDrag(e, item.key)}
-                            className={`touch-none select-none p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] ${
-                              dragging ? 'cursor-grabbing' : 'cursor-grab'
-                            }`}
-                          >
-                            <GripVertical className="h-4 w-4" />
-                          </button>
-                          <span className="w-3 text-center text-[10px] font-medium tabular-nums text-[var(--muted)]">
-                            {idx + 1}
-                          </span>
-                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[var(--accent-warm)]/25 bg-[var(--accent-warm)]/10 text-[#c2410c]">
-                            <RowIcon className="h-3.5 w-3.5" />
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)]">
-                            {unitLabel(item)}
-                          </span>
-                          {item.type === 'email' && (
-                            <span className="flex gap-0.5 rounded-lg border border-[var(--border-warm)] bg-white p-0.5">
-                              <button
-                                type="button"
-                                aria-pressed={item.method === 'magicLink'}
-                                onClick={() =>
-                                  setEmailMethod(item.key, 'magicLink')
-                                }
-                                className={`cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
-                                  item.method === 'magicLink'
-                                    ? 'bg-[var(--accent-warm)]/8 text-[#9a3412]'
-                                    : 'text-[var(--muted)] hover:text-[#9a3412]'
-                                }`}
-                              >
-                                Magic link
-                              </button>
-                              <button
-                                type="button"
-                                aria-pressed={item.method === 'otp'}
-                                onClick={() => setEmailMethod(item.key, 'otp')}
-                                className={`cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
-                                  item.method === 'otp'
-                                    ? 'bg-[var(--accent-warm)]/8 text-[#9a3412]'
-                                    : 'text-[var(--muted)] hover:text-[#9a3412]'
-                                }`}
-                              >
-                                OTP
-                              </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              aria-label={`Drag ${unitLabel(item)} to reorder`}
+                              onPointerDown={(e) => startDrag(e, item.key)}
+                              className={`touch-none select-none p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] ${
+                                dragging ? 'cursor-grabbing' : 'cursor-grab'
+                              }`}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
+                            <span className="w-3 text-center text-[10px] font-medium tabular-nums text-[var(--muted)]">
+                              {idx + 1}
                             </span>
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-[var(--accent-warm)]/25 bg-[var(--accent-warm)]/10 text-[#c2410c]">
+                              <RowIcon className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)]">
+                              {item.type === 'wallet'
+                                ? 'Pinned wallet'
+                                : unitLabel(item)}
+                            </span>
+                            {item.type === 'wallet' && (
+                              <select
+                                value={item.walletId}
+                                onChange={(e) =>
+                                  setWalletId(
+                                    item.key,
+                                    e.target.value as WalletId,
+                                  )
+                                }
+                                className="cursor-pointer rounded-md border border-[var(--border-warm)] bg-white px-2 py-1 text-xs font-medium text-[var(--ink)]"
+                              >
+                                {PINNED_WALLETS.map((w) => (
+                                  <option
+                                    key={w.id}
+                                    value={w.id}
+                                    disabled={usedWalletIds.has(w.id)}
+                                  >
+                                    {w.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            {item.type === 'email' && (
+                              <span className="flex gap-0.5 rounded-lg border border-[var(--border-warm)] bg-white p-0.5">
+                                <button
+                                  type="button"
+                                  aria-pressed={item.method === 'magicLink'}
+                                  onClick={() =>
+                                    setEmailMethod(item.key, 'magicLink')
+                                  }
+                                  className={`cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                                    item.method === 'magicLink'
+                                      ? 'bg-[var(--accent-warm)]/8 text-[#9a3412]'
+                                      : 'text-[var(--muted)] hover:text-[#9a3412]'
+                                  }`}
+                                >
+                                  Magic link
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-pressed={item.method === 'otp'}
+                                  onClick={() =>
+                                    setEmailMethod(item.key, 'otp')
+                                  }
+                                  className={`cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                                    item.method === 'otp'
+                                      ? 'bg-[var(--accent-warm)]/8 text-[#9a3412]'
+                                      : 'text-[var(--muted)] hover:text-[#9a3412]'
+                                  }`}
+                                >
+                                  OTP
+                                </button>
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              aria-label={`Move ${unitLabel(item)} up`}
+                              disabled={idx === 0}
+                              onClick={() => move(item.key, -1)}
+                              className="cursor-pointer rounded-md p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] disabled:cursor-default disabled:opacity-30"
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Move ${unitLabel(item)} down`}
+                              disabled={idx === items.length - 1}
+                              onClick={() => move(item.key, 1)}
+                              className="cursor-pointer rounded-md p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] disabled:cursor-default disabled:opacity-30"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${unitLabel(item)}`}
+                              onClick={() => remove(item.key)}
+                              className="cursor-pointer rounded-md p-1 text-[var(--muted)] hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {item.type === 'installedWallets' && (
+                            <div className="mt-1.5 flex items-center gap-2 pl-[52px]">
+                              <input
+                                type="text"
+                                value={item.exclude}
+                                onChange={(e) =>
+                                  patchInstalled(item.key, {
+                                    exclude: e.target.value,
+                                  })
+                                }
+                                placeholder="exclude ids, comma-separated"
+                                aria-label="Excluded wallet ids"
+                                className="min-w-0 flex-1 rounded-md border border-[var(--border-warm)] bg-white px-2 py-1 font-mono text-xs text-[var(--ink)] outline-none transition-colors placeholder:font-sans placeholder:text-[var(--muted)]/70 focus:border-[var(--accent-warm)] focus:ring-2 focus:ring-[var(--accent-warm)]/20"
+                              />
+                              <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                                max
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={item.maxWallets ?? ''}
+                                  onChange={(e) => {
+                                    const n = Number(e.target.value)
+                                    patchInstalled(item.key, {
+                                      maxWallets:
+                                        e.target.value === '' ||
+                                        !Number.isFinite(n)
+                                          ? null
+                                          : Math.max(1, Math.trunc(n)),
+                                    })
+                                  }}
+                                  placeholder="4"
+                                  aria-label="Max wallets"
+                                  className="w-14 rounded-md border border-[var(--border-warm)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none transition-colors focus:border-[var(--accent-warm)] focus:ring-2 focus:ring-[var(--accent-warm)]/20"
+                                />
+                              </label>
+                            </div>
                           )}
-                          <button
-                            type="button"
-                            aria-label={`Move ${unitLabel(item)} up`}
-                            disabled={idx === 0}
-                            onClick={() => move(item.key, -1)}
-                            className="cursor-pointer rounded-md p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] disabled:cursor-default disabled:opacity-30"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move ${unitLabel(item)} down`}
-                            disabled={idx === items.length - 1}
-                            onClick={() => move(item.key, 1)}
-                            className="cursor-pointer rounded-md p-1 text-[var(--muted)] transition-colors hover:text-[#c2410c] disabled:cursor-default disabled:opacity-30"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${unitLabel(item)}`}
-                            onClick={() => remove(item.key)}
-                            className="cursor-pointer rounded-md p-1 text-[var(--muted)] hover:text-red-500"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
                         </li>
                       )
                     })}

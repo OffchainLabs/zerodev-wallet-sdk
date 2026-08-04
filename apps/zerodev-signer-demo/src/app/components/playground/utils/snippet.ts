@@ -1,10 +1,29 @@
-import type { EmailAuthMethod } from '@zerodev/wallet-react-ui'
+import type { EmailAuthMethod, WalletId } from '@zerodev/wallet-react-ui'
 
-export type UnitType = 'passkey' | 'google' | 'email' | 'divider'
+export type UnitType =
+  | 'passkey'
+  | 'google'
+  | 'email'
+  | 'wallet'
+  | 'installedWallets'
+  | 'moreWallets'
+  | 'divider'
 
 export type PlaygroundItem =
-  | { key: string; type: Exclude<UnitType, 'email'> }
+  | {
+      key: string
+      type: Exclude<UnitType, 'email' | 'wallet' | 'installedWallets'>
+    }
   | { key: string; type: 'email'; method: EmailAuthMethod }
+  | { key: string; type: 'wallet'; walletId: WalletId }
+  | {
+      key: string
+      type: 'installedWallets'
+      /** Raw comma-separated ids — parsed with `parseExcludeIds`. */
+      exclude: string
+      /** null = untouched → the component's own default (4). */
+      maxWallets: number | null
+    }
 
 /** SignUp page-level knobs, separate from the unit list. */
 export type PlaygroundSettings = {
@@ -21,11 +40,39 @@ export const UNIT_DEFS: { type: UnitType; label: string; multi: boolean }[] = [
   { type: 'passkey', label: 'Passkey', multi: false },
   { type: 'google', label: 'Google', multi: false },
   { type: 'email', label: 'Email', multi: false },
+  { type: 'wallet', label: 'Pinned wallet', multi: true },
+  { type: 'installedWallets', label: 'Installed wallets', multi: false },
+  { type: 'moreWallets', label: 'More wallets', multi: false },
   { type: 'divider', label: 'Divider', multi: true },
 ]
 
+// The wallet guide's ids — `WalletId` keeps this list typo-safe against the SDK.
+export const PINNED_WALLETS: { id: WalletId; name: string }[] = [
+  { id: 'metamask', name: 'MetaMask' },
+  { id: 'trust', name: 'Trust Wallet' },
+  { id: 'coinbase', name: 'Coinbase Wallet' },
+  { id: 'rainbow', name: 'Rainbow' },
+  { id: 'rabby', name: 'Rabby Wallet' },
+  { id: 'okx', name: 'OKX Wallet' },
+  { id: 'zerion', name: 'Zerion' },
+  { id: 'uniswap', name: 'Uniswap' },
+  { id: 'ledger', name: 'Ledger' },
+  { id: 'binance', name: 'Binance Wallet' },
+]
+
 export function unitLabel(item: PlaygroundItem): string {
+  if (item.type === 'wallet') {
+    const wallet = PINNED_WALLETS.find((w) => w.id === item.walletId)
+    return wallet ? wallet.name : 'Pinned wallet'
+  }
   return UNIT_DEFS.find((d) => d.type === item.type)?.label ?? item.type
+}
+
+export function parseExcludeIds(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 export function emailMethod(
@@ -46,11 +93,35 @@ export const DEFAULT_ITEMS: PlaygroundItem[] = [
   { key: 'default-email', type: 'email', method: 'otp' },
 ]
 
-const UNIT_TAG: Record<UnitType, string> = {
+const UNIT_TAG: Record<
+  Exclude<UnitType, 'wallet' | 'installedWallets'>,
+  string
+> = {
   passkey: 'Passkey',
   google: 'Google',
   email: 'Email',
+  moreWallets: 'MoreWallets',
   divider: 'Divider',
+}
+
+function unitLine(item: PlaygroundItem): string {
+  if (item.type === 'wallet') {
+    return `<SignUp.Wallet walletId="${item.walletId}" />`
+  }
+  if (item.type === 'installedWallets') {
+    const props: string[] = []
+    const exclude = parseExcludeIds(item.exclude)
+    if (exclude.length > 0) {
+      props.push(
+        `excludeWalletIds={[${exclude.map((id) => `'${id}'`).join(', ')}]}`,
+      )
+    }
+    if (item.maxWallets !== null) {
+      props.push(`maxWallets={${item.maxWallets}}`)
+    }
+    return `<SignUp.InstalledWallets${props.length > 0 ? ` ${props.join(' ')}` : ''} />`
+  }
+  return `<SignUp.${UNIT_TAG[item.type]} />`
 }
 
 export function buildSnippet(
@@ -77,9 +148,7 @@ export function buildSnippet(
       : rootProps.length === 1
         ? `<SignUp ${rootProps[0]}>`
         : `<SignUp\n      ${rootProps.join('\n      ')}\n    >`
-  const units = items
-    .map((i) => `      <SignUp.${UNIT_TAG[i.type]} />`)
-    .join('\n')
+  const units = items.map((i) => `      ${unitLine(i)}`).join('\n')
   return `${head}<ConnectWallet\n  size="md"\n  renderSignUp={() => (\n    ${signUpOpen}\n${units}\n    </SignUp>\n  )}\n/>`
 }
 

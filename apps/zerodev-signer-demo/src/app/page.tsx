@@ -12,6 +12,7 @@ import {
   DEFAULT_ITEMS,
   DEFAULT_SETTINGS,
   emailMethod,
+  parseExcludeIds,
   type PlaygroundItem,
   type PlaygroundSettings,
 } from './components/playground/utils/snippet'
@@ -215,6 +216,18 @@ function renderSignUpItem(item: PlaygroundItem) {
       return <SignUp.Google key={item.key} />
     case 'email':
       return <SignUp.Email key={item.key} />
+    case 'wallet':
+      return <SignUp.Wallet key={item.key} walletId={item.walletId} />
+    case 'installedWallets':
+      return (
+        <SignUp.InstalledWallets
+          key={item.key}
+          excludeWalletIds={parseExcludeIds(item.exclude)}
+          {...(item.maxWallets !== null && { maxWallets: item.maxWallets })}
+        />
+      )
+    case 'moreWallets':
+      return <SignUp.MoreWallets key={item.key} />
     case 'divider':
       return <SignUp.Divider key={item.key} />
   }
