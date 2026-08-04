@@ -22,7 +22,7 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
   const { mutate: connect, isPending } = useConnect()
   useReportPending(isPending)
 
-  // Same claim rule as the wallet-selection page: a 6963 announcement or a
+  // Same claim rule as the MoreWallets grid: a 6963 announcement or a
   // configured SDK connector both make the row connectable. Only an
   // announcement (id === rdns) proves a live extension and earns the badge.
   const installed = connectors.find((c) => matchesWallet(c, wallet))
@@ -56,7 +56,7 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
       { connector: installed },
       {
         // The external wallet is now the active wagmi connection — the
-        // embedded-wallet flow is done, so close it (mirrors WalletSelection).
+        // embedded-wallet flow is done, so close it (mirrors SignUp.MoreWallets).
         onSuccess: () => goToStep(null),
         onError: (err) => {
           if (!isCancellationError(err)) {
