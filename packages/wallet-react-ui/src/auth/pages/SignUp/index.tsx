@@ -128,6 +128,7 @@ function SignUpDefault(props: Omit<SignUpRootProps, 'children'>) {
       <SignUpDivider />
       <SignUpGoogle />
       <SignUpEmail />
+      <SignUpMoreWallets />
     </SignUpRoot>
   )
 }
