@@ -40,6 +40,11 @@ export default defineConfig({
         'packages/*/src/**/*.d.ts',
       ],
     },
-    include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],
+    include: [
+      'packages/*/src/**/*.test.ts',
+      'packages/*/src/**/*.test.tsx',
+      // Repo tooling that gates CI (e.g. the integration-ran checker)
+      'scripts/**/*.test.ts',
+    ],
   },
 })

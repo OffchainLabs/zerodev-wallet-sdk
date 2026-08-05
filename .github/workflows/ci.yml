@@ -142,7 +142,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: pnpm test:integration:ci
         env:
           ZD_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
 

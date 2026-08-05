@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+/**
+ * Guards against a green integration job that never talked to the KMS.
+ *
+ * Every file in `e2e/integration/` calls `context.skip()` from `beforeAll`
+ * when the backend is unreachable, the temp-email service is down, or
+ * `ZD_PROJECT_ID` is unset. Vitest counts a fully skipped file as passed and
+ * exits 0, so the job reported success while running nothing:
+ *
+ *     Test Files  6 passed (6)
+ *          Tests  9 skipped (9)          exit 0
+ *
+ * Policy implemented here:
+ *   - zero tests executed          -> FAIL (the run proved nothing)
+ *   - some executed, some skipped  -> PASS + a visible warning
+ *   - a test executed and failed   -> PASS here; vitest already failed the run,
+ *                                     and adding a second reason only confuses
+ *
+ * `ZD_PROJECT_ID` is handled separately (see `e2e/integration-global-setup.ts`)
+ * so a config error fails immediately instead of after the full suite timeout.
+ *
+ * Usage: node scripts/check-integration-ran.mjs <vitest-json-report>
+ */
+
+import fs from 'node:fs'
+
+/** Vitest marks non-executed tests with one of these in its JSON report. */
+const NOT_EXECUTED = new Set(['skipped', 'pending', 'todo'])
+
+/**
+ * @param {unknown} report Parsed `vitest --reporter=json` output.
+ * @returns {{ok: boolean, executed: number, skipped: number, skippedTests: string[], reason?: string}}
+ */
+export function evaluateIntegrationRun(report) {
+  const empty = { executed: 0, skipped: 0, skippedTests: [] }
+
+  if (
+    !report ||
+    typeof report !== 'object' ||
+    !Array.isArray(/** @type {any} */ (report).testResults)
+  ) {
+    return {
+      ok: false,
+      ...empty,
+      reason:
+        'Integration report is malformed or unreadable (no `testResults` array).',
+    }
+  }
+
+  const assertions = /** @type {any} */ (report).testResults.flatMap(
+    (file) => (Array.isArray(file?.assertionResults) ? file.assertionResults : []),
+  )
+
+  const skippedTests = assertions
+    .filter((a) => NOT_EXECUTED.has(a?.status))
+    .map((a) => a?.fullName ?? a?.title ?? '<unnamed test>')
+  const skipped = skippedTests.length
+  const executed = assertions.length - skipped
+
+  if (/** @type {any} */ (report).testResults.length === 0) {
+    return {
+      ok: false,
+      ...empty,
+      reason:
+        'Integration report contains no test files — the suite never matched anything.',
+    }
+  }
+
+  if (executed === 0) {
+    return {
+      ok: false,
+      executed,
+      skipped,
+      skippedTests,
+      reason:
+        `No integration test actually ran (${skipped} skipped). A green job here ` +
+        'would mean nothing: the KMS was unreachable, the email service was down, ' +
+        'or the suite was misconfigured.',
+    }
+  }
+
+  return { ok: true, executed, skipped, skippedTests }
+}
+
+/** Emits GitHub Actions annotations when running in CI; plain text otherwise. */
+function emit(result) {
+  const inCI = Boolean(process.env.GITHUB_ACTIONS)
+  const lines = []
+
+  if (!result.ok) {
+    lines.push(inCI ? `::error::${result.reason}` : `ERROR: ${result.reason}`)
+  } else if (result.skipped > 0) {
+    const msg =
+      `${result.skipped} of ${result.skipped + result.executed} integration tests skipped ` +
+      `(${result.executed} ran). Likely a third-party outage rather than a code change.`
+    lines.push(inCI ? `::warning::${msg}` : `WARNING: ${msg}`)
+  } else {
+    lines.push(`All ${result.executed} integration tests ran.`)
+  }
+
+  for (const name of result.skippedTests) {
+    lines.push(`  skipped: ${name}`)
+  }
+
+  console.log(lines.join('\n'))
+
+  if (inCI && process.env.GITHUB_STEP_SUMMARY) {
+    const summary = [
+      '### Integration test execution',
+      '',
+      `- ran: **${result.executed}**`,
+      `- skipped: **${result.skipped}**`,
+      ...(result.reason ? ['', `> ${result.reason}`] : []),
+      ...(result.skippedTests.length
+        ? ['', '<details><summary>Skipped tests</summary>', '']
+            .concat(result.skippedTests.map((n) => `- \`${n}\``))
+            .concat(['', '</details>'])
+        : []),
+      '',
+    ].join('\n')
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary)
+  }
+}
+
+// CLI entry — skipped when imported by tests.
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
+  const reportPath = process.argv[2]
+  if (!reportPath) {
+    console.error('Usage: node scripts/check-integration-ran.mjs <vitest-json-report>')
+    process.exit(2)
+  }
+
+  let parsed
+  try {
+    parsed = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+  } catch (err) {
+    const msg = `Could not read the integration report at ${reportPath}: ${err.message}`
+    console.error(process.env.GITHUB_ACTIONS ? `::error::${msg}` : `ERROR: ${msg}`)
+    process.exit(1)
+  }
+
+  const result = evaluateIntegrationRun(parsed)
+  emit(result)
+  process.exit(result.ok ? 0 : 1)
+}

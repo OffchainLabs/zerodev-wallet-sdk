@@ -28,6 +28,7 @@ CLAUDE.local.md
 playwright-report/
 test-results/
 blob-report/
+integration-report.json
 
 # E2E env (see .env.example for required vars)
 .env
