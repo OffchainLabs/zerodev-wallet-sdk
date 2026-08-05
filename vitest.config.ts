@@ -24,7 +24,8 @@ export default defineConfig({
     environment: 'happy-dom',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      // `lcov` (coverage/lcov.info) is what Codecov ingests in CI.
+      reporter: ['text', 'html', 'lcov'],
       include: ['packages/*/src/**/*.ts', 'packages/*/src/**/*.tsx'],
       exclude: [
         'packages/*/src/**/*.test.ts',
@@ -36,6 +37,7 @@ export default defineConfig({
         'packages/*/src/**/types.ts',
         'packages/*/src/**/types/**',
         'packages/*/src/**/*.stories.tsx',
+        'packages/*/src/**/*.d.ts',
       ],
     },
     include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],

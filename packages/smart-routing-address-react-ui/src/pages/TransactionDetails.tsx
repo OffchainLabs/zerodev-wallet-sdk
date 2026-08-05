@@ -12,6 +12,7 @@ import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
+import { useDepositStatus } from '../hooks/useDepositStatus'
 import { useProviderFees } from '../hooks/useProviderFees'
 import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositWithTimestamp } from '../types'
@@ -19,7 +20,9 @@ import { getTxUrl } from '../utils/chains'
 import {
   getDestTokenSymbol,
   getSourceTokenSymbol,
+  resolveBaseUrl,
   resolveDestChain,
+  resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
 import { getDepositStage } from '../utils/deposits'
@@ -29,6 +32,29 @@ import { buildFeeBreakdown } from '../utils/providerFees'
 
 export interface TransactionDetailsProps {
   deposit: DepositWithTimestamp
+}
+
+/**
+ * Poll the deposits list and return the latest snapshot of the deposit
+ * matching `initial.deposit.transactionHash`, falling back to `initial` until
+ * the first response lands (or if the deposit falls out of the list). Keeps
+ * the details view live while the same interval is already running in
+ * `Deposit` / `PastDeposits`.
+ */
+function useLiveDeposit(initial: DepositWithTimestamp): DepositWithTimestamp {
+  const { config, addressState } = useSmartRoutingAddressContext()
+  const address =
+    addressState.status === 'success' ? addressState.address : undefined
+  const { deposits } = useDepositStatus({
+    address,
+    pollingInterval: resolvePollingInterval(config),
+    baseUrl: resolveBaseUrl(config),
+  })
+  const targetHash = initial.deposit.transactionHash
+  const live = deposits.find((d) => d.deposit.transactionHash === targetHash) as
+    | DepositWithTimestamp
+    | undefined
+  return live ?? initial
 }
 
 /** DOM id shared by the fee-toggle button's `aria-controls` and the panel it
@@ -53,7 +79,13 @@ function formatDate(iso?: string): string | null {
  * `ArrowCardPair` + `InfoCard`, a "Transaction details" `Section` with the
  * route metadata, and a "Transaction Progress" `Section` with the step trail.
  */
-export function TransactionDetails({ deposit }: TransactionDetailsProps) {
+export function TransactionDetails({
+  deposit: initialDeposit,
+}: TransactionDetailsProps) {
+  // Re-poll and pick the latest snapshot for this deposit so the details view
+  // — Transaction Progress in particular — updates live rather than staying
+  // frozen at click-time state.
+  const deposit = useLiveDeposit(initialDeposit)
   const { config, addressState, recipient } = useSmartRoutingAddressContext()
   const estimatedFees =
     addressState.status === 'success' ? addressState.estimatedFees : []
@@ -78,7 +110,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   const sourceChainLogo = CHAIN_ICONS[chainId]
 
   const destChain = resolveDestChain(config)
-  const destSymbol = getDestTokenSymbol(config)
+  const destSymbol = getDestTokenSymbol(config, sourceSymbol || undefined)
   const destTokenLogo = destSymbol
     ? TOKEN_ICONS[destSymbol.toUpperCase()]
     : undefined

@@ -147,7 +147,8 @@ describe('resolveSourceTokens', () => {
 describe('resolveActions', () => {
   it('builds an action per default token type', () => {
     // WBTC is excluded because base has no WBTC token address; wrapped
-    // native is surfaced as WETH
+    // native is surfaced as WETH. EURC is excluded via
+    // `UNSUPPORTED_TOKEN_TYPES` because the SRA server rejects it.
     const actions = resolveActions(BARE_CONFIG, OWNER)
     expect(Object.keys(actions ?? {})).toEqual([
       'NATIVE',
@@ -155,7 +156,6 @@ describe('resolveActions', () => {
       'WETH',
       'USDT',
       'DAI',
-      'EURC',
     ])
   })
 
@@ -190,14 +190,19 @@ describe('token symbols', () => {
     ).toBe('WETH')
   })
 
-  it('returns the configured target token', () => {
+  it('prefers the explicit target token when configured', () => {
     expect(
-      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'ETH' }),
-    ).toBe('ETH')
+      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'USDC' }, 'ETH'),
+    ).toBe('USDC')
   })
 
-  it("defaults to 'USDC' when targetTokenSymbol is omitted", () => {
+  it('falls back to the source symbol when targetTokenSymbol is unset', () => {
     const { targetTokenSymbol: _drop, ...withoutSymbol } = BARE_CONFIG
-    expect(getDestTokenSymbol(withoutSymbol)).toBe('USDC')
+    expect(getDestTokenSymbol(withoutSymbol, 'ETH')).toBe('ETH')
+  })
+
+  it('returns undefined when neither target nor source is provided', () => {
+    const { targetTokenSymbol: _drop, ...withoutSymbol } = BARE_CONFIG
+    expect(getDestTokenSymbol(withoutSymbol)).toBeUndefined()
   })
 })
