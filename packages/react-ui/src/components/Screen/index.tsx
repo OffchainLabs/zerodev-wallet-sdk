@@ -14,6 +14,7 @@ import {
 } from './MultiRadialBackground'
 
 const CONTENT_PADDING_TOP = TOP_NAV_HEIGHT + 16
+const FOOTER_HEIGHT = 56
 
 // Container for card-scoped overlays (bottom sheets, dialogs, etc.). Consumers
 // portal into this element via `Radix Dialog.Portal container={...}` so the
@@ -35,6 +36,7 @@ export function Screen({
   size = 'lg',
   style,
   topNav,
+  footer,
   overlay,
 }: {
   children: ReactNode
@@ -43,6 +45,9 @@ export function Screen({
   size?: 'sm' | 'md' | 'lg' | undefined
   style?: CSSProperties | undefined
   topNav?: ReactNode
+  /** Pinned bottom band — mirrors `topNav`. Same edge-to-edge, blurred
+   * background treatment; scrolled content passes behind it. */
+  footer?: ReactNode
   overlay?: ReactNode
 }) {
   // Overlay container ref goes into state so children re-render once the DOM
@@ -83,7 +88,9 @@ export function Screen({
           // gradient border ring thins with the size variants. (Corner radii
           // stay fixed, so at smaller sizes the ring is marginally non-uniform
           // at the corners — a minor cosmetic trade-off.)
-          'zd:flex zd:flex-1 zd:flex-col zd:m-1.5 zd:px-4 zd:overflow-hidden zd:rounded-4xl zd:relative',
+          // Horizontal padding lives on the scroll container so TopNav and
+          // footer can span edge-to-edge without escape offsets.
+          'zd:flex zd:flex-1 zd:flex-col zd:m-1.5 zd:overflow-hidden zd:rounded-4xl zd:relative',
           contentClassName,
         )}
         // clip-path clips backdrop-filter to the rounded corners; plain
@@ -96,7 +103,9 @@ export function Screen({
         <div className="zd:relative zd:z-10 zd:flex zd:flex-1 zd:flex-col zd:min-h-0">
           {topNav}
           <div
-            className="zd:flex zd:flex-1 zd:flex-col zd:min-h-0 zd:overflow-y-auto zd:overflow-x-hidden zd:-mr-4 zd:pr-4"
+            // Owns horizontal padding — pages needing edge-to-edge content
+            // escape via `zd:-mx-4` on their own outer wrapper.
+            className="zd:flex zd:flex-1 zd:flex-col zd:min-h-0 zd:overflow-y-auto zd:overflow-x-hidden zd:px-4"
             // Scale via --zd-spacing (matches TopNav's scaled height) so the
             // top padding shrinks with the frame — otherwise the fixed 68px
             // eats a disproportionate share at smaller sizes and overflows.
@@ -108,6 +117,18 @@ export function Screen({
               {children}
             </ScreenOverlayContext.Provider>
           </div>
+          {footer && (
+            <div
+              // Flex sibling so scrolled content stops at the footer's top
+              // edge; internal px-4 keeps the content at the 16px inset.
+              className="zd:flex zd:shrink-0 zd:items-center zd:justify-center zd:px-4 zd:pb-4 zd:backdrop-blur-[15px]"
+              style={{
+                height: `calc(${FOOTER_HEIGHT / 4} * var(--zd-spacing))`,
+              }}
+            >
+              {footer}
+            </div>
+          )}
         </div>
       </div>
       {/* Overlay is a sibling of the inner card, not a child — so it escapes

@@ -1,6 +1,7 @@
 # ZeroDev Wallet SDK
 
-[![CI](https://github.com/offchainlabs/doorway-kms-sdk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/offchainlabs/doorway-kms-sdk/actions/workflows/ci.yml)
+[![CI](https://github.com/zerodevapp/zerodev-wallet-sdk/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zerodevapp/zerodev-wallet-sdk/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/zerodevapp/zerodev-wallet-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/zerodevapp/zerodev-wallet-sdk)
 
 TypeScript SDK for non-custodial wallet signing with EIP-7702 gasless transactions.
 

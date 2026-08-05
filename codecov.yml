@@ -1,0 +1,28 @@
+# Coverage comes from the Vitest unit suite only (`pnpm test:coverage`, uploaded
+# by the `test` job in .github/workflows/ci.yml). Both statuses are
+# informational: Codecov reports the delta on a PR but never fails a check.
+#
+# No `ignore:` list here on purpose — vitest.config.ts's coverage
+# `include`/`exclude` already scope the lcov report, so a second list of globs
+# would be redundant and could silently drift out of sync.
+
+coverage:
+  range: 50..80
+  precision: 2
+  round: down
+
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment:
+  layout: 'reach, diff, files'
+  behavior: default
+  require_changes: false
+
+github_checks:
+  annotations: true

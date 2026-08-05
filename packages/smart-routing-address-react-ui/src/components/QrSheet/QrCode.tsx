@@ -14,22 +14,36 @@ interface QrCodeProps {
 const FINDER_SIZE = 7 // every QR has three 7×7 finder patterns
 const MODULE_COLOR = '#000'
 const BG_COLOR = '#fff'
+/** Vertical shrink applied to data-module pills so rows read as distinct
+ * without introducing white slivers wide enough to look like transitions
+ * to a scanner. Kept small (5%) so total black area stays close to spec. */
+const PILL_PAD_RATIO = 0.05
 
 /**
- * Custom QR renderer that draws runs of horizontally-adjacent modules as a
- * single rounded pill, and the three finder patterns as rounded squares.
- * Isolated modules naturally fall out as circles (a 1×1 pill is a circle).
+ * Custom QR renderer that draws runs of horizontally-adjacent data modules as
+ * a single rounded pill. Finder patterns stay as sharp concentric squares
+ * (rounding them breaks the 1:1:3:1:1 corner ratio scanners use to locate the
+ * code). Isolated data modules render as pill-ish rects — visually close to
+ * circles at very small `PILL_PAD_RATIO`, still square-adjacent for scanners.
+ *
+ * Default `errorCorrectionLevel` is `'H'` (30% recovery) so the decorative
+ * rounding + shrinkage has plenty of headroom before scans fail.
+ *
+ * Quiet zone (spec: ≥4 modules of white around the code) is expected to be
+ * provided by the caller — e.g. via a white-background padded wrapper. This
+ * component fills the given `size` with the QR data area itself so the
+ * consumer controls the visual footprint.
  */
 export function QrCode({
   value,
   size,
-  errorCorrectionLevel = 'M',
-  eyeRadius = 2,
+  errorCorrectionLevel = 'H',
+  eyeRadius = 0,
 }: QrCodeProps) {
   // `uqr` returns a 2D boolean matrix (`data[row][col]`) and the module count
   // per side. Same information as `qrcode`, just shaped differently — the
   // pill/finder rendering below is unchanged.
-  const qr = encode(value, { ecc: errorCorrectionLevel })
+  const qr = encode(value, { ecc: errorCorrectionLevel, border: 0 })
   const matrix = qr.data
   const moduleCount = qr.size
   const cellSize = size / moduleCount
@@ -87,10 +101,11 @@ export function QrCode({
     >
       <rect width={size} height={size} fill={BG_COLOR} />
       {runs.map(({ row, col, length }) => {
-        // Shrink each pill vertically so rows have a visible gap between
-        // them. For a single isolated module (length === 1) also shrink
-        // horizontally so it renders as a circle, not an oval.
-        const pad = cellSize * 0.1
+        // Shrink each pill vertically so rows read as distinct without
+        // creating scanner-confusing white gaps mid-run. Isolated modules
+        // (length === 1) also shrink horizontally so they render close to a
+        // circle instead of an oval.
+        const pad = cellSize * PILL_PAD_RATIO
         const pillHeight = cellSize - 2 * pad
         const isSingle = length === 1
         return (

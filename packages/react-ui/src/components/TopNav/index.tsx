@@ -34,13 +34,19 @@ export function TopNav({
   return (
     <div
       className={cn(
-        'zd:absolute zd:top-4 zd:left-0 zd:right-0 zd:flex zd:flex-row zd:items-center zd:justify-between',
+        // Spans the card edge-to-edge; internal px-4 aligns icons with
+        // the scroll container's 16px inset.
+        'zd:absolute zd:top-0 zd:left-0 zd:right-0 zd:z-20 zd:flex zd:flex-row zd:items-center zd:justify-between zd:px-4 zd:pt-4',
+        // Frosted bg masks scrolled content passing under the nav.
+        'zd:backdrop-blur-[15px]',
         className,
       )}
       // Scale via --zd-spacing (the 4px base) like every spacing utility, so
       // the nav height tracks the density variants and doesn't eat a
       // disproportionate share of the shrunken frame at smaller sizes.
-      style={{ height: `calc(${TOP_NAV_HEIGHT / 4} * var(--zd-spacing))` }}
+      style={{
+        height: `calc(${(TOP_NAV_HEIGHT + 24) / 4} * var(--zd-spacing))`,
+      }}
     >
       {onLeftButtonClick ? (
         <IconButton iconName={leftButtonIcon} onClick={onLeftButtonClick} />

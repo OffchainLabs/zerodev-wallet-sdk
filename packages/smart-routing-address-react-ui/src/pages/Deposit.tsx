@@ -4,7 +4,6 @@ import {
   DataRow,
   Icon,
   Pill,
-  PoweredBy,
   Select,
   SelectContent,
   SelectIcon,
@@ -12,9 +11,10 @@ import {
   SelectTrigger,
   Text,
   TokenListItem,
+  Tooltip,
   Wrapper,
 } from '@zerodev/react-ui'
-import type { TOKEN_TYPE } from '@zerodev/smart-routing-address'
+import type { DepositedToken, TOKEN_TYPE } from '@zerodev/smart-routing-address'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AddressDisplay } from '../components/AddressDisplay'
 import { ErrorRetryCard } from '../components/ErrorRetryCard'
@@ -30,7 +30,7 @@ import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressCon
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { useNewDeposits } from '../hooks/useNewDeposits'
 import { useProviderFees } from '../hooks/useProviderFees'
-import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
+import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { SourceToken } from '../types'
 import {
   getDestTokenSymbol,
@@ -53,6 +53,10 @@ export interface DepositProps {
   onQrClick?: () => void
   /** Navigate to the "Past deposits" view. When omitted, the row is hidden. */
   onViewPastDeposits?: () => void
+  /** Fired when a pending-deposit row is tapped. Wires through to
+   * `PendingDeposits` so an in-flight deposit opens the transaction-details
+   * view, matching the past-deposits behaviour. */
+  onSelectDeposit?: (deposit: DepositedToken) => void
 }
 
 const SUBTITLE =
@@ -65,7 +69,11 @@ const FULL_ROW_PANEL_STYLE = {
   width: 'calc(var(--radix-select-trigger-width) * 2 + 4px)',
 }
 
-export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
+export function Deposit({
+  onQrClick,
+  onViewPastDeposits,
+  onSelectDeposit,
+}: DepositProps) {
   const { config, addressState, recipient, retry, setActiveRoute } =
     useSmartRoutingAddressContext()
   const [feeOpen, setFeeOpen] = useState(false)
@@ -380,17 +388,26 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
                   info
                   infoTooltip={FEE_INFO.maxSlippage}
                   trailing={
-                    breakdown?.provider ? (
+                    breakdown?.provider &&
+                    PROVIDER_ICONS[breakdown.provider] ? (
                       <LiveValue
                         loading={providerFees.loading}
                         flashKey={breakdown.provider}
                       >
-                        <span
-                          className="zd:inline-flex zd:items-center zd:rounded-full zd:bg-greyScale/10 zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
-                          title={`Quoted via ${breakdown.provider}`}
-                        >
-                          {breakdown.provider}
-                        </span>
+                        <Tooltip content={`Quoted via ${breakdown.provider}`}>
+                          <button
+                            type="button"
+                            aria-label={`Quoted via ${breakdown.provider}`}
+                            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+                          >
+                            <img
+                              src={PROVIDER_ICONS[breakdown.provider]}
+                              alt=""
+                              aria-hidden
+                              className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
+                            />
+                          </button>
+                        </Tooltip>
                       </LiveValue>
                     ) : null
                   }
@@ -511,6 +528,7 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
             deposits={newDeposits}
             estimatedFees={estimatedFees}
             config={config}
+            {...(onSelectDeposit && { onSelectDeposit })}
           />
         ) : (
           <LoadingCard
@@ -561,8 +579,6 @@ export function Deposit({ onQrClick, onViewPastDeposits }: DepositProps) {
             </div>
           ))}
       </div>
-
-      <PoweredBy className="zd:justify-center" />
     </div>
   )
 }
