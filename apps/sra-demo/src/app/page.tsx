@@ -52,7 +52,10 @@ export default function Home() {
     SIMULATED_DEFAULT_RECIPIENT,
   )
   const [targetChainId, setTargetChainId] = useState<number>(arbitrum.id)
-  const [slippage, setSlippage] = useState<number>(50)
+  // `undefined` = don't send `slippage` to the widget/SDK, so the SRA server
+  // uses its own default. Tight client-set values (e.g. 50 bps) massively
+  // inflate `minDeposit` since the server computes it as ~fee / slippage.
+  const [slippage, setSlippage] = useState<number | undefined>(undefined)
   // Bumped by `MockControls` after inserting/clearing mock deposits or
   // toggling error/sponsored modes — re-mounts the widget so freshly-added
   // deposits re-baseline as past and new mock state takes effect.
@@ -70,7 +73,9 @@ export default function Home() {
     SIMULATED_DEFAULT_RECIPIENT,
   )
   const [draftChain, setDraftChain] = useState<number>(targetChainId)
-  const [draftSlippage, setDraftSlippage] = useState<number>(slippage)
+  const [draftSlippage, setDraftSlippage] = useState<number | undefined>(
+    slippage,
+  )
 
   // Mock lifecycle owned at page level so the toggle can flip it cleanly.
   // Simulated → install the fetch interceptor + seed past-deposits from
@@ -117,8 +122,12 @@ export default function Home() {
   }
 
   const config = useMemo<SmartRoutingAddressConfig>(
-    // targetTokenSymbol defaults to 'USDC' when omitted.
-    () => ({ targetChainId, slippage }),
+    // Omit `slippage` when unset so the server picks its default — sending
+    // a tight value (e.g. 50 bps) blows up `minDeposit`.
+    () => ({
+      targetChainId,
+      ...(slippage !== undefined && { slippage }),
+    }),
     [targetChainId, slippage],
   )
 
@@ -135,13 +144,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Key on recipient+chain+slippage+mode so the whole SRA subtree resets
-          (including provider state) when the user regenerates or flips modes —
-          otherwise stale addresses can persist across config changes. */}
-      <SmartRoutingAddressProvider
-        key={`${mode}-${recipient}-${targetChainId}-${slippage}-${mockNonce}`}
-        config={config}
-      >
+      {/* Remount only on the two axes where re-instantiating the widget is
+          the goal: switching mock lifecycle (`mode`) and the mock-controls
+          reset (`mockNonce`). Recipient / chain / slippage flow through as
+          `config` prop updates — the provider refetches internally, so the
+          picker's token/chain selection survives "Save & regenerate". */}
+      <SmartRoutingAddressProvider key={`${mode}-${mockNonce}`} config={config}>
         {/* Grid uses an arbitrary breakpoint of 900px — Tailwind's default
             `md` (768) is too eager and `lg` (1024) too late for this
             two-column ↔ stacked flip. */}
@@ -308,21 +316,39 @@ export default function Home() {
                   <span className="flex items-baseline justify-between text-sm font-semibold">
                     Max slippage
                     <span className="text-muted tabular-nums">
-                      {(draftSlippage / 100).toFixed(2)}%
+                      {draftSlippage === undefined
+                        ? 'Server default'
+                        : `${(draftSlippage / 100).toFixed(2)}%`}
                     </span>
                   </span>
-                  <input
-                    type="range"
-                    min={10}
-                    max={300}
-                    step={10}
-                    value={draftSlippage}
-                    onChange={(e) => setDraftSlippage(Number(e.target.value))}
-                    className="w-full accent-ink"
-                  />
+                  <span className="flex items-center gap-2 text-[13px] text-muted">
+                    <input
+                      type="checkbox"
+                      checked={draftSlippage !== undefined}
+                      onChange={(e) =>
+                        setDraftSlippage(e.target.checked ? 100 : undefined)
+                      }
+                      className="accent-ink"
+                    />
+                    Override server default
+                  </span>
+                  {draftSlippage !== undefined && (
+                    <input
+                      type="range"
+                      min={50}
+                      max={500}
+                      step={10}
+                      value={draftSlippage}
+                      onChange={(e) => setDraftSlippage(Number(e.target.value))}
+                      className="w-full accent-ink"
+                    />
+                  )}
                   <span className="text-[13px] text-muted">
-                    Max price movement tolerated while swapping. Lower protects
-                    the price but raises the minimum deposit; higher lowers it.
+                    Max price movement tolerated while swapping. A tighter value
+                    protects the price but raises the minimum deposit, and can
+                    make it fluctuate significantly with gas. Leaving it on{' '}
+                    <b>Server default</b> keeps the minimum deposit at the
+                    lowest.
                   </span>
                 </label>
 
