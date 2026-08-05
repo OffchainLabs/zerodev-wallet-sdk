@@ -23,9 +23,11 @@
  */
 
 import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-/** Vitest marks non-executed tests with one of these in its JSON report. */
-const NOT_EXECUTED = new Set(['skipped', 'pending', 'todo'])
+/** Allowlist, so any status vitest adds later counts as "did not run". */
+const EXECUTED = new Set(['passed', 'failed'])
 
 /**
  * @param {unknown} report Parsed `vitest --reporter=json` output.
@@ -51,11 +53,11 @@ export function evaluateIntegrationRun(report) {
     (file) => (Array.isArray(file?.assertionResults) ? file.assertionResults : []),
   )
 
+  const executed = assertions.filter((a) => EXECUTED.has(a?.status)).length
   const skippedTests = assertions
-    .filter((a) => NOT_EXECUTED.has(a?.status))
+    .filter((a) => !EXECUTED.has(a?.status))
     .map((a) => a?.fullName ?? a?.title ?? '<unnamed test>')
   const skipped = skippedTests.length
-  const executed = assertions.length - skipped
 
   if (/** @type {any} */ (report).testResults.length === 0) {
     return {
@@ -103,27 +105,10 @@ function emit(result) {
   }
 
   console.log(lines.join('\n'))
-
-  if (inCI && process.env.GITHUB_STEP_SUMMARY) {
-    const summary = [
-      '### Integration test execution',
-      '',
-      `- ran: **${result.executed}**`,
-      `- skipped: **${result.skipped}**`,
-      ...(result.reason ? ['', `> ${result.reason}`] : []),
-      ...(result.skippedTests.length
-        ? ['', '<details><summary>Skipped tests</summary>', '']
-            .concat(result.skippedTests.map((n) => `- \`${n}\``))
-            .concat(['', '</details>'])
-        : []),
-      '',
-    ].join('\n')
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary)
-  }
 }
 
 // CLI entry — skipped when imported by tests.
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
+if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? '')) {
   const reportPath = process.argv[2]
   if (!reportPath) {
     console.error('Usage: node scripts/check-integration-ran.mjs <vitest-json-report>')
