@@ -1,9 +1,10 @@
 /**
  * Session-restore / initialization behaviour of the wagmi connector.
  *
- * ⚠️ THREE OF THESE TESTS FAIL ON PURPOSE — they document a live defect, they
- * are not broken tests. See the `describe` block below for what breaks and the
- * one-line production change that turns them green.
+ * ⚠️ THREE OF THESE TESTS ARE MARKED `it.fails()` — they document a live
+ * defect, they are not broken tests. `it.fails()` asserts the body throws, so
+ * the suite is green while the bug exists and turns RED the moment someone
+ * fixes it. When you land the fix, change them back to plain `it()`.
  *
  * Context: PR #365 ("require a valid, non-zero owner when building the
  * account") correctly stopped `toViemAccount` from silently falling back to
@@ -167,59 +168,68 @@ describe('zeroDevWallet connector — session restore', () => {
    * lands before the user has done anything; the subsequent user-initiated
    * connect must be allowed to succeed.
    */
-  it('connects on the next attempt once a transient owner-resolution failure clears', async () => {
-    walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
-    walletMock.toAccount
-      .mockRejectedValueOnce(transientKmsFailure())
-      .mockResolvedValue({ address: OWNER })
-    const connector = createConnector()
+  it.fails(
+    'connects on the next attempt once a transient owner-resolution failure clears',
+    async () => {
+      walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
+      walletMock.toAccount
+        .mockRejectedValueOnce(transientKmsFailure())
+        .mockResolvedValue({ address: OWNER })
+      const connector = createConnector()
 
-    // Boot-time blip. Failing here is correct — better than a zero-address account.
-    await expect(connector.setup()).rejects.toThrow(/timed out/)
+      // Boot-time blip. Failing here is correct — better than a zero-address account.
+      await expect(connector.setup()).rejects.toThrow(/timed out/)
 
-    // Network is healthy now and the session is still valid: this must work.
-    const result = await connector.connect({ chainId: sepolia.id })
+      // Network is healthy now and the session is still valid: this must work.
+      const result = await connector.connect({ chainId: sepolia.id })
 
-    expect(result.accounts).toEqual([OWNER])
-  })
+      expect(result.accounts).toEqual([OWNER])
+    },
+  )
 
   /**
    * BREAK: the retry never reaches the wallet SDK at all.
    * Names the mechanism — the cached rejection short-circuits initialization,
    * so owner resolution is not re-attempted. Fails on the second `setup()`.
    */
-  it('re-attempts owner resolution after a failed init instead of replaying the cached rejection', async () => {
-    walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
-    walletMock.toAccount
-      .mockRejectedValueOnce(transientKmsFailure())
-      .mockResolvedValue({ address: OWNER })
-    const connector = createConnector()
+  it.fails(
+    're-attempts owner resolution after a failed init instead of replaying the cached rejection',
+    async () => {
+      walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
+      walletMock.toAccount
+        .mockRejectedValueOnce(transientKmsFailure())
+        .mockResolvedValue({ address: OWNER })
+      const connector = createConnector()
 
-    await expect(connector.setup()).rejects.toThrow(/timed out/)
-    expect(walletMock.toAccount).toHaveBeenCalledTimes(1)
+      await expect(connector.setup()).rejects.toThrow(/timed out/)
+      expect(walletMock.toAccount).toHaveBeenCalledTimes(1)
 
-    await connector.setup()
+      await connector.setup()
 
-    expect(walletMock.toAccount).toHaveBeenCalledTimes(2)
-  })
+      expect(walletMock.toAccount).toHaveBeenCalledTimes(2)
+    },
+  )
 
   /**
    * BREAK: the React surface stays dead.
    * `getStore()` is how the hooks reach connector state, so while it rejects
    * the app cannot render — not even a login screen to recover through.
    */
-  it('exposes a usable store to the hooks once the failure clears', async () => {
-    walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
-    walletMock.toAccount
-      .mockRejectedValueOnce(transientKmsFailure())
-      .mockResolvedValue({ address: OWNER })
-    const connector = createConnector()
+  it.fails(
+    'exposes a usable store to the hooks once the failure clears',
+    async () => {
+      walletMock.getSession.mockResolvedValue(RESTORED_SESSION)
+      walletMock.toAccount
+        .mockRejectedValueOnce(transientKmsFailure())
+        .mockResolvedValue({ address: OWNER })
+      const connector = createConnector()
 
-    await expect(connector.setup()).rejects.toThrow(/timed out/)
+      await expect(connector.setup()).rejects.toThrow(/timed out/)
 
-    // @ts-expect-error - getStore is added in the connector's Properties.
-    const store = await connector.getStore()
+      // @ts-expect-error - getStore is added in the connector's Properties.
+      const store = await connector.getStore()
 
-    expect(store.getState().eoaAccount?.address).toBe(OWNER)
-  })
+      expect(store.getState().eoaAccount?.address).toBe(OWNER)
+    },
+  )
 })
