@@ -92,9 +92,6 @@ export function ConnectWallet({
       // Sign-up shrinks to its content (few methods → shorter card) but never
       // grows past the standard height; other steps keep the fixed size.
       className={step === 'sign-up' ? 'zd:h-auto zd:max-h-202.5' : undefined}
-      // Some elements in SignUp need to go from edge to edge.
-      // No vertical padding; we set px-0 so we can fully control this padding.
-      contentClassName={step === 'sign-up' ? 'zd:px-0' : undefined}
       topNav={
         <TopNav
           {...(goBack !== null && { onLeftButtonClick: goBack })}

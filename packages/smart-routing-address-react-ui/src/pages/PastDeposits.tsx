@@ -98,10 +98,6 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
 
   const destChain = resolveDestChain(config)
   const destChainLogo = CHAIN_ICONS[destChain.id]
-  const destSymbol = getDestTokenSymbol(config)
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
 
   const groups = useMemo(
     () => groupByDay(deposits as DepositWithTimestamp[]),
@@ -168,6 +164,16 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                       ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
                       : undefined
                     const sourceChainLogo = CHAIN_ICONS[chainId]
+                    // Dest symbol mirrors this row's source (widget's default
+                    // actions forward the deposited token). Consumer overrides
+                    // via `config.targetTokenSymbol` still win.
+                    const destSymbol = getDestTokenSymbol(
+                      config,
+                      sourceSymbol || undefined,
+                    )
+                    const destTokenLogo = destSymbol
+                      ? TOKEN_ICONS[destSymbol.toUpperCase()]
+                      : undefined
                     const amountLabel = feeData
                       ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
                       : String(amount)
