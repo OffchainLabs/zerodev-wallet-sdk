@@ -67,11 +67,25 @@ export const CHAINS_BY_ID: ReadonlyMap<number, Chain> = new Map(
 )
 
 /**
- * Source tokens offered for deposits: every
- * supported mainnet token the SDK exposes (NATIVE plus each ERC-20, with
- * wrapped native surfaced as WETH), mapped to its viem chain object. Testnets
- * are excluded from the default; chains this package cannot resolve to a viem
- * chain are skipped.
+ * Token types the SDK ships in `SUPPORTED_TOKENS` but the SRA server does not
+ * yet recognize. Sending one of these as a source token makes the server
+ * reject the whole `createSmartRoutingAddress` request with
+ * `Invalid params: Token address … is not supported on chain N`, which breaks
+ * the entire destination (e.g. Base). Remove entries here as the server
+ * registry catches up.
+ *
+ * TODO: file/track ZeroDev SRA server bug for EURC on Base
+ * (chain 8453, address 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42) — once the
+ * server accepts it, drop this filter.
+ */
+const UNSUPPORTED_TOKEN_TYPES: ReadonlySet<TOKEN_TYPE> = new Set(['EURC'])
+
+/**
+ * Source tokens offered for deposits: every supported mainnet token the SDK
+ * exposes (NATIVE plus each ERC-20, with wrapped native surfaced as WETH),
+ * mapped to its viem chain object. Testnets are excluded from the default;
+ * chains this package cannot resolve to a viem chain are skipped, and token
+ * types the server can't route yet are filtered via `UNSUPPORTED_TOKEN_TYPES`.
  */
 export const DEFAULT_SOURCE_TOKENS: SourceToken[] = Object.entries(
   SUPPORTED_TOKENS,
@@ -79,8 +93,10 @@ export const DEFAULT_SOURCE_TOKENS: SourceToken[] = Object.entries(
   // Skip chains this package cannot resolve to a viem chain object
   const chain = CHAINS_BY_ID.get(Number(chainId))
   if (!chain) return []
-  return Object.keys(tokens).map((tokenType) => ({
-    chain,
-    tokenType: tokenType as TOKEN_TYPE,
-  }))
+  return Object.keys(tokens)
+    .filter((t) => !UNSUPPORTED_TOKEN_TYPES.has(t as TOKEN_TYPE))
+    .map((tokenType) => ({
+      chain,
+      tokenType: tokenType as TOKEN_TYPE,
+    }))
 })

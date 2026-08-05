@@ -87,7 +87,13 @@ export function PendingDeposits({
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
 
-          const destSymbol = getDestTokenSymbol(config)
+          // Dest symbol mirrors this row's source (widget's default actions
+          // forward the deposited token). Consumer overrides via
+          // `config.targetTokenSymbol` still win.
+          const destSymbol = getDestTokenSymbol(
+            config,
+            sourceSymbol || undefined,
+          )
           const destTokenLogo = destSymbol
             ? TOKEN_ICONS[destSymbol.toUpperCase()]
             : undefined
