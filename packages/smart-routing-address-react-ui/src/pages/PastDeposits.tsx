@@ -7,7 +7,6 @@ import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositStage, DepositWithTimestamp } from '../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
@@ -164,16 +163,9 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                       ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
                       : undefined
                     const sourceChainLogo = CHAIN_ICONS[chainId]
-                    // Dest symbol mirrors this row's source (widget's default
-                    // actions forward the deposited token). Consumer overrides
-                    // via `config.targetTokenSymbol` still win.
-                    const destSymbol = getDestTokenSymbol(
-                      config,
-                      sourceSymbol || undefined,
-                    )
-                    const destTokenLogo = destSymbol
-                      ? TOKEN_ICONS[destSymbol.toUpperCase()]
-                      : undefined
+                    // Destination token equals source token — widget's default
+                    // actions forward the deposited asset unchanged.
+                    const destTokenLogo = sourceTokenLogo
                     const amountLabel = feeData
                       ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
                       : String(amount)

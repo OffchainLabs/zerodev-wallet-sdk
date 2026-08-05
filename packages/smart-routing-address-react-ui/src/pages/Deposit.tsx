@@ -33,7 +33,6 @@ import { useProviderFees } from '../hooks/useProviderFees'
 import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { SourceToken } from '../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
@@ -145,14 +144,13 @@ export function Deposit({
 
   const destChain = resolveDestChain(config)
   const sourceSymbol = source ? getSourceTokenSymbol(source) : undefined
-  const destSymbol = getDestTokenSymbol(config, sourceSymbol)
   const sourceTokenLogo = sourceSymbol
     ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
     : undefined
   const sourceChainLogo = source ? CHAIN_ICONS[source.chain.id] : undefined
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
+  // Widget's default actions forward the deposited token, so the destination
+  // token equals the source token — same symbol, same logo.
+  const destTokenLogo = sourceTokenLogo
   const destChainLogo = CHAIN_ICONS[destChain.id]
   const feeData = source
     ? findFeeData(estimatedFees, source.chain.id, source.tokenType)
@@ -468,10 +466,10 @@ export function Deposit({
               <PillRow
                 left={
                   <Pill
-                    label={destSymbol ?? ''}
+                    label={sourceSymbol ?? ''}
                     {...(destTokenLogo && { logoUri: destTokenLogo })}
                     disabled
-                    loading={!destSymbol}
+                    loading={!sourceSymbol}
                   />
                 }
                 right={

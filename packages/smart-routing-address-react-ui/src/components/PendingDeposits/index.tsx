@@ -8,7 +8,6 @@ import type {
   SmartRoutingAddressConfig,
 } from '../../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveDestChain,
   sourceTokensFromFees,
@@ -87,16 +86,9 @@ export function PendingDeposits({
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
 
-          // Dest symbol mirrors this row's source (widget's default actions
-          // forward the deposited token). Consumer overrides via
-          // `config.targetTokenSymbol` still win.
-          const destSymbol = getDestTokenSymbol(
-            config,
-            sourceSymbol || undefined,
-          )
-          const destTokenLogo = destSymbol
-            ? TOKEN_ICONS[destSymbol.toUpperCase()]
-            : undefined
+          // Destination token equals source token — widget's default
+          // actions forward the deposited asset unchanged.
+          const destTokenLogo = sourceTokenLogo
 
           const status = STAGE_TO_STATUS[getDepositStage(deposit)]
           const amountLabel = feeData
