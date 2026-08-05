@@ -144,8 +144,8 @@ export function Deposit({
   const pastDepositsCount = deposits.length - newDeposits.length
 
   const destChain = resolveDestChain(config)
-  const destSymbol = getDestTokenSymbol(config)
   const sourceSymbol = source ? getSourceTokenSymbol(source) : undefined
+  const destSymbol = getDestTokenSymbol(config, sourceSymbol)
   const sourceTokenLogo = sourceSymbol
     ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
     : undefined
