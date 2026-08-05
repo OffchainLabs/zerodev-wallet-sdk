@@ -56,7 +56,7 @@ function SignUpRoot({
       }}
     >
       {error !== null && (
-        <div className="zd:flex zd:items-center zd:justify-center zd:h-full">
+        <div className="zd:flex zd:items-center zd:justify-center zd:h-full zd:min-h-100">
           <div className="zd:flex zd:flex-col zd:gap-4 zd:max-w-md">
             <Text className="zd:text-h2 zd:text-center">Error occurred</Text>
             <Text className="zd:text-center zd:text-red-500">{error}</Text>
