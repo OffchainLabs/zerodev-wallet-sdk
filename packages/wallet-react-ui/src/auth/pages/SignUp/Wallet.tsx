@@ -1,4 +1,5 @@
 import { Badge, ListItem, ListItemChevron } from '@zerodev/react-ui'
+import { useLayoutEffect } from 'react'
 import { useConnect, useConnectors } from 'wagmi'
 import { useAuth } from '../../hooks/useAuth'
 import { isCancellationError } from '../../utils/isCancellationError'
@@ -17,10 +18,12 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
   }
 
   const { goToStep } = useAuth()
-  const { authPending, guardAgreement, setError } = useSignUpContext()
+  const { authPending, guardAgreement, setError, registerWallet } =
+    useSignUpContext()
   const connectors = useConnectors()
   const { mutate: connect, isPending } = useConnect()
   useReportPending(isPending)
+  useLayoutEffect(() => registerWallet(wallet.id), [registerWallet, wallet.id])
 
   // Same claim rule as the MoreWallets grid: a 6963 announcement or a
   // configured SDK connector both make the row connectable. Only an

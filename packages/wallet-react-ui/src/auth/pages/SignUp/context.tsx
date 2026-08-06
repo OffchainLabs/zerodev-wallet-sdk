@@ -16,6 +16,11 @@ export type SignUpContextValue = {
    * returns false when agreement is required but missing. */
   guardAgreement: () => boolean
   setError: (message: string | null) => void
+  /** Guide ids of every mounted `SignUp.Wallet` pin. Discovery units skip
+   * these so a pinned wallet isn't listed twice. */
+  registeredWallets: readonly string[]
+  /** Returns the unregister function. */
+  registerWallet: (walletId: string) => () => void
 }
 
 export const SignUpContext = createContext<SignUpContextValue | null>(null)
