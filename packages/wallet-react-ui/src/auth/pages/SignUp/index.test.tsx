@@ -19,6 +19,9 @@ vi.mock('./Google', () => ({
 vi.mock('./Email', () => ({
   SignUpEmail: () => <div data-testid="unit-email" />,
 }))
+vi.mock('./MoreWallets', () => ({
+  SignUpMoreWallets: () => <div data-testid="unit-more-wallets" />,
+}))
 
 vi.mock('../../components/BlobAnimation', () => ({
   BlobAnimation: () => null,
@@ -63,6 +66,8 @@ describe('SignUp.Default', () => {
     expect(isBefore(passkey, divider)).toBe(true)
     expect(isBefore(divider, google)).toBe(true)
     expect(isBefore(google, email)).toBe(true)
+    // Wallet units are compose-only — the canonical page has none.
+    expect(screen.queryByTestId('unit-more-wallets')).toBeNull()
   })
 
   it('forwards consent-gate props to the root like a hand-composed <SignUp>', () => {

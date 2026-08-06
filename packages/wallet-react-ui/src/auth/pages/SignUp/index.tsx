@@ -6,7 +6,10 @@ import type { EmailAuthMethod } from '../../types'
 import { SignUpContext } from './context'
 import { SignUpEmail } from './Email'
 import { SignUpGoogle } from './Google'
+import { SignUpInstalledWallets } from './InstalledWallets'
+import { SignUpMoreWallets } from './MoreWallets'
 import { SignUpPasskey } from './Passkey'
+import { SignUpWallet } from './Wallet'
 
 type SignUpRootProps = {
   children: ReactNode
@@ -53,7 +56,7 @@ function SignUpRoot({
       }}
     >
       {error !== null && (
-        <div className="zd:flex zd:items-center zd:justify-center zd:h-full">
+        <div className="zd:flex zd:items-center zd:justify-center zd:h-full zd:min-h-100">
           <div className="zd:flex zd:flex-col zd:gap-4 zd:max-w-md">
             <Text className="zd:text-h2 zd:text-center">Error occurred</Text>
             <Text className="zd:text-center zd:text-red-500">{error}</Text>
@@ -136,5 +139,8 @@ export const SignUp = Object.assign(SignUpRoot, {
   Passkey: SignUpPasskey,
   Google: SignUpGoogle,
   Email: SignUpEmail,
+  Wallet: SignUpWallet,
+  InstalledWallets: SignUpInstalledWallets,
+  MoreWallets: SignUpMoreWallets,
   Divider: SignUpDivider,
 })

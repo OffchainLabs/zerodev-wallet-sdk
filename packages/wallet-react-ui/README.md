@@ -135,9 +135,23 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
 - `<SignUp>` (the root) owns the shared page state and the consent gate: when
   either terms URL is set, a checkbox appears and every method is blocked
   until the user agrees. `emailAuthMethod` picks the email verification flow.
-- Units: `SignUp.Passkey`, `SignUp.Google`, `SignUp.Email`, `SignUp.Divider`.
-  Order and presence are yours; while one method is in flight, the others
-  disable themselves.
+- Units: `SignUp.Passkey`, `SignUp.Google`, `SignUp.Email`, `SignUp.Wallet`,
+  `SignUp.InstalledWallets`, `SignUp.MoreWallets`, `SignUp.Divider`. Order and
+  presence are yours; while one method is in flight, the others disable
+  themselves.
+- `SignUp.Wallet` pins one external wallet as its own row. `walletId` is the
+  `WalletId` union (e.g. `'metamask'`, `'coinbase'`, `'rabby'`); the row
+  connects the wallet when a live connector claims it (browser extension or a
+  configured SDK connector) and is a link to the vendor's download page
+  otherwise.
+- `SignUp.InstalledWallets` auto-discovers installed wallets: one row with an
+  INSTALLED badge per announced (EIP-6963) browser extension, and nothing when
+  none are installed. `excludeWalletIds` hides wallets by guide id or rdns —
+  use it to dedupe against a pinned `SignUp.Wallet` row — and `maxWallets`
+  caps the list (default 4, known wallets ranked first).
+- `SignUp.MoreWallets` renders a row that opens an overlay sheet with the full
+  wallet grid — every known wallet plus any other live connector; installed
+  ones connect, the rest link to the vendor's download page.
 - `SignUp.Default` is the canonical composition; it accepts the same props as
   the root and forwards them.
 - Auth success/failure surfaces through wagmi — await `connect`, or watch
@@ -149,12 +163,13 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
 | --- | --- |
 | `zeroDevWallet` | wagmi connector with kit-specific auth extensions. |
 | `<ConnectWallet />` | Renders the current auth step (sign-in, OTP, verifying, etc.). Props: `logo`, `renderSignUp`, `size`, `onClose`. |
-| `<SignUp />` | Compound sign-up page: `SignUp.Default` plus the composable units (`Passkey`, `Google`, `Email`, `Divider`). |
+| `<SignUp />` | Compound sign-up page: `SignUp.Default` plus the composable units (`Passkey`, `Google`, `Email`, `Wallet`, `InstalledWallets`, `MoreWallets`, `Divider`). |
 | `useAuth` | Read / drive the auth flow state. |
 
 ### Types
 
-`AuthMethod`, `AuthStep`, `EmailAuthMethod`, `ZeroDevKitConnectorParams`.
+`AuthMethod`, `AuthStep`, `EmailAuthMethod`, `WalletId`,
+`ZeroDevKitConnectorParams`.
 
 ## Development
 
