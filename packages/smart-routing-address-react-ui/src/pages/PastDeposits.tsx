@@ -6,6 +6,7 @@ import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressCon
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositStage, DepositWithTimestamp } from '../types'
+import { getTxUrl } from '../utils/chains'
 import {
   getSourceTokenSymbol,
   resolveBaseUrl,
@@ -156,9 +157,13 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                           t.chain.id === chainId &&
                           tokenAddressMatches(t.tokenType, chainId, token),
                       ) ?? null
+                    // Prefer the reconstructed source's symbol; fall back to
+                    // the server's `feeData.name` so past deposits whose route
+                    // dropped out of the current fee estimates still get a
+                    // symbol / icon.
                     const sourceSymbol = source
                       ? getSourceTokenSymbol(source)
-                      : ''
+                      : (feeData?.name ?? '')
                     const sourceTokenLogo = sourceSymbol
                       ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
                       : undefined
@@ -172,11 +177,9 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                     const timestamp = deposit.createdAt
                       ? (formatRelativeTime(deposit.createdAt) ?? '')
                       : ''
-                    const explorerBase =
-                      source?.chain.blockExplorers?.default?.url
-                    const href = explorerBase
-                      ? `${explorerBase}/tx/${transactionHash}`
-                      : undefined
+                    // Explorer URL from the chain id alone — independent of
+                    // whether the deposit's token matched the current fees.
+                    const href = getTxUrl(chainId, transactionHash)
                     const status = STAGE_TO_STATUS[getDepositStage(deposit)]
 
                     const row = (

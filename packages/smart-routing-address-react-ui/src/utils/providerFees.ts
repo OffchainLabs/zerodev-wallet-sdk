@@ -1,5 +1,5 @@
 import { formatUnits } from 'viem'
-import { z } from 'zod'
+import { z } from 'zod/mini'
 import type { EstimatedFeeData } from '../types'
 import { formatDisplayAmount, STABLE_SYMBOLS } from './format'
 
@@ -79,7 +79,7 @@ export const AcrossSuggestedFeesSchema = z.object({
   relayerCapitalFee: AcrossLegSchema,
   relayerGasFee: AcrossLegSchema,
   lpFee: AcrossLegSchema,
-  estimatedFillTimeSec: z.number().optional(),
+  estimatedFillTimeSec: z.optional(z.number()),
 })
 
 type AcrossLeg = z.infer<typeof AcrossLegSchema>
@@ -160,25 +160,25 @@ export function parseAcrossFees(
 // ---------------------------------------------------------------------------
 
 const RelayFeeSchema = z.object({
-  amountUsd: z.string().optional(),
+  amountUsd: z.optional(z.string()),
 })
 
 export const RelayQuoteSchema = z.object({
-  fees: z
-    .object({
-      gas: RelayFeeSchema.optional(),
-      relayer: RelayFeeSchema.optional(),
-      relayerGas: RelayFeeSchema.optional(),
-      relayerService: RelayFeeSchema.optional(),
-      app: RelayFeeSchema.optional(),
-    })
-    .optional(),
-  details: z
-    .object({
-      timeEstimate: z.number().optional(),
-    })
-    .optional(),
-  timeEstimate: z.number().optional(),
+  fees: z.optional(
+    z.object({
+      gas: z.optional(RelayFeeSchema),
+      relayer: z.optional(RelayFeeSchema),
+      relayerGas: z.optional(RelayFeeSchema),
+      relayerService: z.optional(RelayFeeSchema),
+      app: z.optional(RelayFeeSchema),
+    }),
+  ),
+  details: z.optional(
+    z.object({
+      timeEstimate: z.optional(z.number()),
+    }),
+  ),
+  timeEstimate: z.optional(z.number()),
 })
 
 type RelayFee = z.infer<typeof RelayFeeSchema>
