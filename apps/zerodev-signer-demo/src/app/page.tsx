@@ -143,10 +143,7 @@ function LandingPageInner() {
                 logo={<ZeroDevLogo variant="mark" tone="color" className="zd:h-8 zd:w-auto" />}
                 renderSignUp={() =>
                   <SignUp emailAuthMethod={getEmailAuthMethod()}>
-                    <SignUp.Passkey />
-                    <SignUp.Divider />
-                    <SignUp.Google />
-                    <SignUp.Email />
+                    <SignUp.InstalledWallets />
                   </SignUp>
                 }
               />

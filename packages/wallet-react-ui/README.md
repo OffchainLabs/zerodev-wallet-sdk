@@ -146,9 +146,9 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
   otherwise.
 - `SignUp.InstalledWallets` auto-discovers installed wallets: one row with an
   INSTALLED badge per announced (EIP-6963) browser extension, and nothing when
-  none are installed. `excludeWalletIds` hides wallets by guide id or rdns —
-  use it to dedupe against a pinned `SignUp.Wallet` row — and `maxWallets`
-  caps the list (default 4, known wallets ranked first).
+  none are installed. Wallets pinned via `SignUp.Wallet` are excluded
+  automatically; `excludeWalletIds` hides further wallets by guide id or rdns,
+  and `maxWallets` caps the list (default 4, known wallets ranked first).
 - `SignUp.MoreWallets` renders a row that opens an overlay sheet with the full
   wallet grid — every known wallet plus any other live connector; installed
   ones connect, the rest link to the vendor's download page.

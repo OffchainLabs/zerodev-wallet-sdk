@@ -11,7 +11,8 @@ export function SignUpInstalledWallets({
   excludeWalletIds = [],
   maxWallets = 4,
 }: {
-  /** Wallets to hide, by guide id (e.g. `'metamask'`) or EIP-6963 rdns. */
+  /** Wallets to hide, by guide id (e.g. `'metamask'`) or EIP-6963 rdns.
+   * Pinned `SignUp.Wallet` rows are excluded automatically. */
   excludeWalletIds?: string[]
   /** Cap on the number of rendered rows (default 4). Guide wallets rank
    * first, in guide order, so the cut drops unknown extensions before
@@ -19,7 +20,8 @@ export function SignUpInstalledWallets({
   maxWallets?: number
 }) {
   const { goToStep } = useAuth()
-  const { authPending, guardAgreement, setError } = useSignUpContext()
+  const { authPending, guardAgreement, setError, registeredWalletIds } =
+    useSignUpContext()
   const connectors = useConnectors()
   const { mutate: connect, isPending } = useConnect()
   useReportPending(isPending)
@@ -40,13 +42,17 @@ export function SignUpInstalledWallets({
       const wallet = WALLET_GUIDE.find((w) => matchesWallet(connector, w))
       return {
         connector,
+        walletId: wallet?.id,
         name: wallet?.name ?? connector.name,
         icon: wallet?.icon ?? connector.icon,
         ids: wallet ? [wallet.id, connector.id] : [connector.id],
         rank: wallet ? WALLET_GUIDE.indexOf(wallet) : WALLET_GUIDE.length,
       }
     })
-    .filter((row) => !excludeWalletIds.some((id) => row.ids.includes(id)))
+    .filter(
+      (row) => !(row.walletId && registeredWalletIds.includes(row.walletId)),
+    )
+    .filter((row) => !row.ids.some((id) => excludeWalletIds.includes(id)))
     .sort((a, b) => a.rank - b.rank)
     .slice(0, maxWallets)
 

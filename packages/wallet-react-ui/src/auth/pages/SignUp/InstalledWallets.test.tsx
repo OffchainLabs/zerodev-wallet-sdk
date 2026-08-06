@@ -240,6 +240,65 @@ describe('SignUp.InstalledWallets', () => {
     expect(screen.getByText('boom')).toBeDefined()
   })
 
+  it('auto-dedupes a wallet pinned via SignUp.Wallet', () => {
+    connectors = [announced('io.metamask'), announced('io.rabby')]
+    render(
+      <SignUp>
+        <SignUp.Wallet walletId="metamask" />
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+
+    // The pinned row is the only MetaMask on the page; discovery still
+    // lists the un-pinned wallet.
+    expect(screen.getAllByText('MetaMask')).toHaveLength(1)
+    expect(screen.getByText('Rabby Wallet')).toBeDefined()
+  })
+
+  it('auto-dedupes regardless of unit order', () => {
+    connectors = [announced('io.metamask')]
+    render(
+      <SignUp>
+        <SignUp.InstalledWallets />
+        <SignUp.Wallet walletId="metamask" />
+      </SignUp>,
+    )
+
+    expect(screen.getAllByText('MetaMask')).toHaveLength(1)
+  })
+
+  it('returns a wallet to discovery when its pin unmounts', () => {
+    connectors = [announced('io.metamask')]
+    const { rerender } = render(
+      <SignUp>
+        <SignUp.Wallet walletId="metamask" />
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+    expect(screen.getAllByText('MetaMask')).toHaveLength(1)
+
+    rerender(
+      <SignUp>
+        <SignUp.InstalledWallets />
+      </SignUp>,
+    )
+    // Unregistered on unmount — the discovery row takes over.
+    expect(screen.getAllByText('MetaMask')).toHaveLength(1)
+  })
+
+  it('composes auto-dedupe with excludeWalletIds', () => {
+    connectors = [announced('io.metamask'), announced('io.rabby')]
+    render(
+      <SignUp>
+        <SignUp.Wallet walletId="metamask" />
+        <SignUp.InstalledWallets excludeWalletIds={['rabby']} />
+      </SignUp>,
+    )
+
+    expect(screen.getAllByText('MetaMask')).toHaveLength(1)
+    expect(screen.queryByText('Rabby Wallet')).toBeNull()
+  })
+
   it('disables rows while another method is in flight', () => {
     connectors = [announced('io.metamask')]
     connectPending = true

@@ -1,5 +1,5 @@
 import { Button, Text } from '@zerodev/react-ui'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 import { SignUpFooter } from '../../../shared/components/SignUpFooter'
 import { BlobAnimation } from '../../components/BlobAnimation'
 import type { EmailAuthMethod } from '../../types'
@@ -34,6 +34,22 @@ function SignUpRoot({
   // one unit is in flight at a time. Known accepted edge: a unit unmounting
   // mid-flight (conditional composition) clears a sibling's lock.
   const [authPending, setAuthPending] = useState(false)
+  // Which wallets have a pinned `SignUp.Wallet` row mounted. A plain list of
+  // registrants: register appends, cleanup removes one occurrence.
+  const [registeredWalletIds, setRegisteredWalletIds] = useState<
+    readonly string[]
+  >([])
+
+  const registerWallet = useCallback((walletId: string) => {
+    setRegisteredWalletIds((prev) => [...prev, walletId])
+    return () => {
+      setRegisteredWalletIds((prev) => {
+        const next = [...prev]
+        next.splice(next.indexOf(walletId), 1)
+        return next
+      })
+    }
+  }, [])
 
   const requiresAgreement = !!(termsAndConditionsUrl || privacyPolicyUrl)
   const needsAgreement = requiresAgreement && !agreedToTerms
@@ -53,6 +69,8 @@ function SignUpRoot({
         needsAgreement,
         guardAgreement,
         setError,
+        registeredWalletIds,
+        registerWallet,
       }}
     >
       {error !== null && (
