@@ -177,6 +177,9 @@ export function useProviderFees(
     try {
       amount = BigInt(minDeposit).toString()
     } catch {
+      // Malformed `minDeposit` — nothing to quote. Clear loading so the
+      // caller doesn't sit in a spinner forever until the route changes.
+      setLoading(false)
       return
     }
 
