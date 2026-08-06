@@ -1,7 +1,4 @@
 import { formatUnits } from 'viem'
-// `zod/mini` ships a tree-shakable, functional API (`z.optional(z.number())`
-// instead of `z.number().optional()`). Same runtime semantics, ~70% smaller
-// contribution to the widget bundle.
 import { z } from 'zod/mini'
 import type { EstimatedFeeData } from '../types'
 import { formatDisplayAmount, STABLE_SYMBOLS } from './format'
