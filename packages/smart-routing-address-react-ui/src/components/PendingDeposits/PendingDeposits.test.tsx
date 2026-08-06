@@ -12,7 +12,6 @@ afterEach(cleanup)
 
 const config: SmartRoutingAddressConfig = {
   targetChainId: arbitrum.id,
-  targetTokenSymbol: 'USDC',
   slippage: 50,
 }
 
