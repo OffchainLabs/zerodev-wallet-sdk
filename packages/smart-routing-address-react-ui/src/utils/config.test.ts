@@ -14,7 +14,6 @@ import {
 } from '../test/fixtures'
 import type { SmartRoutingAddressConfig } from '../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveActions,
   resolveBaseUrl,
@@ -28,7 +27,6 @@ import {
 /** Minimal config without routes, exercising the defaults */
 const BARE_CONFIG: SmartRoutingAddressConfig = {
   targetChainId: base.id,
-  targetTokenSymbol: 'USDC',
 }
 
 describe('resolveVersion', () => {
@@ -135,10 +133,7 @@ describe('resolveSourceTokens', () => {
 
   it('keeps only stables for a destination chain without native support', () => {
     // bsc only maps USDC/USDT and is not in NATIVE_TOKENS_SUPPORTED
-    const sources = resolveSourceTokens({
-      targetChainId: bsc.id,
-      targetTokenSymbol: 'USDC',
-    })
+    const sources = resolveSourceTokens({ targetChainId: bsc.id })
     const tokenTypes = new Set(sources.map((source) => source.tokenType))
     expect([...tokenTypes].sort()).toEqual(['USDC', 'USDT'])
   })
@@ -188,21 +183,5 @@ describe('token symbols', () => {
         chain: optimism,
       }),
     ).toBe('WETH')
-  })
-
-  it('prefers the explicit target token when configured', () => {
-    expect(
-      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'USDC' }, 'ETH'),
-    ).toBe('USDC')
-  })
-
-  it('falls back to the source symbol when targetTokenSymbol is unset', () => {
-    const { targetTokenSymbol: _drop, ...withoutSymbol } = BARE_CONFIG
-    expect(getDestTokenSymbol(withoutSymbol, 'ETH')).toBe('ETH')
-  })
-
-  it('returns undefined when neither target nor source is provided', () => {
-    const { targetTokenSymbol: _drop, ...withoutSymbol } = BARE_CONFIG
-    expect(getDestTokenSymbol(withoutSymbol)).toBeUndefined()
   })
 })

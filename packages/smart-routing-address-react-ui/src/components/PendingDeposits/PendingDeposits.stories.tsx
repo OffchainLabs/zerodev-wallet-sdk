@@ -7,7 +7,6 @@ import { PendingDeposits } from './index'
 
 const config: SmartRoutingAddressConfig = {
   targetChainId: arbitrum.id,
-  targetTokenSymbol: 'USDC',
   slippage: 50,
 }
 

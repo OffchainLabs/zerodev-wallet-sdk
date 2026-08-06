@@ -7,8 +7,8 @@ import type {
   EstimatedFee,
   SmartRoutingAddressConfig,
 } from '../../types'
+import { getTxUrl } from '../../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveDestChain,
   sourceTokensFromFees,
@@ -81,22 +81,20 @@ export function PendingDeposits({
                 t.chain.id === chainId &&
                 tokenAddressMatches(t.tokenType, chainId, token),
             ) ?? null
-          const sourceSymbol = source ? getSourceTokenSymbol(source) : ''
+          // Prefer the reconstructed source's symbol; fall back to the
+          // server's `feeData.name` so past deposits whose route dropped
+          // out of the current fee estimates still get a symbol / icon.
+          const sourceSymbol = source
+            ? getSourceTokenSymbol(source)
+            : (feeData?.name ?? '')
           const sourceTokenLogo = sourceSymbol
             ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
 
-          // Dest symbol mirrors this row's source (widget's default actions
-          // forward the deposited token). Consumer overrides via
-          // `config.targetTokenSymbol` still win.
-          const destSymbol = getDestTokenSymbol(
-            config,
-            sourceSymbol || undefined,
-          )
-          const destTokenLogo = destSymbol
-            ? TOKEN_ICONS[destSymbol.toUpperCase()]
-            : undefined
+          // Destination token equals source token — widget's default
+          // actions forward the deposited asset unchanged.
+          const destTokenLogo = sourceTokenLogo
 
           const status = STAGE_TO_STATUS[getDepositStage(deposit)]
           const amountLabel = feeData
@@ -106,13 +104,9 @@ export function PendingDeposits({
             ? (formatRelativeTime(deposit.createdAt) ?? '')
             : ''
 
-          // Block-explorer URL for the source-chain deposit tx. viem's chain
-          // objects ship `blockExplorers.default.url`; fall through to
-          // omitting `href` when the chain doesn't advertise one.
-          const explorerBase = source?.chain.blockExplorers?.default?.url
-          const href = explorerBase
-            ? `${explorerBase}/tx/${transactionHash}`
-            : undefined
+          // Explorer URL from the chain id alone — independent of whether
+          // the deposit's token was matched in the current fee estimates.
+          const href = getTxUrl(chainId, transactionHash)
 
           const row = (
             <TxnItem

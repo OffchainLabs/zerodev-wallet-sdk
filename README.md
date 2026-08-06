@@ -79,6 +79,11 @@ If you'd rather not build your own auth and signing UI, use
 React components (`<ConnectWallet />`, `<SignatureRequest />`) built on top of
 this SDK.
 
+To let users fund a wallet from any chain / any token, mount
+[@zerodev/smart-routing-address-react-ui](./packages/smart-routing-address-react-ui/README.md) —
+a `<SmartRoutingAddress />` widget that generates a single deposit address
+and routes across chains via Across / Relay.
+
 ## React Native
 
 The SDK runs in React Native (Expo) too. The connector setup is the same, but
@@ -338,12 +343,19 @@ zerodev-wallet-sdk/
 │   │   │   ├── native/    # React Native connector, OAuth & export WebView
 │   │   │   └── provider.ts  # EIP-1193 provider
 │   │   └── dist/          # Compiled output
-│   └── wallet-react-ui/         # Drop-in React UI components
+│   ├── wallet-react-ui/         # Drop-in React UI components
+│   │   ├── src/
+│   │   │   ├── auth/      # <ConnectWallet /> + auth pages and hooks
+│   │   │   ├── signing/   # <SignatureRequest /> + signing hooks
+│   │   │   ├── shared/    # Shared components and utilities
+│   │   │   └── connector.ts # Enhanced wagmi connector (zeroDevWallet)
+│   │   └── dist/          # Compiled output
+│   └── smart-routing-address-react-ui/  # Drop-in funding widget
 │       ├── src/
-│       │   ├── auth/      # <ConnectWallet /> + auth pages and hooks
-│       │   ├── signing/   # <SignatureRequest /> + signing hooks
-│       │   ├── shared/    # Shared components and utilities
-│       │   └── connector.ts # Enhanced wagmi connector (zeroDevWallet)
+│       │   ├── context/   # SmartRoutingAddressProvider
+│       │   ├── pages/     # <SmartRoutingAddress /> screens
+│       │   ├── components/ # QR sheet, deposit rows, fee breakdown, etc.
+│       │   └── hooks/     # useDepositStatus, useSmartRoutingAddress
 │       └── dist/          # Compiled output
 └── README.md
 ```
@@ -361,5 +373,6 @@ MIT
 ## Packages
 
 - **[@zerodev/wallet-react-ui](./packages/wallet-react-ui)** — Drop-in React UI components (`<ConnectWallet />`, `<SignatureRequest />`) and enhanced wagmi connector
+- **[@zerodev/smart-routing-address-react-ui](./packages/smart-routing-address-react-ui)** — Drop-in funding widget (`<SmartRoutingAddress />`) that generates a single deposit address routing any supported token/chain to a chosen destination
 - **[@zerodev/wallet-react](./packages/react)** — React hooks and Wagmi connector (recommended for React apps)
 - **[@zerodev/wallet-core](./packages/core)** — Core SDK (framework-agnostic)

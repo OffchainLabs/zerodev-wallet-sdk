@@ -247,9 +247,9 @@ export function MockPanel({
             Try modifying the experience
           </span>
           <span className="text-sm leading-[1.5] text-muted">
-            Open <b>Advanced settings</b> below to change the max slippage or
-            destination chain, then use the mock controls to preview how the
-            widget handles errors, sponsored fees and past deposits.
+            Adjust the max slippage or destination chain in <b>Settings</b>{' '}
+            below, then open <b>Mock controls</b> to preview how the widget
+            handles errors, sponsored fees and past deposits.
           </span>
           <MockControls
             destChainId={destChainId}

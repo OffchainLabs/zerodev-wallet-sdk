@@ -6,8 +6,8 @@ import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressCon
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositStage, DepositWithTimestamp } from '../types'
+import { getTxUrl } from '../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
@@ -157,34 +157,29 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                           t.chain.id === chainId &&
                           tokenAddressMatches(t.tokenType, chainId, token),
                       ) ?? null
+                    // Prefer the reconstructed source's symbol; fall back to
+                    // the server's `feeData.name` so past deposits whose route
+                    // dropped out of the current fee estimates still get a
+                    // symbol / icon.
                     const sourceSymbol = source
                       ? getSourceTokenSymbol(source)
-                      : ''
+                      : (feeData?.name ?? '')
                     const sourceTokenLogo = sourceSymbol
                       ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
                       : undefined
                     const sourceChainLogo = CHAIN_ICONS[chainId]
-                    // Dest symbol mirrors this row's source (widget's default
-                    // actions forward the deposited token). Consumer overrides
-                    // via `config.targetTokenSymbol` still win.
-                    const destSymbol = getDestTokenSymbol(
-                      config,
-                      sourceSymbol || undefined,
-                    )
-                    const destTokenLogo = destSymbol
-                      ? TOKEN_ICONS[destSymbol.toUpperCase()]
-                      : undefined
+                    // Destination token equals source token — widget's default
+                    // actions forward the deposited asset unchanged.
+                    const destTokenLogo = sourceTokenLogo
                     const amountLabel = feeData
                       ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
                       : String(amount)
                     const timestamp = deposit.createdAt
                       ? (formatRelativeTime(deposit.createdAt) ?? '')
                       : ''
-                    const explorerBase =
-                      source?.chain.blockExplorers?.default?.url
-                    const href = explorerBase
-                      ? `${explorerBase}/tx/${transactionHash}`
-                      : undefined
+                    // Explorer URL from the chain id alone — independent of
+                    // whether the deposit's token matched the current fees.
+                    const href = getTxUrl(chainId, transactionHash)
                     const status = STAGE_TO_STATUS[getDepositStage(deposit)]
 
                     const row = (

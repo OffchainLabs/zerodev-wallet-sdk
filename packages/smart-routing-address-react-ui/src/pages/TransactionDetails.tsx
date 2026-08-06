@@ -18,7 +18,6 @@ import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositWithTimestamp } from '../types'
 import { getTxUrl } from '../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
@@ -110,10 +109,9 @@ export function TransactionDetails({
   const sourceChainLogo = CHAIN_ICONS[chainId]
 
   const destChain = resolveDestChain(config)
-  const destSymbol = getDestTokenSymbol(config, sourceSymbol || undefined)
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
+  // Widget's default actions forward the deposited token, so destination
+  // token = source token — reuse the source logo.
+  const destTokenLogo = sourceTokenLogo
   const destChainLogo = CHAIN_ICONS[destChain.id]
 
   const stage = getDepositStage(deposit)
@@ -139,7 +137,7 @@ export function TransactionDetails({
   // this as "how much I received", so rounding to 250.00 is intuitive.
   const destHeadline =
     outAmountRaw && feeData
-      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
+      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${sourceSymbol}`
       : '—'
 
   // `getTxUrl` looks up the chain independently of whether `source` was

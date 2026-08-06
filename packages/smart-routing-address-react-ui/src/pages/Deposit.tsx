@@ -33,7 +33,6 @@ import { useProviderFees } from '../hooks/useProviderFees'
 import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { SourceToken } from '../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
@@ -144,15 +143,14 @@ export function Deposit({
   const pastDepositsCount = deposits.length - newDeposits.length
 
   const destChain = resolveDestChain(config)
-  const sourceSymbol = source ? getSourceTokenSymbol(source) : undefined
-  const destSymbol = getDestTokenSymbol(config, sourceSymbol)
-  const sourceTokenLogo = sourceSymbol
-    ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
+  // Widget's default actions forward the deposited token, so the destination
+  // token equals the source token — one symbol and logo serve both cards.
+  // Only the chain differs, hence the source/dest split below.
+  const tokenSymbol = source ? getSourceTokenSymbol(source) : undefined
+  const tokenLogo = tokenSymbol
+    ? TOKEN_ICONS[tokenSymbol.toUpperCase()]
     : undefined
   const sourceChainLogo = source ? CHAIN_ICONS[source.chain.id] : undefined
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
   const destChainLogo = CHAIN_ICONS[destChain.id]
   const feeData = source
     ? findFeeData(estimatedFees, source.chain.id, source.tokenType)
@@ -165,15 +163,15 @@ export function Deposit({
   // Enriches the SRA fee estimate with the itemised legs it doesn't expose.
   const providerFees = useProviderFees(source, destChain, feeData, recipient)
   const breakdown =
-    feeData && sourceSymbol
-      ? buildFeeBreakdown(feeData, sourceSymbol, providerFees.fees)
+    feeData && tokenSymbol
+      ? buildFeeBreakdown(feeData, tokenSymbol, providerFees.fees)
       : null
 
   // Publish the current picker selection so hosts (e.g. a demo "send" panel)
   // can mirror the widget's route. Cleared when the picker is empty so
   // downstream mocks show their fallback instead of stale state.
   useEffect(() => {
-    if (!source || !feeData || !sourceSymbol) {
+    if (!source || !feeData || !tokenSymbol) {
       setActiveRoute(null)
       return
     }
@@ -186,7 +184,7 @@ export function Deposit({
       sourceChainId: source.chain.id,
       sourceChainName: source.chain.name,
       token,
-      symbol: sourceSymbol,
+      symbol: tokenSymbol,
       decimals: feeData.decimal,
       // `feeData.fee` is a `Hex` string from the SDK — normalise to a
       // decimal atomic-units string here so `activeRoute.feeAmount` has
@@ -196,7 +194,7 @@ export function Deposit({
       // `parseInt(x, 10)` would silently misread the hex form.
       feeAmount: BigInt(feeData.fee).toString(),
     })
-  }, [source, feeData, sourceSymbol, setActiveRoute])
+  }, [source, feeData, tokenSymbol, setActiveRoute])
 
   // Deduped list of routable token types — the token picker's rows. Chain
   // count per token drives the subtitle. Kept as SourceToken (not a bespoke
@@ -227,12 +225,14 @@ export function Deposit({
     return out
   }, [srcTokens, selectedTokenType])
 
+  // Only formatted when the consumer explicitly sets a slippage — otherwise
+  // the server picks its own default and there is no meaningful value to show.
   const slippage =
-    typeof config.slippage === 'number' ? formatSlippage(config.slippage) : '—'
+    typeof config.slippage === 'number' ? formatSlippage(config.slippage) : null
 
   const minDepositAmount =
-    feeData && sourceSymbol
-      ? `${formatDisplayAmount(feeData.minDeposit, feeData.decimal, 'up')} ${sourceSymbol}`
+    feeData && tokenSymbol
+      ? `${formatDisplayAmount(feeData.minDeposit, feeData.decimal, 'up')} ${tokenSymbol}`
       : null
 
   // Flash key re-triggers the LiveValue animation on the estimated-fee row
@@ -305,10 +305,10 @@ export function Deposit({
                   >
                     <SelectTrigger asChild>
                       <Pill
-                        label={sourceSymbol ?? ''}
-                        {...(sourceTokenLogo && { logoUri: sourceTokenLogo })}
+                        label={tokenSymbol ?? ''}
+                        {...(tokenLogo && { logoUri: tokenLogo })}
                         disabled={pickerDisabled}
-                        loading={!sourceSymbol}
+                        loading={!tokenSymbol}
                         trailingIcon={!pickerDisabled && <SelectIcon />}
                       />
                     </SelectTrigger>
@@ -382,36 +382,38 @@ export function Deposit({
                 }
               />
               <div className="zd:flex zd:w-full zd:flex-col zd:items-start zd:gap-2 zd:px-2 zd:py-4">
-                <DataRow
-                  label="Max slippage"
-                  value={slippage}
-                  info
-                  infoTooltip={FEE_INFO.maxSlippage}
-                  trailing={
-                    breakdown?.provider &&
-                    PROVIDER_ICONS[breakdown.provider] ? (
-                      <LiveValue
-                        loading={providerFees.loading}
-                        flashKey={breakdown.provider}
-                      >
-                        <Tooltip content={`Quoted via ${breakdown.provider}`}>
-                          <button
-                            type="button"
-                            aria-label={`Quoted via ${breakdown.provider}`}
-                            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
-                          >
-                            <img
-                              src={PROVIDER_ICONS[breakdown.provider]}
-                              alt=""
-                              aria-hidden
-                              className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
-                            />
-                          </button>
-                        </Tooltip>
-                      </LiveValue>
-                    ) : null
-                  }
-                />
+                {slippage && (
+                  <DataRow
+                    label="Max slippage"
+                    value={slippage}
+                    info
+                    infoTooltip={FEE_INFO.maxSlippage}
+                    trailing={
+                      breakdown?.provider &&
+                      PROVIDER_ICONS[breakdown.provider] ? (
+                        <LiveValue
+                          loading={providerFees.loading}
+                          flashKey={breakdown.provider}
+                        >
+                          <Tooltip content={`Quoted via ${breakdown.provider}`}>
+                            <button
+                              type="button"
+                              aria-label={`Quoted via ${breakdown.provider}`}
+                              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+                            >
+                              <img
+                                src={PROVIDER_ICONS[breakdown.provider]}
+                                alt=""
+                                aria-hidden
+                                className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
+                              />
+                            </button>
+                          </Tooltip>
+                        </LiveValue>
+                      ) : null
+                    }
+                  />
+                )}
                 <DataRow
                   label="Estimated fee"
                   value={
@@ -464,10 +466,10 @@ export function Deposit({
               <PillRow
                 left={
                   <Pill
-                    label={destSymbol ?? ''}
-                    {...(destTokenLogo && { logoUri: destTokenLogo })}
+                    label={tokenSymbol ?? ''}
+                    {...(tokenLogo && { logoUri: tokenLogo })}
                     disabled
-                    loading={!destSymbol}
+                    loading={!tokenSymbol}
                   />
                 }
                 right={
