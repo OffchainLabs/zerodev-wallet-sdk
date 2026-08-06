@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateIntegrationRun } from './check-integration-ran.mjs'
+import { evaluateContractRun } from './check-contract-ran.mjs'
 
 /**
- * The integration job used to report green when the KMS was unreachable:
+ * The contract job used to report green when the KMS was unreachable:
  * every test hits `context.skip()` in `beforeAll`, vitest counts a fully
  * skipped file as passed, and the run exits 0. A green badge was therefore
  * equally consistent with "everything works" and "nothing ran".
  *
- * `evaluateIntegrationRun` is what restores meaning to that badge, so it is
+ * `evaluateContractRun` is what restores meaning to that badge, so it is
  * itself the thing most worth testing: if it is wrong, CI lies.
  *
  * Fixtures mirror the real `--reporter=json` payload (captured from an actual
@@ -18,11 +18,7 @@ import { evaluateIntegrationRun } from './check-integration-ran.mjs'
 
 type Status = 'passed' | 'failed' | 'skipped'
 
-function assertion(
-  fullName: string,
-  status: Status,
-  suite = 'Integration Flow',
-) {
+function assertion(fullName: string, status: Status, suite = 'Contract Flow') {
   return {
     ancestorTitles: [suite],
     fullName: `${suite} ${fullName}`,
@@ -58,7 +54,7 @@ function reportFromFiles(files: ReturnType<typeof assertion>[][]) {
       endTime: 1_700_000_001_000,
       status: 'passed',
       message: '',
-      name: `/repo/e2e/integration/flow-${i}.test.ts`,
+      name: `/repo/e2e/contract/flow-${i}.test.ts`,
     })),
   }
 }
@@ -66,9 +62,9 @@ function reportFromFiles(files: ReturnType<typeof assertion>[][]) {
 const report = (assertions: ReturnType<typeof assertion>[]) =>
   reportFromFiles([assertions])
 
-describe('evaluateIntegrationRun', () => {
+describe('evaluateContractRun', () => {
   it('rejects a run where every test skipped, even though vitest reported success', () => {
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       report([
         assertion('OTP login works', 'skipped'),
         assertion('OTP resend works', 'skipped'),
@@ -79,11 +75,11 @@ describe('evaluateIntegrationRun', () => {
     expect(result.ok).toBe(false)
     expect(result.executed).toBe(0)
     expect(result.skipped).toBe(2)
-    expect(result.reason).toMatch(/no integration test actually ran/i)
+    expect(result.reason).toMatch(/no contract test actually ran/i)
   })
 
   it('accepts a run where at least one test executed against the KMS', () => {
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       report([
         assertion('OTP login works', 'passed'),
         assertion('OTP resend works', 'skipped'),
@@ -98,7 +94,7 @@ describe('evaluateIntegrationRun', () => {
   it('sums skips across every file, not just the first', () => {
     // The real report is one entry per file. Reading only `testResults[0]`
     // would undercount and could pass a run where nothing executed.
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       reportFromFiles([
         [assertion('OTP login works', 'skipped', 'OTP Flow')],
         [assertion('magic link round-trips', 'skipped', 'Magic Link')],
@@ -115,7 +111,7 @@ describe('evaluateIntegrationRun', () => {
     // Sharpest guard against per-file aggregation regressing: the only test
     // that ran lives in the last file, so ignoring files after the first
     // would wrongly fail the run.
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       reportFromFiles([
         [assertion('OTP login works', 'skipped', 'OTP Flow')],
         [assertion('magic link round-trips', 'skipped', 'Magic Link')],
@@ -132,7 +128,7 @@ describe('evaluateIntegrationRun', () => {
     // Fail-open here would recreate the original bug via reporter schema
     // drift: a renamed or newly added status would make skipped tests look
     // executed and hand back a meaningless green.
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       reportFromFiles([
         [{ fullName: 'status-less test', title: 'status-less test' } as never],
       ]),
@@ -144,7 +140,7 @@ describe('evaluateIntegrationRun', () => {
   })
 
   it('counts a failed test as executed — vitest already fails the run, we must not mask it', () => {
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       report([assertion('OTP login works', 'failed')]),
     )
 
@@ -157,7 +153,7 @@ describe('evaluateIntegrationRun', () => {
   })
 
   it('names the skipped tests so the CI annotation is actionable', () => {
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       reportFromFiles([
         [assertion('OTP login works', 'passed', 'OTP Flow')],
         [assertion('round-trips', 'skipped', 'Magic Link')],
@@ -172,7 +168,7 @@ describe('evaluateIntegrationRun', () => {
   })
 
   it('reports no skips when the whole suite ran', () => {
-    const result = evaluateIntegrationRun(
+    const result = evaluateContractRun(
       report([
         assertion('OTP login works', 'passed'),
         assertion('magic link round-trips', 'passed'),
@@ -188,7 +184,7 @@ describe('evaluateIntegrationRun', () => {
     // `vitest run` with a bad --config or a glob that matches nothing produces
     // an empty report. Silently passing here would reintroduce the same blind
     // spot through a different door, so it gets its own actionable message.
-    const result = evaluateIntegrationRun({
+    const result = evaluateContractRun({
       ...report([]),
       testResults: [],
     })
@@ -199,7 +195,7 @@ describe('evaluateIntegrationRun', () => {
   })
 
   it('rejects a malformed report instead of throwing', () => {
-    const result = evaluateIntegrationRun({} as never)
+    const result = evaluateContractRun({} as never)
 
     expect(result.ok).toBe(false)
     expect(result.reason).toMatch(/malformed|unreadable/i)

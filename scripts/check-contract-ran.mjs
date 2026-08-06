@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Guards against a green integration job that never talked to the KMS.
+ * Guards against a green contract job that never talked to the KMS.
  *
- * Every file in `e2e/integration/` calls `context.skip()` from `beforeAll`
+ * Every file in `e2e/contract/` calls `context.skip()` from `beforeAll`
  * when the backend is unreachable, the temp-email service is down, or
  * `ZD_PROJECT_ID` is unset. Vitest counts a fully skipped file as passed and
  * exits 0, so the job reported success while running nothing:
@@ -16,10 +16,10 @@
  *   - a test executed and failed   -> PASS here; vitest already failed the run,
  *                                     and adding a second reason only confuses
  *
- * `ZD_PROJECT_ID` is handled separately (see `e2e/integration-global-setup.ts`)
+ * `ZD_PROJECT_ID` is handled separately (see `e2e/contract-global-setup.ts`)
  * so a config error fails immediately instead of after the full suite timeout.
  *
- * Usage: node scripts/check-integration-ran.mjs <vitest-json-report>
+ * Usage: node scripts/check-contract-ran.mjs <vitest-json-report>
  */
 
 import fs from 'node:fs'
@@ -33,7 +33,7 @@ const EXECUTED = new Set(['passed', 'failed'])
  * @param {unknown} report Parsed `vitest --reporter=json` output.
  * @returns {{ok: boolean, executed: number, skipped: number, skippedTests: string[], reason?: string}}
  */
-export function evaluateIntegrationRun(report) {
+export function evaluateContractRun(report) {
   const empty = { executed: 0, skipped: 0, skippedTests: [] }
 
   if (
@@ -45,7 +45,7 @@ export function evaluateIntegrationRun(report) {
       ok: false,
       ...empty,
       reason:
-        'Integration report is malformed or unreadable (no `testResults` array).',
+        'Contract report is malformed or unreadable (no `testResults` array).',
     }
   }
 
@@ -64,7 +64,7 @@ export function evaluateIntegrationRun(report) {
       ok: false,
       ...empty,
       reason:
-        'Integration report contains no test files — the suite never matched anything.',
+        'Contract report contains no test files — the suite never matched anything.',
     }
   }
 
@@ -75,7 +75,7 @@ export function evaluateIntegrationRun(report) {
       skipped,
       skippedTests,
       reason:
-        `No integration test actually ran (${skipped} skipped). A green job here ` +
+        `No contract test actually ran (${skipped} skipped). A green job here ` +
         'would mean nothing: the KMS was unreachable, the email service was down, ' +
         'or the suite was misconfigured.',
     }
@@ -93,11 +93,11 @@ function emit(result) {
     lines.push(inCI ? `::error::${result.reason}` : `ERROR: ${result.reason}`)
   } else if (result.skipped > 0) {
     const msg =
-      `${result.skipped} of ${result.skipped + result.executed} integration tests skipped ` +
+      `${result.skipped} of ${result.skipped + result.executed} contract tests skipped ` +
       `(${result.executed} ran). Likely a third-party outage rather than a code change.`
     lines.push(inCI ? `::warning::${msg}` : `WARNING: ${msg}`)
   } else {
-    lines.push(`All ${result.executed} integration tests ran.`)
+    lines.push(`All ${result.executed} contract tests ran.`)
   }
 
   for (const name of result.skippedTests) {
@@ -111,7 +111,7 @@ function emit(result) {
 if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? '')) {
   const reportPath = process.argv[2]
   if (!reportPath) {
-    console.error('Usage: node scripts/check-integration-ran.mjs <vitest-json-report>')
+    console.error('Usage: node scripts/check-contract-ran.mjs <vitest-json-report>')
     process.exit(2)
   }
 
@@ -119,12 +119,12 @@ if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? '')) {
   try {
     parsed = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
   } catch (err) {
-    const msg = `Could not read the integration report at ${reportPath}: ${err.message}`
+    const msg = `Could not read the contract report at ${reportPath}: ${err.message}`
     console.error(process.env.GITHUB_ACTIONS ? `::error::${msg}` : `ERROR: ${msg}`)
     process.exit(1)
   }
 
-  const result = evaluateIntegrationRun(parsed)
+  const result = evaluateContractRun(parsed)
   emit(result)
   process.exit(result.ok ? 0 : 1)
 }
