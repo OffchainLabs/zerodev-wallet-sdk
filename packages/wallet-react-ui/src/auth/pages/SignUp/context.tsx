@@ -18,7 +18,7 @@ export type SignUpContextValue = {
   setError: (message: string | null) => void
   /** Guide ids of every mounted `SignUp.Wallet` pin. Discovery units skip
    * these so a pinned wallet isn't listed twice. */
-  registeredWalletIds: readonly string[]
+  registeredWallets: readonly string[]
   /** Returns the unregister function. */
   registerWallet: (walletId: string) => () => void
 }

@@ -20,7 +20,7 @@ export function SignUpInstalledWallets({
   maxWallets?: number
 }) {
   const { goToStep } = useAuth()
-  const { authPending, guardAgreement, setError, registeredWalletIds } =
+  const { authPending, guardAgreement, setError, registeredWallets } =
     useSignUpContext()
   const connectors = useConnectors()
   const { mutate: connect, isPending } = useConnect()
@@ -50,7 +50,7 @@ export function SignUpInstalledWallets({
       }
     })
     .filter(
-      (row) => !(row.walletId && registeredWalletIds.includes(row.walletId)),
+      (row) => !(row.walletId && registeredWallets.includes(row.walletId)),
     )
     .filter((row) => !row.ids.some((id) => excludeWalletIds.includes(id)))
     .sort((a, b) => a.rank - b.rank)

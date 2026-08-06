@@ -36,14 +36,14 @@ function SignUpRoot({
   const [authPending, setAuthPending] = useState(false)
   // Which wallets have a pinned `SignUp.Wallet` row mounted. A plain list of
   // registrants: register appends, cleanup removes one occurrence.
-  const [registeredWalletIds, setRegisteredWalletIds] = useState<
-    readonly string[]
-  >([])
+  const [registeredWallets, setRegisteredWallets] = useState<readonly string[]>(
+    [],
+  )
 
   const registerWallet = useCallback((walletId: string) => {
-    setRegisteredWalletIds((prev) => [...prev, walletId])
+    setRegisteredWallets((prev) => [...prev, walletId])
     return () => {
-      setRegisteredWalletIds((prev) => {
+      setRegisteredWallets((prev) => {
         const next = [...prev]
         next.splice(next.indexOf(walletId), 1)
         return next
@@ -69,7 +69,7 @@ function SignUpRoot({
         needsAgreement,
         guardAgreement,
         setError,
-        registeredWalletIds,
+        registeredWallets,
         registerWallet,
       }}
     >
