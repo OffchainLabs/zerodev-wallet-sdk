@@ -50,6 +50,11 @@ export {
   PillSkeleton,
 } from './components/Pill'
 export { PoweredBy } from './components/PoweredBy'
+export {
+  ProgressStep,
+  type ProgressStepProps,
+  type ProgressStepStatus,
+} from './components/ProgressStep'
 export { Screen } from './components/Screen'
 export { Section, type SectionProps } from './components/Section'
 export {
