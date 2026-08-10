@@ -4,6 +4,7 @@ import {
   SmartRoutingAddress,
   type SmartRoutingAddressConfig,
   SmartRoutingAddressProvider,
+  useCreateSmartRoutingAddress,
   useSmartRoutingAddress,
 } from '@zerodev/smart-routing-address-react-ui'
 import { useEffect, useMemo, useState } from 'react'
@@ -440,22 +441,14 @@ export default function Home() {
               // zerodev-signer-demo after logout: the outer wrapper
               // preserves the SRA card's footprint so the surrounding
               // layout doesn't reflow when the widget is closed.
-              <div className="flex h-[810px] w-[400px] max-w-full items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => setSraOpen(true)}
-                  className="cursor-pointer rounded-3xl bg-ink px-8 py-4 text-body1 font-semibold text-white hover:bg-[#2a1c13]"
-                >
-                  + Fund
-                </button>
-              </div>
+              <FundReopenCard
+                recipient={recipientReady ? (recipient as Address) : undefined}
+                onOpen={() => setSraOpen(true)}
+              />
             ) : recipientReady ? (
               <SmartRoutingAddress
                 recipient={recipient as Address}
                 onClose={() => setSraOpen(false)}
-                onHelp={() => {
-                  /* no-op — surfaces the ? icon in TopNav's left slot */
-                }}
               />
             ) : (
               // Mainnet mode without a recipient — inline entry point so the
@@ -500,6 +493,64 @@ export default function Home() {
         </div>
       </SmartRoutingAddressProvider>
     </main>
+  )
+}
+
+/**
+ * Re-open card shown while the widget is dismissed — and a live demo of the
+ * companion-hook split. Hovering (or focusing) "+ Fund" pre-creates the
+ * deposit address via `useCreateSmartRoutingAddress().ensureAddress` (the
+ * write half), while the status line mirrors `addressState` from
+ * `useSmartRoutingAddress` (the read half) so the pre-warm is visible:
+ * idle → creating → ready before the click ever lands. `ensureAddress` is
+ * idempotent per recipient, so repeated hovers are free.
+ */
+function FundReopenCard({
+  recipient,
+  onOpen,
+}: {
+  /** Undefined while no valid recipient is set (mainnet before entry). */
+  recipient: Address | undefined
+  onOpen: () => void
+}) {
+  const { addressState } = useSmartRoutingAddress()
+  const { ensureAddress } = useCreateSmartRoutingAddress()
+
+  const prewarm = () => {
+    if (recipient) void ensureAddress(recipient)
+  }
+
+  const status =
+    addressState.status === 'success'
+      ? 'Deposit address ready ✓'
+      : addressState.status === 'loading'
+        ? 'Creating deposit address…'
+        : addressState.status === 'error'
+          ? 'Address creation failed — opening will retry'
+          : recipient
+            ? 'Hover to pre-create the deposit address'
+            : null
+
+  return (
+    <div className="flex h-[810px] w-[400px] max-w-full flex-col items-center justify-center gap-3">
+      <button
+        type="button"
+        onMouseEnter={prewarm}
+        onFocus={prewarm}
+        onClick={onOpen}
+        className="cursor-pointer rounded-3xl bg-ink px-8 py-4 text-body1 font-semibold text-white hover:bg-[#2a1c13]"
+      >
+        + Fund
+      </button>
+      {status && (
+        <span
+          aria-live="polite"
+          className={`text-xs ${addressState.status === 'success' ? 'text-ink' : 'text-muted'}`}
+        >
+          {status}
+        </span>
+      )}
+    </div>
   )
 }
 
