@@ -11,6 +11,8 @@ import { SmartRoutingAddressProvider } from '../context/SmartRoutingAddressProvi
 import { OWNER, SMART_ROUTING_ADDRESS, TEST_CONFIG } from '../test/fixtures'
 import type { SmartRoutingAddressConfig } from '../types'
 import { resolveActions, resolveSourceTokens } from '../utils/config'
+import type { UseCreateSmartRoutingAddressResult } from './useCreateSmartRoutingAddress'
+import { useCreateSmartRoutingAddress } from './useCreateSmartRoutingAddress'
 import type { UseSmartRoutingAddressResult } from './useSmartRoutingAddress'
 import { useSmartRoutingAddress } from './useSmartRoutingAddress'
 
@@ -49,7 +51,12 @@ function renderWithProvider() {
       {children}
     </SmartRoutingAddressProvider>
   )
-  return renderHook(() => useSmartRoutingAddress(), { wrapper })
+  // Render the read hook and its action counterpart together — most tests
+  // drive `ensureAddress` and assert on the resulting `addressState`.
+  return renderHook(
+    () => ({ ...useSmartRoutingAddress(), ...useCreateSmartRoutingAddress() }),
+    { wrapper },
+  )
 }
 
 describe('useSmartRoutingAddress', () => {
@@ -282,11 +289,18 @@ describe('ensureAddress race handling', () => {
       estimatedFees: [],
     })
 
-    const captured: { current: UseSmartRoutingAddressResult | null } = {
+    const captured: {
+      current:
+        | (UseSmartRoutingAddressResult & UseCreateSmartRoutingAddressResult)
+        | null
+    } = {
       current: null,
     }
     function Probe() {
-      captured.current = useSmartRoutingAddress()
+      captured.current = {
+        ...useSmartRoutingAddress(),
+        ...useCreateSmartRoutingAddress(),
+      }
       return null
     }
     function Harness({ config }: { config: SmartRoutingAddressConfig }) {
