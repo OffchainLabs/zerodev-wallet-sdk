@@ -66,7 +66,6 @@ host app can dismiss.
 <SmartRoutingAddress
   recipient={recipient}
   onClose={() => setOpen(false)}
-  onHelp={() => window.open('https://your-docs.example', '_blank')}
   size="lg" // 'sm' | 'md' | 'lg'
 />
 ```
@@ -97,7 +96,7 @@ Everything the widget needs is on the config passed to the provider.
 | Export | Description |
 | --- | --- |
 | `<SmartRoutingAddressProvider />` | Wraps the subtree; owns config, recipient, and the address lifecycle. |
-| `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `onHelp?`, `size?`, `className?`. |
+| `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `size?`, `className?`. |
 | `useSmartRoutingAddress()` | Read-only widget companion for hosts: address state and the `activeRoute` the widget is showing. |
 | `useCreateSmartRoutingAddress()` | Action counterpart: `ensureAddress(recipient)` pre-creates the deposit address (e.g. before opening the modal). Creation params come from the provider config. |
 

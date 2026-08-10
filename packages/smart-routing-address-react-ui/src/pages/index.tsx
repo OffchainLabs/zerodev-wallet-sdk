@@ -70,8 +70,6 @@ export interface SmartRoutingAddressProps {
   recipient: Address
   /** Called when the top-right × close button is clicked. */
   onClose: () => void
-  /** Called when the top-left ? help button is clicked on the deposit step. */
-  onHelp?: () => void
   className?: string
   size?: 'sm' | 'md' | 'lg'
 }
@@ -79,7 +77,6 @@ export interface SmartRoutingAddressProps {
 export function SmartRoutingAddress({
   recipient,
   onClose,
-  onHelp,
   className,
   size,
 }: SmartRoutingAddressProps) {
@@ -117,18 +114,14 @@ export function SmartRoutingAddress({
   }
 
   // Sub-view chrome — sub-views swap the left slot for a back chevron that
-  // returns to the parent step. Root (deposit) step keeps the optional
-  // help (?) icon.
+  // returns to the parent step. Root (deposit) step has no left button
+  // (TopNav renders a spacer so the title stays centred).
   const goBack =
     step === 'transaction'
       ? () => setStep('past')
       : step === 'past'
         ? () => setStep('deposit')
         : undefined
-  const leftClick = goBack ?? onHelp ?? undefined
-  const leftIcon: 'chevronLeft' | 'question' = goBack
-    ? 'chevronLeft'
-    : 'question'
 
   return (
     <Screen
@@ -137,9 +130,9 @@ export function SmartRoutingAddress({
       topNav={
         <TopNav
           title={title}
-          {...(leftClick && {
-            onLeftButtonClick: leftClick,
-            leftButtonIcon: leftIcon,
+          {...(goBack && {
+            onLeftButtonClick: goBack,
+            leftButtonIcon: 'chevronLeft' as const,
           })}
           onRightButtonClick={onClose}
         />
