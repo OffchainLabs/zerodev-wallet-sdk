@@ -70,10 +70,12 @@ host app can dismiss.
 />
 ```
 
-Address creation and deposit polling happen in the provider; the widget
-subscribes to state via `useSmartRoutingAddress()` / `useDepositStatus()` so
-host code can mirror the same data (e.g. show pending deposits elsewhere in
-the app).
+Address creation and deposit polling happen in the provider; host code can
+mirror the widget's state via `useSmartRoutingAddress()` (e.g. pre-create the
+address before opening the modal, or drive a companion panel from the route
+the widget is showing). To build a fully custom deposit UI, use the
+`@zerodev/smart-routing-address` SDK directly — this package's hooks are
+widget plumbing, not a UI kit.
 
 ## Configuration
 
@@ -87,8 +89,6 @@ Everything the widget needs is on the config passed to the provider.
 | `actions` | `CreateSmartRoutingAddressParams['actions']?` | Destination actions per token type. When omitted, deposits are simply transferred to the recipient. |
 | `slippage` | `number?` | Max slippage in basis points (50 = 0.5%). When omitted, the SRA server picks its default. |
 | `baseUrl` | `string?` | Override the SRA server root URL; the `projectId` is appended. |
-| `pollingInterval` | `number?` | Deposit-status polling interval in ms (default 5000). |
-| `estimatedFillTimeSeconds` | `number \| Record<number, number>?` | Expected fill time, flat or per source chain id. |
 
 ## API
 
@@ -96,9 +96,7 @@ Everything the widget needs is on the config passed to the provider.
 | --- | --- |
 | `<SmartRoutingAddressProvider />` | Wraps the subtree; owns config, recipient, and the address lifecycle. |
 | `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `onHelp?`, `size?`, `className?`. |
-| `useSmartRoutingAddress()` | Read the current address state and active route from the provider. |
-| `useDepositStatus({ address })` | Poll the SRA status endpoint; returns `deposits`, `totalCount`, `hasLoaded`, `error`, `refetch`. |
-| `useNewDeposits(deposits, hasLoaded)` | Filter to deposits that arrived after mount. |
+| `useSmartRoutingAddress()` | Widget companion for hosts: address state, `ensureAddress` (pre-create before opening the modal), and the read-only `activeRoute` the widget is showing. |
 
 ### Types
 

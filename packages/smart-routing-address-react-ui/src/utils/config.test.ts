@@ -1,11 +1,7 @@
 import { SMART_ROUTING_ADDRESS_SERVER_URL } from '@zerodev/smart-routing-address'
 import { arbitrum, base, bsc, optimism } from 'viem/chains'
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_DASHBOARD_URL,
-  DEFAULT_FILL_TIME_SECONDS,
-  DEFAULT_SOURCE_TOKENS,
-} from '../constants'
+import { DEFAULT_DASHBOARD_URL, DEFAULT_SOURCE_TOKENS } from '../constants'
 import {
   OWNER,
   SMART_ROUTING_ADDRESS,
@@ -19,7 +15,6 @@ import {
   resolveBaseUrl,
   resolveDashboardUrl,
   resolveDestChain,
-  resolveFillTimeSeconds,
   resolveSourceTokens,
   resolveVersion,
 } from './config'
@@ -79,34 +74,6 @@ describe('resolveDashboardUrl', () => {
 
   it('returns the bare URL without an address', () => {
     expect(resolveDashboardUrl()).toBe(DEFAULT_DASHBOARD_URL)
-  })
-})
-
-describe('resolveFillTimeSeconds', () => {
-  it('falls back to the default', () => {
-    expect(resolveFillTimeSeconds(TEST_CONFIG, optimism.id)).toBe(
-      DEFAULT_FILL_TIME_SECONDS,
-    )
-  })
-
-  it('supports flat overrides', () => {
-    expect(
-      resolveFillTimeSeconds(
-        { ...TEST_CONFIG, estimatedFillTimeSeconds: 12 },
-        optimism.id,
-      ),
-    ).toBe(12)
-  })
-
-  it('supports per-chain overrides', () => {
-    const config = {
-      ...TEST_CONFIG,
-      estimatedFillTimeSeconds: { [optimism.id]: 45 },
-    }
-    expect(resolveFillTimeSeconds(config, optimism.id)).toBe(45)
-    expect(resolveFillTimeSeconds(config, arbitrum.id)).toBe(
-      DEFAULT_FILL_TIME_SECONDS,
-    )
   })
 })
 

@@ -11,12 +11,7 @@ import {
   SUPPORTED_TOKENS,
 } from '@zerodev/smart-routing-address'
 import { type Address, type Chain, erc20Abi } from 'viem'
-import {
-  DEFAULT_DASHBOARD_URL,
-  DEFAULT_FILL_TIME_SECONDS,
-  DEFAULT_POLLING_INTERVAL_MS,
-  DEFAULT_SOURCE_TOKENS,
-} from '../constants'
+import { DEFAULT_DASHBOARD_URL, DEFAULT_SOURCE_TOKENS } from '../constants'
 import type {
   EstimatedFee,
   SmartRoutingAddressConfig,
@@ -29,12 +24,6 @@ export function resolveVersion(
   config: SmartRoutingAddressConfig,
 ): SmartRoutingAddressVersion {
   return config.version ?? SMART_ROUTING_ADDRESS_V0_2_1
-}
-
-export function resolvePollingInterval(
-  config: SmartRoutingAddressConfig,
-): number {
-  return config.pollingInterval ?? DEFAULT_POLLING_INTERVAL_MS
 }
 
 /**
@@ -54,15 +43,6 @@ export function resolveBaseUrl(
 export function resolveDashboardUrl(address?: string): string {
   if (!address) return DEFAULT_DASHBOARD_URL
   return `${DEFAULT_DASHBOARD_URL.replace(/\/+$/, '')}/address/${address}`
-}
-
-export function resolveFillTimeSeconds(
-  config: SmartRoutingAddressConfig,
-  chainId: number,
-): number {
-  const fillTime = config.estimatedFillTimeSeconds
-  if (typeof fillTime === 'number') return fillTime
-  return fillTime?.[chainId] ?? DEFAULT_FILL_TIME_SECONDS
 }
 
 /** Chain where the routed funds settle */

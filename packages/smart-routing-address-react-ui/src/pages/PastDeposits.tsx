@@ -11,7 +11,6 @@ import {
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
-  resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
 import { getDepositStage } from '../utils/deposits'
@@ -92,7 +91,6 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
 
   const { deposits, hasLoaded } = useDepositStatus({
     address,
-    pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
   })
 
