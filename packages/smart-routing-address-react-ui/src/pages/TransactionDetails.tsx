@@ -4,11 +4,11 @@ import {
   DataRow,
   Icon,
   InfoCard,
+  ProgressStep,
   Section,
   Text,
-  Tooltip,
 } from '@zerodev/react-ui'
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
@@ -237,7 +237,7 @@ export function TransactionDetails({
         <ProgressStep
           label="Deposit detected"
           info={FEE_INFO.detected}
-          done
+          status="done"
           right={
             <TxLink
               label={truncateAddress(transactionHash)}
@@ -252,7 +252,11 @@ export function TransactionDetails({
           // detected stage — including the failed path (failure implies the
           // route was tried), so mark it done there too rather than showing
           // an inert pending circle above the "Failed" row.
-          done={stage === 'bridging' || stage === 'completed' || failed}
+          status={
+            stage === 'bridging' || stage === 'completed' || failed
+              ? 'done'
+              : 'pending'
+          }
           right={
             providerFees.loading ? (
               <ProviderChipSkeleton />
@@ -267,8 +271,7 @@ export function TransactionDetails({
           <ProgressStep
             label="Failed"
             info={FEE_INFO.failed}
-            done={false}
-            failed
+            status="failed"
             isLast
             right={<StatusText tone="error">Error</StatusText>}
           />
@@ -276,7 +279,7 @@ export function TransactionDetails({
           <ProgressStep
             label="Completed"
             info={FEE_INFO.completed}
-            done={stage === 'completed'}
+            status={stage === 'completed' ? 'done' : 'pending'}
             isLast
             right={
               execution ? (
@@ -303,89 +306,6 @@ function NetworkValue({ name, logoUrl }: { name: string; logoUrl?: string }) {
         <img src={logoUrl} alt="" className="zd:size-4 zd:rounded-full" />
       )}
     </span>
-  )
-}
-
-function ProgressStep({
-  label,
-  info,
-  done,
-  failed,
-  isLast,
-  right,
-}: {
-  label: string
-  info?: string | undefined
-  done: boolean
-  failed?: boolean
-  isLast?: boolean
-  right?: ReactNode
-}) {
-  return (
-    <div className="zd:relative zd:flex zd:w-full zd:items-start zd:gap-3">
-      <div className="zd:flex zd:flex-col zd:items-center zd:pt-0.5">
-        <StatusMark done={done} failed={!!failed} />
-        {!isLast && (
-          <div
-            className={cn(
-              'zd:mt-1 zd:h-4 zd:w-px',
-              done ? 'zd:bg-solarOrange/60' : 'zd:bg-greyScale/20',
-            )}
-          />
-        )}
-      </div>
-      <div className="zd:flex zd:min-w-0 zd:flex-1 zd:items-center zd:gap-1">
-        <Text
-          className={cn(
-            'zd:whitespace-nowrap',
-            failed
-              ? 'zd:text-negative'
-              : // Mute the label until the step is done so a "Completed" row
-                // with an inert open circle doesn't read at full intensity
-                // while the flow is still bridging.
-                done
-                ? 'zd:text-greyScale'
-                : 'zd:text-greyScale/50',
-          )}
-        >
-          {label}
-        </Text>
-        {info && (
-          <Tooltip content={info}>
-            <button
-              type="button"
-              aria-label="More info"
-              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
-            >
-              <Icon
-                name="info"
-                className="zd:w-3 zd:h-3 zd:text-greyScale/50"
-                aria-hidden
-              />
-            </button>
-          </Tooltip>
-        )}
-      </div>
-      <div className="zd:flex zd:shrink-0 zd:items-center">{right}</div>
-    </div>
-  )
-}
-
-function StatusMark({ done, failed }: { done: boolean; failed: boolean }) {
-  if (failed) {
-    return (
-      <Icon name="warning" className="zd:size-4 zd:text-negative" aria-hidden />
-    )
-  }
-  if (done) {
-    return (
-      <span className="zd:inline-flex zd:size-4 zd:items-center zd:justify-center zd:rounded-full zd:bg-solarOrange">
-        <Icon name="check" className="zd:size-3 zd:text-white" aria-hidden />
-      </span>
-    )
-  }
-  return (
-    <span className="zd:inline-block zd:size-4 zd:rounded-full zd:border zd:border-greyScale/30" />
   )
 }
 
