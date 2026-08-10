@@ -3,14 +3,17 @@ import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressCon
 
 export type UseCreateSmartRoutingAddressResult = {
   /**
-   * Create the address for the recipient if needed (idempotent per
-   * recipient; a new recipient triggers a fresh creation). Creation params
-   * (`actions`, `slippage`, …) come from the provider config so the address
-   * always matches what the widget displays — there are no per-call
-   * overrides. To create addresses with bespoke params, use
-   * `createSmartRoutingAddress` from `@zerodev/smart-routing-address`.
+   * Return the deposit address for the recipient, creating it if it doesn't
+   * exist yet. Idempotent per recipient — concurrent and repeated calls
+   * share one request, so it's safe to call on every hover/focus/mount.
+   * Rejects when creation fails (the failure also lands in the read hook's
+   * `addressState`). Creation params (`actions`, `slippage`, …) come from
+   * the provider config so the address always matches what the widget
+   * displays — there are no per-call overrides. To create addresses with
+   * bespoke params, use `createSmartRoutingAddress` from
+   * `@zerodev/smart-routing-address`.
    */
-  ensureAddress: (recipient: Address) => Promise<void>
+  getOrCreateAddress: (recipient: Address) => Promise<Address>
 }
 
 /**
@@ -20,6 +23,6 @@ export type UseCreateSmartRoutingAddressResult = {
  * so the widget renders instantly.
  */
 export function useCreateSmartRoutingAddress(): UseCreateSmartRoutingAddressResult {
-  const { ensureAddress } = useSmartRoutingAddressContext()
-  return { ensureAddress }
+  const { getOrCreateAddress } = useSmartRoutingAddressContext()
+  return { getOrCreateAddress }
 }

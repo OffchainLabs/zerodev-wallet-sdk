@@ -73,7 +73,7 @@ host app can dismiss.
 Address creation and deposit polling happen in the provider; host code can
 observe the widget's state via `useSmartRoutingAddress()` (e.g. drive a
 companion panel from the route the widget is showing) and pre-create the
-address via `useCreateSmartRoutingAddress().ensureAddress` before the modal
+address via `useCreateSmartRoutingAddress().getOrCreateAddress` before the modal
 opens. To build a fully custom deposit UI, use the
 `@zerodev/smart-routing-address` SDK directly — this package's hooks are
 widget plumbing, not a UI kit.
@@ -98,7 +98,7 @@ Everything the widget needs is on the config passed to the provider.
 | `<SmartRoutingAddressProvider />` | Wraps the subtree; owns config, recipient, and the address lifecycle. |
 | `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `size?`, `className?`. |
 | `useSmartRoutingAddress()` | Read-only widget companion for hosts: address state and the `activeRoute` the widget is showing. |
-| `useCreateSmartRoutingAddress()` | Action counterpart: `ensureAddress(recipient)` pre-creates the deposit address (e.g. before opening the modal). Creation params come from the provider config. |
+| `useCreateSmartRoutingAddress()` | Action counterpart: `getOrCreateAddress(recipient)` returns the deposit address, creating it if needed — idempotent per recipient, so it's safe to call on every hover/open. Creation params come from the provider config. |
 
 ### Types
 

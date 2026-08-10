@@ -52,7 +52,7 @@ function renderWithProvider() {
     </SmartRoutingAddressProvider>
   )
   // Render the read hook and its action counterpart together — most tests
-  // drive `ensureAddress` and assert on the resulting `addressState`.
+  // drive `getOrCreateAddress` and assert on the resulting `addressState`.
   return renderHook(
     () => ({ ...useSmartRoutingAddress(), ...useCreateSmartRoutingAddress() }),
     { wrapper },
@@ -79,19 +79,22 @@ describe('useSmartRoutingAddress', () => {
 
     expect(result.current.addressState.status).toBe('idle')
 
-    await act(() =>
-      Promise.all([
-        result.current.ensureAddress(OWNER),
-        result.current.ensureAddress(OWNER),
-      ]),
-    )
+    let addresses: readonly Address[] = []
+    await act(async () => {
+      addresses = await Promise.all([
+        result.current.getOrCreateAddress(OWNER),
+        result.current.getOrCreateAddress(OWNER),
+      ])
+    })
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(1)
+    // Both callers of the shared request resolve to the created address
+    expect(addresses).toEqual([SMART_ROUTING_ADDRESS, SMART_ROUTING_ADDRESS])
   })
 
   it('creates the address with resolved chains and the recipient as owner', async () => {
     const { result } = renderWithProvider()
 
-    await act(() => result.current.ensureAddress(OWNER))
+    await act(() => result.current.getOrCreateAddress(OWNER))
 
     expect(createSmartRoutingAddress).toHaveBeenCalledWith({
       owner: OWNER,
@@ -110,8 +113,8 @@ describe('useSmartRoutingAddress', () => {
   it('reuses the result for repeat calls with the same recipient', async () => {
     const { result } = renderWithProvider()
 
-    await act(() => result.current.ensureAddress(OWNER))
-    await act(() => result.current.ensureAddress(OWNER))
+    await act(() => result.current.getOrCreateAddress(OWNER))
+    await act(() => result.current.getOrCreateAddress(OWNER))
 
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(1)
   })
@@ -119,8 +122,8 @@ describe('useSmartRoutingAddress', () => {
   it('creates a fresh address when called with a different recipient', async () => {
     const { result } = renderWithProvider()
 
-    await act(() => result.current.ensureAddress(OWNER))
-    await act(() => result.current.ensureAddress(OTHER_RECIPIENT))
+    await act(() => result.current.getOrCreateAddress(OWNER))
+    await act(() => result.current.getOrCreateAddress(OTHER_RECIPIENT))
 
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(2)
     expect(createSmartRoutingAddress).toHaveBeenLastCalledWith(
@@ -134,7 +137,7 @@ describe('useSmartRoutingAddress', () => {
   })
 })
 
-describe('ensureAddress race handling', () => {
+describe('getOrCreateAddress race handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -150,16 +153,16 @@ describe('ensureAddress race handling', () => {
 
     const { result } = renderWithProvider()
 
-    let first: Promise<void> = Promise.resolve()
-    let third: Promise<void> = Promise.resolve()
+    let first!: Promise<Address>
+    let third!: Promise<Address>
     await act(async () => {
-      first = result.current.ensureAddress(OWNER)
+      first = result.current.getOrCreateAddress(OWNER)
     })
     await act(async () => {
-      result.current.ensureAddress(OTHER_RECIPIENT).catch(() => {})
+      result.current.getOrCreateAddress(OTHER_RECIPIENT).catch(() => {})
     })
     await act(async () => {
-      third = result.current.ensureAddress(OWNER)
+      third = result.current.getOrCreateAddress(OWNER)
     })
 
     // Dedupe contract: only a pending request for the SAME recipient is
@@ -208,13 +211,13 @@ describe('ensureAddress race handling', () => {
 
     const { result } = renderWithProvider()
 
-    let first: Promise<void> = Promise.resolve()
-    let second: Promise<void> = Promise.resolve()
+    let first!: Promise<Address>
+    let second!: Promise<Address>
     await act(async () => {
-      first = result.current.ensureAddress(OWNER)
+      first = result.current.getOrCreateAddress(OWNER)
     })
     await act(async () => {
-      second = result.current.ensureAddress(OTHER_RECIPIENT)
+      second = result.current.getOrCreateAddress(OTHER_RECIPIENT)
     })
 
     await act(async () => {
@@ -248,25 +251,26 @@ describe('ensureAddress race handling', () => {
 
     const { result } = renderWithProvider()
 
-    let first: Promise<void> = Promise.resolve()
-    let second: Promise<void> = Promise.resolve()
+    let first!: Promise<Address>
+    let second!: Promise<Address>
     await act(async () => {
-      first = result.current.ensureAddress(OWNER)
+      first = result.current.getOrCreateAddress(OWNER)
     })
     await act(async () => {
-      second = result.current.ensureAddress(OTHER_RECIPIENT)
+      second = result.current.getOrCreateAddress(OTHER_RECIPIENT)
     })
 
+    // The stale request rejects for its caller but must not write state
     await act(async () => {
       forA.reject(new Error('boom'))
-      await first
+      await expect(first).rejects.toThrow('boom')
     })
     expect(result.current.addressState.status).toBe('loading')
 
     // The pending request for B is still shared (not cleared by the
     // stale failure)
     await act(async () => {
-      result.current.ensureAddress(OTHER_RECIPIENT).catch(() => {})
+      result.current.getOrCreateAddress(OTHER_RECIPIENT).catch(() => {})
     })
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(2)
 
@@ -314,7 +318,7 @@ describe('ensureAddress race handling', () => {
     const { rerender } = render(<Harness config={TEST_CONFIG} />)
 
     await act(async () => {
-      await captured.current?.ensureAddress(OWNER)
+      await captured.current?.getOrCreateAddress(OWNER)
     })
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(1)
 
@@ -325,7 +329,7 @@ describe('ensureAddress race handling', () => {
     rerender(<Harness config={newConfig} />)
 
     await act(async () => {
-      await captured.current?.ensureAddress(OWNER)
+      await captured.current?.getOrCreateAddress(OWNER)
     })
     expect(createSmartRoutingAddress).toHaveBeenCalledTimes(2)
     expect(createSmartRoutingAddress).toHaveBeenLastCalledWith(

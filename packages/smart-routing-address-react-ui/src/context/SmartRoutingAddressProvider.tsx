@@ -34,15 +34,15 @@ export function SmartRoutingAddressProvider({
   })
   const [recipient, setRecipient] = useState<Address | undefined>(undefined)
   const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null)
-  const pendingRef = useRef<Promise<void> | null>(null)
+  const pendingRef = useRef<Promise<Address> | null>(null)
   const recipientRef = useRef<Address | null>(null)
   // Each creation request gets a generation; only the latest generation
   // may write state, so superseded requests are ignored entirely
   const genRef = useRef(0)
   const configRef = useRef(config)
 
-  const ensureAddress = useCallback(
-    async (nextRecipient: Address) => {
+  const getOrCreateAddress = useCallback(
+    async (nextRecipient: Address): Promise<Address> => {
       // A new config invalidates any cached request
       if (configRef.current !== config) {
         configRef.current = config
@@ -83,22 +83,27 @@ export function SmartRoutingAddressProvider({
               version: resolveVersion(config),
             },
           })
-          // Ignore results superseded by a newer request
-          if (genRef.current !== gen) return
-          setAddressState({
-            status: 'success',
-            address: result.smartRoutingAddress,
-            estimatedFees: result.estimatedFees,
-          })
+          // State writes are generation-gated (results superseded by a newer
+          // request must not clobber the live one), but the promise still
+          // resolves with the address this call created — per-call semantics
+          // stay honest even after the provider has moved on.
+          if (genRef.current === gen) {
+            setAddressState({
+              status: 'success',
+              address: result.smartRoutingAddress,
+              estimatedFees: result.estimatedFees,
+            })
+          }
+          return result.smartRoutingAddress
         } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error))
           // Superseded failures must not clear the live request
-          if (genRef.current !== gen) return
-          // Allow a retry after failures
-          pendingRef.current = null
-          setAddressState({
-            status: 'error',
-            error: error instanceof Error ? error : new Error(String(error)),
-          })
+          if (genRef.current === gen) {
+            // Allow a retry after failures
+            pendingRef.current = null
+            setAddressState({ status: 'error', error: err })
+          }
+          throw err
         }
       })()
 
@@ -114,20 +119,22 @@ export function SmartRoutingAddressProvider({
     // Force a fresh request even if we still have a settled one cached
     pendingRef.current = null
     recipientRef.current = null
-    await ensureAddress(current)
-  }, [ensureAddress])
+    // Failures surface via `addressState`; swallow the rejection so retry
+    // callers (e.g. the ErrorRetryCard click handler) don't need a catch.
+    await getOrCreateAddress(current).catch(() => {})
+  }, [getOrCreateAddress])
 
   const value = useMemo(
     () => ({
       config,
       addressState,
       recipient,
-      ensureAddress,
+      getOrCreateAddress,
       retry,
       activeRoute,
       setActiveRoute,
     }),
-    [config, addressState, recipient, ensureAddress, retry, activeRoute],
+    [config, addressState, recipient, getOrCreateAddress, retry, activeRoute],
   )
 
   return (

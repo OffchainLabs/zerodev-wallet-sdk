@@ -80,7 +80,7 @@ export function SmartRoutingAddress({
   className,
   size,
 }: SmartRoutingAddressProps) {
-  const { addressState, ensureAddress } = useSmartRoutingAddressContext()
+  const { addressState, getOrCreateAddress } = useSmartRoutingAddressContext()
   const [qrOpen, setQrOpen] = useState(false)
   const [step, setStep] = useState<SmartRoutingAddressStep>('deposit')
   const [selectedDeposit, setSelectedDeposit] = useState<
@@ -90,8 +90,8 @@ export function SmartRoutingAddress({
   useEffect(() => {
     // Errors surface via `addressState.status === 'error'`; swallow rejection
     // here so React doesn't warn about an unhandled promise.
-    ensureAddress(recipient).catch(() => {})
-  }, [recipient, ensureAddress])
+    getOrCreateAddress(recipient).catch(() => {})
+  }, [recipient, getOrCreateAddress])
 
   const title = TITLE_BY_STEP[step]
 

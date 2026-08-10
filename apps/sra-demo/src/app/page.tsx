@@ -499,10 +499,10 @@ export default function Home() {
 /**
  * Re-open card shown while the widget is dismissed — and a live demo of the
  * companion-hook split. Hovering (or focusing) "+ Fund" pre-creates the
- * deposit address via `useCreateSmartRoutingAddress().ensureAddress` (the
+ * deposit address via `useCreateSmartRoutingAddress().getOrCreateAddress` (the
  * write half), while the status line mirrors `addressState` from
  * `useSmartRoutingAddress` (the read half) so the pre-warm is visible:
- * idle → creating → ready before the click ever lands. `ensureAddress` is
+ * idle → creating → ready before the click ever lands. `getOrCreateAddress` is
  * idempotent per recipient, so repeated hovers are free.
  */
 function FundReopenCard({
@@ -514,10 +514,11 @@ function FundReopenCard({
   onOpen: () => void
 }) {
   const { addressState } = useSmartRoutingAddress()
-  const { ensureAddress } = useCreateSmartRoutingAddress()
+  const { getOrCreateAddress } = useCreateSmartRoutingAddress()
 
   const prewarm = () => {
-    if (recipient) void ensureAddress(recipient)
+    // Failures surface via `addressState`; swallow the rejection here.
+    if (recipient) getOrCreateAddress(recipient).catch(() => {})
   }
 
   const status =
