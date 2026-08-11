@@ -4,7 +4,8 @@
  * by the production TLS Fetcher key (no `dangerouslyOverrideSignerPublicKey`).
  *
  * Doesn't require email service — only the backend on `upgrade_turnkey` and a
- * test project. Skipped without ZD_OTP_PROJECT_ID set.
+ * test project. Fails (does not skip) without ZD_OTP_PROJECT_ID set — global
+ * setup requires it.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest'
