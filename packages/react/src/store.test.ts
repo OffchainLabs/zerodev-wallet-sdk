@@ -42,4 +42,26 @@ describe('createZeroDevWalletStore', () => {
 
     expect(store.getState().kernelClients.get(1)).toBe(kernelClient)
   })
+
+  it('never persists the session (Core owns session state)', () => {
+    const store = createZeroDevWalletStore()
+    store.getState().setSession({
+      id: 'sess-1',
+      userId: 'user-1',
+      organizationId: 'org-1',
+      stamperType: 'apiKey',
+      token: 'jwt',
+      expiry: Date.now() + 60_000,
+      createdAt: Date.now(),
+    })
+
+    // Sanity: the live state actually holds a session, so the assertion below
+    // only passes because partialize strips it — not because it was absent.
+    expect(store.getState().session).not.toBeNull()
+
+    const { partialize } = store.persist.getOptions()
+    const persisted = partialize?.(store.getState())
+
+    expect(persisted).not.toHaveProperty('session')
+  })
 })

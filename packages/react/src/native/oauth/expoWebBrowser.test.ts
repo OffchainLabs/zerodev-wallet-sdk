@@ -56,6 +56,25 @@ describe('createOAuthGetSessionIdWithExpoWebBrowser', () => {
     expect(h.remove).toHaveBeenCalledOnce()
   })
 
+  it('resolves with the session id from a matching deep link', async () => {
+    // The browser branch never settles, so the win must come from the
+    // expo-linking deep-link listener delivering a matching callback URL.
+    h.openAuthSessionAsync.mockReturnValueOnce(new Promise(() => {}))
+    const getSessionId = createOAuthGetSessionIdWithExpoWebBrowser({
+      redirectUri: 'myapp://oauth/callback',
+    })
+    const result = getSessionId({
+      oauthUrl: 'https://accounts.google.com/oauth',
+      provider: 'google',
+    })
+    h.listener?.({
+      url: 'myapp://oauth/callback?oauth_success=true&session_id=deeplinked',
+    })
+
+    await expect(result).resolves.toBe('deeplinked')
+    expect(h.remove).toHaveBeenCalledOnce()
+  })
+
   it('rejects a browser result from a different callback URL', async () => {
     h.openAuthSessionAsync.mockResolvedValueOnce({
       type: 'success',

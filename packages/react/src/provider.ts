@@ -144,6 +144,10 @@ export function createProvider({
         if (store.getState().session?.id !== session.id) return
         store.getState().setIsExpiring(false)
 
+        // Duck-typed on `status` rather than `err instanceof RestRequestError`:
+        // RestRequestError is internal to @zerodev/wallet-core (not in its
+        // public entry, see utils/query.ts), so an instanceof check here would
+        // require a deep import.
         if (
           typeof err === 'object' &&
           err !== null &&

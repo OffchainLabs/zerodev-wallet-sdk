@@ -1,6 +1,6 @@
 import type { Config } from '@wagmi/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { sepolia } from 'wagmi/chains'
+import { mainnet, sepolia } from 'wagmi/chains'
 
 // SDK mocks — hoisted so they're defined before vi.mock() (which is itself
 // hoisted to the top of the file by vitest).
@@ -113,6 +113,50 @@ describe('zeroDevWallet connector — mode branching', () => {
       expect(createKernelAccountClientMock).not.toHaveBeenCalled()
     })
 
+    it('drops a stale rehydrated session when Core reports none', async () => {
+      // An older SDK version may have persisted a session into React storage.
+      // Core (mocked getSession → null) is the source of truth, so init must
+      // erase the rehydrated session while still honoring the chain preference.
+      const persistedStale = JSON.stringify({
+        state: {
+          activeChainId: sepolia.id,
+          session: {
+            id: 'stale-session',
+            userId: 'user-1',
+            organizationId: 'org-1',
+            stamperType: 'apiKey',
+            token: 'stale-jwt',
+            expiry: Date.now() + 60_000,
+            createdAt: Date.now(),
+          },
+        },
+        version: 0,
+      })
+      const persistStorage = {
+        getItem: vi.fn().mockReturnValue(persistedStale),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      }
+      const factory = zeroDevWalletCore({
+        projectId: 'proj-test',
+        chains: [sepolia],
+        persistStorage: persistStorage as never,
+      })
+      const wagmiConfig = {
+        transports: {},
+        emitter: { emit: vi.fn() },
+        storage: null,
+      } as unknown as Config
+      const connector = factory(wagmiConfig as never) as ConnectorInstance
+
+      // @ts-expect-error - getStore is added in the connector's Properties.
+      const store = await connector.getStore()
+
+      expect(store.getState().session).toBeNull()
+      // Chain preference survives rehydration — proves the stale state loaded.
+      expect(store.getState().activeChainId).toBe(sepolia.id)
+    })
+
     it("default mode is '7702' (passes eip7702Account, no ECDSA plugin)", async () => {
       const connector = createConnector()
       await seedEoa(connector)
@@ -198,6 +242,38 @@ describe('zeroDevWallet connector — mode branching', () => {
       )
 
       await expect(connector.getChainId()).resolves.toBe(sepolia.id)
+    })
+
+    it('does not commit the new chain when its setup fails', async () => {
+      // The target chain IS in config, but building its client blows up. The
+      // active chain must stay on the previous one — no half-switched state.
+      createKernelAccountClientMock.mockImplementationOnce(() => {
+        throw new Error('chain setup failed')
+      })
+      const factory = zeroDevWalletCore({
+        projectId: 'proj-test',
+        chains: [sepolia, mainnet],
+        mode: '4337',
+      })
+      const wagmiConfig = {
+        transports: {},
+        emitter: { emit: vi.fn() },
+        storage: null,
+      } as unknown as Config
+      const connector = factory(wagmiConfig as never) as ConnectorInstance
+      await seedEoa(connector)
+      // @ts-expect-error - getStore is added in the connector's Properties.
+      const store = await connector.getStore()
+      store.getState().setActiveChainId(sepolia.id)
+      const switchChain = connector.switchChain
+      if (!switchChain) throw new Error('Expected connector.switchChain')
+
+      await expect(switchChain({ chainId: mainnet.id })).rejects.toThrow(
+        'chain setup failed',
+      )
+
+      await expect(connector.getChainId()).resolves.toBe(sepolia.id)
+      expect(store.getState().kernelAccounts.has(mainnet.id)).toBe(false)
     })
   })
 

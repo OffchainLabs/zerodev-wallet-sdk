@@ -414,6 +414,7 @@ describe('provider state safety', () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_700_000_000_000)
     vi.spyOn(console, 'error').mockImplementation(() => {})
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
     const store = createZeroDevWalletStore()
     const session = {
       id: 'session-1',
@@ -442,6 +443,13 @@ describe('provider state safety', () => {
     expect(store.getState().session).toEqual(session)
     expect(store.getState().eoaAccount?.address).toBe(EOA_ADDRESS)
     expect(vi.getTimerCount()).toBeGreaterThan(0)
+    // The retry must land within the 5s cap, not just "some timer exists".
+    // The session has 30s left, so an uncapped retry would schedule 30_000ms.
+    const scheduledDelays = setTimeoutSpy.mock.calls
+      .map(([, delay]) => delay)
+      .filter((delay): delay is number => typeof delay === 'number')
+    expect(scheduledDelays.length).toBeGreaterThan(0)
+    expect(Math.max(...scheduledDelays)).toBeLessThanOrEqual(5_000)
     provider.destroy()
   })
 
@@ -545,6 +553,18 @@ describe('provider state safety', () => {
       provider.request({
         method: 'personal_sign',
         params: ['0x1234', '0x2222222222222222222222222222222222222222'],
+      }),
+    ).rejects.toThrow('Invalid from address')
+  })
+
+  it('rejects eth_signTypedData_v4 for an address other than the active owner', async () => {
+    const provider = createTestProvider('EOA')
+
+    await expect(
+      provider.request({
+        method: 'eth_signTypedData_v4',
+        // Typed-data params are [address, typedData] — address comes first.
+        params: ['0x2222222222222222222222222222222222222222', '{}'],
       }),
     ).rejects.toThrow('Invalid from address')
   })
