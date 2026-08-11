@@ -21,7 +21,6 @@ import {
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
-  resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
 import { getDepositStage } from '../utils/deposits'
@@ -46,7 +45,6 @@ function useLiveDeposit(initial: DepositWithTimestamp): DepositWithTimestamp {
     addressState.status === 'success' ? addressState.address : undefined
   const { deposits } = useDepositStatus({
     address,
-    pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
   })
   const targetHash = initial.deposit.transactionHash

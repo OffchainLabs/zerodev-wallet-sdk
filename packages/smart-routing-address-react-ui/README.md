@@ -12,12 +12,13 @@ and a per-transaction details view. UI styling comes from
 ## Installation
 
 ```bash
-pnpm add @zerodev/smart-routing-address-react-ui \
-  @zerodev/smart-routing-address viem
+pnpm add @zerodev/smart-routing-address-react-ui viem
 ```
 
-> `@zerodev/smart-routing-address`, `react` (18 or 19), `react-dom`, and
-> `viem` are **peer dependencies** — install them alongside this package.
+> `react` (18 or 19), `react-dom`, and `viem` are **peer dependencies** —
+> install them alongside this package. `@zerodev/smart-routing-address` ships
+> as a regular dependency; install it directly only if you import from it
+> (e.g. `createCall` for custom `actions`).
 
 ## Setup
 
@@ -65,15 +66,17 @@ host app can dismiss.
 <SmartRoutingAddress
   recipient={recipient}
   onClose={() => setOpen(false)}
-  onHelp={() => window.open('https://your-docs.example', '_blank')}
   size="lg" // 'sm' | 'md' | 'lg'
 />
 ```
 
-Address creation and deposit polling happen in the provider; the widget
-subscribes to state via `useSmartRoutingAddress()` / `useDepositStatus()` so
-host code can mirror the same data (e.g. show pending deposits elsewhere in
-the app).
+Address creation and deposit polling happen in the provider; host code can
+observe the widget's state via `useSmartRoutingAddress()` (e.g. drive a
+companion panel from the route the widget is showing) and pre-create the
+address via `useCreateSmartRoutingAddress().getOrCreateAddress` before the modal
+opens. To build a fully custom deposit UI, use the
+`@zerodev/smart-routing-address` SDK directly — this package's hooks are
+widget plumbing, not a UI kit.
 
 ## Configuration
 
@@ -87,25 +90,21 @@ Everything the widget needs is on the config passed to the provider.
 | `actions` | `CreateSmartRoutingAddressParams['actions']?` | Destination actions per token type. When omitted, deposits are simply transferred to the recipient. |
 | `slippage` | `number?` | Max slippage in basis points (50 = 0.5%). When omitted, the SRA server picks its default. |
 | `baseUrl` | `string?` | Override the SRA server root URL; the `projectId` is appended. |
-| `pollingInterval` | `number?` | Deposit-status polling interval in ms (default 5000). |
-| `estimatedFillTimeSeconds` | `number \| Record<number, number>?` | Expected fill time, flat or per source chain id. |
 
 ## API
 
 | Export | Description |
 | --- | --- |
 | `<SmartRoutingAddressProvider />` | Wraps the subtree; owns config, recipient, and the address lifecycle. |
-| `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `onHelp?`, `size?`, `className?`. |
-| `useSmartRoutingAddress()` | Read the current address state and active route from the provider. |
-| `useDepositStatus({ address })` | Poll the SRA status endpoint; returns `deposits`, `totalCount`, `hasLoaded`, `error`, `refetch`. |
-| `useNewDeposits(deposits, hasLoaded)` | Filter to deposits that arrived after mount. |
+| `<SmartRoutingAddress />` | The funding widget UI. Props: `recipient`, `onClose`, `size?`, `className?`. |
+| `useSmartRoutingAddress()` | Read-only widget companion for hosts: address state and the `activeRoute` the widget is showing. |
+| `useCreateSmartRoutingAddress()` | Action counterpart: `getOrCreateAddress(recipient)` returns the deposit address, creating it if needed — idempotent per recipient, so it's safe to call on every hover/open. Creation params come from the provider config. |
 
 ### Types
 
 `SmartRoutingAddressConfig`, `SmartRoutingAddressProps`,
 `SmartRoutingAddressStep`, `SmartRoutingAddressProviderProps`,
-`UseDepositStatusParams`, `UseDepositStatusResult`,
-`UseSmartRoutingAddressResult`.
+`UseSmartRoutingAddressResult`, `UseCreateSmartRoutingAddressResult`.
 
 ## Development
 
