@@ -604,9 +604,16 @@ export async function createZeroDevWalletCore(
                 apiKeyId,
               })
             } catch (error) {
+              // Only a confirmed rejection (401) or an explicit `force` clears
+              // local credentials below. Any other failure (403, 5xx, network)
+              // is ambiguous — erasing the only key on an inconclusive signal
+              // could lock the user out unrecoverably — so preserve it and
+              // return without throwing, so callers (e.g. a logout button)
+              // don't crash. Pass `logout({ force: true })` to clear locally
+              // regardless when the caller knows the remote is gone.
               const credentialIsRejected =
                 error instanceof RestRequestError && error.status === 401
-              if (!options?.force && !credentialIsRejected) throw error
+              if (!options?.force && !credentialIsRejected) return false
             }
           }
         }

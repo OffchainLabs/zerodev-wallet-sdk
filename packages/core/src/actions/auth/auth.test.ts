@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../client/types.js'
 import { authenticateWithEmail } from './authenticateWithEmail.js'
 import { authenticateWithOAuth } from './authenticateWithOAuth.js'
@@ -165,7 +165,14 @@ describe('authenticateWithEmail', () => {
 })
 
 describe('logout', () => {
+  // setSystemTime below needs fake timers; reset after each test so the frozen
+  // clock doesn't leak into later tests in this file.
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('stamps the exact Turnkey delete-api-keys activity in the header', async () => {
+    vi.useFakeTimers()
     vi.setSystemTime(1_700_000_000_000)
     const mockClient = createMockClient(async () => ({}))
 

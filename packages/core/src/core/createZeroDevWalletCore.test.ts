@@ -1104,13 +1104,15 @@ describe('logout', () => {
     expect(await sdk.getAllSessions()).toEqual({})
   })
 
-  it('preserves the live local key and session when remote revocation fails', async () => {
+  it('returns false and preserves the live local key and session when remote revocation fails', async () => {
     const sdk = await createZeroDevWalletCore(baseConfig())
     await sdk.auth({ type: 'oauth', provider: 'google', sessionId: 's' })
     h.apiKeyStamper.clear.mockClear()
     h.client.logout.mockRejectedValueOnce(new Error('activity rejected'))
 
-    await expect(sdk.logout()).rejects.toThrow('activity rejected')
+    // Ambiguous failure: preserve the credential and return false rather than
+    // throwing, so a logout call site doesn't crash.
+    await expect(sdk.logout()).resolves.toBe(false)
 
     expect(await sdk.getSession()).toBeDefined()
     expect(h.apiKeyStamper.clear).not.toHaveBeenCalled()
@@ -1158,7 +1160,7 @@ describe('logout', () => {
     await expect(sdk.getSession()).resolves.toBeUndefined()
   })
 
-  it('preserves local credentials on a non-terminal 403 revocation failure', async () => {
+  it('returns false and preserves local credentials on a non-terminal 403 revocation failure', async () => {
     const sdk = await createZeroDevWalletCore(baseConfig())
     await sdk.auth({ type: 'oauth', provider: 'google', sessionId: 's' })
     h.apiKeyStamper.clear.mockClear()
@@ -1168,7 +1170,7 @@ describe('logout', () => {
       }),
     )
 
-    await expect(sdk.logout()).rejects.toThrow()
+    await expect(sdk.logout()).resolves.toBe(false)
 
     expect(h.apiKeyStamper.clear).not.toHaveBeenCalled()
     await expect(sdk.getSession()).resolves.toBeDefined()
@@ -1256,7 +1258,7 @@ describe('logout', () => {
       sessionKeys: [],
     })
 
-    await expect(sdk.logout()).rejects.toThrow(/refusing to erase local/i)
+    await expect(sdk.logout()).resolves.toBe(false)
 
     expect(h.client.logout).not.toHaveBeenCalled()
     expect(await sdk.getSession()).toBeDefined()
