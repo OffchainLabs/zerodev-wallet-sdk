@@ -29,7 +29,8 @@
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
     "!src/**/*.stories.ts",
-    "!src/**/*.stories.tsx"
+    "!src/**/*.stories.tsx",
+    "!src/test/**"
   ],
   "scripts": {
     "build": "pnpm run clean && pnpm run build:css && pnpm run build:js && pnpm run build:types",

@@ -22,6 +22,10 @@ export default defineConfig({
         // Match `viem` and every subpath (`viem/chains`, `viem/utils`, etc.)
         // — otherwise Rollup inlines `viem/chains`, ballooning the bundle.
         /^viem(\/|$)/,
+        // Regular dependencies — installed alongside the package, so let
+        // the consumer's bundler resolve them instead of inlining.
+        /^zod(\/|$)/,
+        'uqr',
       ],
     },
     sourcemap: true,
