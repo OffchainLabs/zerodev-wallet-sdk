@@ -10,7 +10,11 @@
 
 import { expect, type Page, test } from '@playwright/test'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
-import { expectLabReady, loginWithMagicLink } from '../helpers/ui-login.js'
+import {
+  expectLabReady,
+  loginWithMagicLink,
+  logoutAndExpectLoginSurface,
+} from '../helpers/ui-login.js'
 
 /**
  * Signs the preset message from the lab's Signing area and asserts the run
@@ -157,15 +161,8 @@ test.describe('Post-Auth Operations', () => {
     const emailAccount = await createNewAccount()
     await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
-    await page.getByTestId('wallet-logout').click()
-
     // The lab has no logout redirect — the gate swaps the lab back out for the
     // login surface at whatever route you were on.
-    await expect(page.getByTestId('wallet-strip')).toBeHidden({
-      timeout: 30_000,
-    })
-    await expect(page.getByText('Sign in to open the QA Lab')).toBeVisible({
-      timeout: 30_000,
-    })
+    await logoutAndExpectLoginSurface(page)
   })
 })
