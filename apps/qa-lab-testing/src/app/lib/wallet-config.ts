@@ -32,8 +32,6 @@ export const SUPPORTED_CHAINS = [arbitrumSepolia, sepolia] as const;
  */
 export const DEFAULT_AUTH_METHODS = ["email", "google", "passkey"] as const;
 
-export const DEFAULT_EMAIL_AUTH_METHOD = "otp" as const;
-
 /**
  * Per-chain RPC overrides from the environment. Only the two original testnets
  * have env vars; every other chain falls through to `defaultTransportUrl`.
@@ -56,6 +54,25 @@ export const MAGIC_LINK_PROJECT_ID = process.env.NEXT_PUBLIC_ZD_PROJECT_ID;
 export const OTP_PROJECT_ID = process.env.NEXT_PUBLIC_ZD_OTP_PROJECT_ID;
 
 /**
+ * Authentication flavors available in the app.
+ */
+export const AUTH_FLAVORS = {
+  magicLink: { projectId: MAGIC_LINK_PROJECT_ID, emailAuthMethod: "magicLink" },
+  otp: { projectId: OTP_PROJECT_ID, emailAuthMethod: "otp" },
+} as const;
+
+export type AuthFlavorId = keyof typeof AUTH_FLAVORS;
+
+export const AUTH_FLAVOR_IDS = Object.keys(AUTH_FLAVORS) as AuthFlavorId[];
+
+/**
+ * Magic link is the default because a magic-link email lands on `/verify` with
+ * whatever URL the project's template produced — it can't carry `?authFlavor`.
+ * So the flavor that has to work without params is this one.
+ */
+export const DEFAULT_AUTH_FLAVOR: AuthFlavorId = "magicLink";
+
+/**
  * The transport a chain gets when nothing more specific is set.
  *
  * Everything routes through the ZeroDev staging RPC, keyed by project id and
@@ -66,18 +83,24 @@ export const OTP_PROJECT_ID = process.env.NEXT_PUBLIC_ZD_OTP_PROJECT_ID;
  * Returns undefined when the project id is unset, which leaves `http()` to fall
  * back to viem's public RPC for the chain rather than building a broken URL.
  */
-export function defaultTransportUrl(chainId: number): string | undefined {
+export function defaultTransportUrl(
+  chainId: number,
+  projectId: string | undefined,
+): string | undefined {
   if (chainId === anvil.id) return ANVIL_RPC_URL;
-
-  // Uses the magic-link project because that's the default flavor. Once the
-  // flavor is selectable per request this should take the active project id.
-  const projectId = MAGIC_LINK_PROJECT_ID;
   if (!projectId) return undefined;
 
   return `${ZERODEV_STAGING_RPC_BASE}/${projectId}/chain/${chainId}`;
 }
 
-/** Where a chain's transport comes from, before any URL param is applied. */
-export function envTransportUrl(chainId: number): string | undefined {
-  return RPC_URLS[chainId] ?? defaultTransportUrl(chainId);
+/**
+ * Where a chain's transport comes from before any URL param is applied. Takes
+ * the active project id so the RPC is scoped to the same project the connector
+ * authenticates against.
+ */
+export function envTransportUrl(
+  chainId: number,
+  projectId: string | undefined,
+): string | undefined {
+  return RPC_URLS[chainId] ?? defaultTransportUrl(chainId, projectId);
 }

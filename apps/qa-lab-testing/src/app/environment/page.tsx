@@ -242,10 +242,19 @@ export default async function EnvironmentPage({
             </ConfigRow>
 
             <ConfigRow
-              id="email-auth"
-              label="email auth method"
-              overridden={isOverridden(PARAM.emailAuth)}
+              id="auth-flavor"
+              label="auth flavor"
+              overridden={isOverridden(PARAM.authFlavor)}
             >
+              <Chip testId={`env-auth-flavor-${resolved.authFlavor}`}>
+                {resolved.authFlavor}
+              </Chip>
+              <Chip
+                testId="env-auth-flavor-project"
+                tone={resolved.projectId ? "pass" : "neutral"}
+              >
+                {resolved.projectId ? "project id set" : "project id MISSING"}
+              </Chip>
               <Chip testId={`env-email-auth-${resolved.emailAuthMethod}`}>
                 {resolved.emailAuthMethod}
               </Chip>

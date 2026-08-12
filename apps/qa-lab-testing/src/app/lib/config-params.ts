@@ -1,9 +1,12 @@
 import type { Chain } from "viem";
 import {
   ANVIL_RPC_URL,
+  AUTH_FLAVOR_IDS,
+  AUTH_FLAVORS,
+  type AuthFlavorId,
   CHAIN_CATALOG,
+  DEFAULT_AUTH_FLAVOR,
   DEFAULT_AUTH_METHODS,
-  DEFAULT_EMAIL_AUTH_METHOD,
   envTransportUrl,
   RPC_URLS,
   SUPPORTED_CHAINS,
@@ -39,7 +42,7 @@ export const PARAM = {
   aaHost: "aaHost",
   chains: "chains",
   authMethods: "authMethods",
-  emailAuth: "emailAuth",
+  authFlavor: "authFlavor",
   /** Per-chain transport, e.g. `rpc.421614`. */
   rpcPrefix: "rpc.",
 } as const;
@@ -50,7 +53,7 @@ export const isConfigParam = (key: string) =>
   key === PARAM.aaHost ||
   key === PARAM.chains ||
   key === PARAM.authMethods ||
-  key === PARAM.emailAuth ||
+  key === PARAM.authFlavor ||
   key.startsWith(PARAM.rpcPrefix);
 
 export interface ResolvedWalletConfig {
@@ -61,6 +64,10 @@ export interface ResolvedWalletConfig {
   /** Provenance per chain, so `/environment` can show where a transport came from. */
   rpcSources: Record<number, TransportSource>;
   authMethods: AuthMethodId[];
+  /** Selected delivery flavor; binds projectId and emailAuthMethod together. */
+  authFlavor: AuthFlavorId;
+  /** The ZeroDev project the connector authenticates against. */
+  projectId: string | undefined;
   emailAuthMethod: EmailAuthMethodId;
   /** Params that were present and applied — drives the "overridden" badge. */
   applied: string[];
@@ -137,6 +144,28 @@ export function resolveWalletConfig(
     }
   }
 
+  // Delivery flavor. Resolved before transports because it decides the project
+  // id, and the default RPC URL is scoped to that project.
+  let authFlavor: AuthFlavorId = DEFAULT_AUTH_FLAVOR;
+  const rawFlavor = get(PARAM.authFlavor);
+  if (rawFlavor !== undefined) {
+    if ((AUTH_FLAVOR_IDS as readonly string[]).includes(rawFlavor)) {
+      authFlavor = rawFlavor as AuthFlavorId;
+      applied.push(PARAM.authFlavor);
+    } else {
+      warnings.push(
+        `${PARAM.authFlavor}: "${rawFlavor}" must be one of ${AUTH_FLAVOR_IDS.join(" | ")} — using default.`,
+      );
+    }
+  }
+
+  const { projectId, emailAuthMethod } = AUTH_FLAVORS[authFlavor];
+  if (!projectId) {
+    warnings.push(
+      `${PARAM.authFlavor}: the "${authFlavor}" project id is not set — auth will fail.`,
+    );
+  }
+
   // Transports, one lookup per selected chain. Precedence: URL param, then the
   // chain's env var, then the ZeroDev staging RPC (localhost for Anvil). Only
   // if all three are absent does `http(undefined)` fall back to viem's public
@@ -145,7 +174,7 @@ export function resolveWalletConfig(
   const rpcSources: Record<number, TransportSource> = {};
 
   const fallbackTransport = (chainId: number) => {
-    const url = envTransportUrl(chainId);
+    const url = envTransportUrl(chainId, projectId);
     rpcUrls[chainId] = url;
 
     if (RPC_URLS[chainId]) rpcSources[chainId] = "env";
@@ -206,19 +235,6 @@ export function resolveWalletConfig(
     }
   }
 
-  let emailAuthMethod: EmailAuthMethodId = DEFAULT_EMAIL_AUTH_METHOD;
-  const rawEmailAuth = get(PARAM.emailAuth);
-  if (rawEmailAuth !== undefined) {
-    if ((EMAIL_AUTH_METHODS as readonly string[]).includes(rawEmailAuth)) {
-      emailAuthMethod = rawEmailAuth as EmailAuthMethodId;
-      applied.push(PARAM.emailAuth);
-    } else {
-      warnings.push(
-        `${PARAM.emailAuth}: "${rawEmailAuth}" must be one of ${EMAIL_AUTH_METHODS.join(" | ")} — using default.`,
-      );
-    }
-  }
-
   return {
     kmsProxyBaseUrl,
     aaHost,
@@ -226,6 +242,8 @@ export function resolveWalletConfig(
     rpcUrls,
     rpcSources,
     authMethods,
+    authFlavor,
+    projectId,
     emailAuthMethod,
     applied,
     warnings,
@@ -286,7 +304,7 @@ export function serializeOverrides(overrides: {
   chainIds?: number[];
   rpcUrls?: Record<number, string>;
   authMethods?: AuthMethodId[];
-  emailAuthMethod?: EmailAuthMethodId;
+  authFlavor?: AuthFlavorId;
 }): URLSearchParams {
   const params = new URLSearchParams();
   const defaultChainIds = SUPPORTED_CHAINS.map((chain) => chain.id);
@@ -303,9 +321,11 @@ export function serializeOverrides(overrides: {
   ) {
     params.set(PARAM.chains, overrides.chainIds.join(","));
   }
+  const activeProjectId =
+    AUTH_FLAVORS[overrides.authFlavor ?? DEFAULT_AUTH_FLAVOR].projectId;
   for (const [id, url] of Object.entries(overrides.rpcUrls ?? {})) {
     const chainId = Number(id);
-    if (url && url !== envTransportUrl(chainId)) {
+    if (url && url !== envTransportUrl(chainId, activeProjectId)) {
       params.set(`${PARAM.rpcPrefix}${chainId}`, url);
     }
   }
@@ -315,11 +335,8 @@ export function serializeOverrides(overrides: {
   ) {
     params.set(PARAM.authMethods, overrides.authMethods.join(","));
   }
-  if (
-    overrides.emailAuthMethod &&
-    overrides.emailAuthMethod !== DEFAULT_EMAIL_AUTH_METHOD
-  ) {
-    params.set(PARAM.emailAuth, overrides.emailAuthMethod);
+  if (overrides.authFlavor && overrides.authFlavor !== DEFAULT_AUTH_FLAVOR) {
+    params.set(PARAM.authFlavor, overrides.authFlavor);
   }
 
   return params;

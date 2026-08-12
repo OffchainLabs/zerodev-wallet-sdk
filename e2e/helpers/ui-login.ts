@@ -34,16 +34,16 @@ export async function expectLabReady(page: Page): Promise<void> {
 /**
  * Completes plain-code OTP login through the UI, landing on the lab.
  *
- * The lab takes its wallet config from URL params, so the OTP project is
- * selected by navigating with `?emailAuth=otp` rather than by pointing at a
- * separately-built server as the signer demo does.
+ * The lab takes its wallet config from URL params, so `?authFlavor=otp` selects
+ * both the OTP project and the OTP email method together — rather than pointing
+ * at a separately-built server as the signer demo does.
  */
 export async function loginWithOtp(
   page: Page,
   email: string,
   authToken: string,
 ): Promise<void> {
-  await page.goto('/?emailAuth=otp')
+  await page.goto('/?authFlavor=otp')
   await page.getByPlaceholder('Enter your email').fill(email)
   await page.getByPlaceholder('Enter your email').press('Enter')
   await expect(
@@ -81,7 +81,7 @@ export async function loginWithMagicLink(
   // the emailed link is redeeming. Production builds already have the route.
   await page.request.get('/verify')
 
-  await page.goto('/?emailAuth=magicLink')
+  await page.goto('/')
   await page.getByPlaceholder('Enter your email').fill(email)
   await page.getByPlaceholder('Enter your email').press('Enter')
   await expect(page.getByText(/check your email/i)).toBeVisible({
@@ -101,8 +101,8 @@ export async function loginWithMagicLink(
   // Navigate the actual emailed link rather than reconstructing /verify?code=
   // against baseURL, so a change to the project's magic_link_template (host or
   // path) is exercised here instead of silently passing. The template can't
-  // carry the lab's config params, so /verify redeems under the app's default
-  // config — which is why magic link has to be the default flavor.
+  // carry config params, so /verify redeems under the default flavor — which is
+  // why magic link is the default, and why this helper passes no param above.
   await page.goto(magicLinkUrl)
   await expectLabReady(page)
 }

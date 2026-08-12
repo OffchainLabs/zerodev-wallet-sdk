@@ -2,6 +2,10 @@ import path from 'node:path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Lets a build and a dev server coexist without trampling each other's
+  // output — the .next corruption that shows up as "Cannot find module for
+  // page" or a React Client Manifest 500.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   transpilePackages: [
     '@zerodev/wallet-react',

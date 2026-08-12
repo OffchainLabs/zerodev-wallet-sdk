@@ -4,7 +4,6 @@ import { type WalletMode } from '@zerodev/wallet-react'
 import { zeroDevWallet } from '@zerodev/wallet-react-ui'
 import { type Transport, createConfig, http } from 'wagmi'
 import type { ResolvedWalletConfig } from './lib/config-params'
-import { MAGIC_LINK_PROJECT_ID } from './lib/wallet-config'
 
 // Local testing toggle for the connector's account mode.
 // Set NEXT_PUBLIC_WALLET_MODE to 'EOA' | '4337' | '7702' to override; leave
@@ -32,7 +31,7 @@ export function createWalletConfig(resolved: ResolvedWalletConfig) {
     chains: resolved.chains,
     connectors: [
       zeroDevWallet({
-        projectId: MAGIC_LINK_PROJECT_ID!,
+        projectId: resolved.projectId!,
         proxyBaseUrl: resolved.kmsProxyBaseUrl!,
         chains: [...resolved.chains],
         ...(resolved.aaHost && { aaHost: resolved.aaHost }),
