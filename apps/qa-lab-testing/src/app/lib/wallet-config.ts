@@ -46,7 +46,14 @@ export const RPC_URLS: Record<number, string | undefined> = {
 const ZERODEV_STAGING_RPC_BASE = "https://staging-rpc.zerodev.app/api/v3";
 
 /** Anvil runs locally, so it can't route through a hosted RPC. */
-export const ANVIL_RPC_URL = "http://localhost:18545";
+export const ANVIL_RPC_URL =
+  process.env.NEXT_PUBLIC_ANVIL_URL || "http://localhost:18545";
+
+/** The magic-link-configured project id. */
+export const MAGIC_LINK_PROJECT_ID = process.env.NEXT_PUBLIC_ZD_PROJECT_ID;
+
+/** The OTP-configured project id. */
+export const OTP_PROJECT_ID = process.env.NEXT_PUBLIC_ZD_OTP_PROJECT_ID;
 
 /**
  * The transport a chain gets when nothing more specific is set.
@@ -62,7 +69,9 @@ export const ANVIL_RPC_URL = "http://localhost:18545";
 export function defaultTransportUrl(chainId: number): string | undefined {
   if (chainId === anvil.id) return ANVIL_RPC_URL;
 
-  const projectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
+  // Uses the magic-link project because that's the default flavor. Once the
+  // flavor is selectable per request this should take the active project id.
+  const projectId = MAGIC_LINK_PROJECT_ID;
   if (!projectId) return undefined;
 
   return `${ZERODEV_STAGING_RPC_BASE}/${projectId}/chain/${chainId}`;

@@ -59,8 +59,12 @@ export default async function EnvironmentPage({
 
   const checks = [
     {
-      variable: "NEXT_PUBLIC_ZERODEV_PROJECT_ID",
-      result: isSet(process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID),
+      variable: "NEXT_PUBLIC_ZD_PROJECT_ID",
+      result: isSet(process.env.NEXT_PUBLIC_ZD_PROJECT_ID),
+    },
+    {
+      variable: "NEXT_PUBLIC_ZD_OTP_PROJECT_ID",
+      result: isSet(process.env.NEXT_PUBLIC_ZD_OTP_PROJECT_ID),
     },
     {
       variable: "NEXT_PUBLIC_KMS_PROXY_BASE_URL",

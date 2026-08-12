@@ -88,7 +88,7 @@ Resolved per selected chain, first match wins:
 1. **`rpc.<chainId>` param** — hand-written, not exposed in the builder.
 2. **Env var** — only `NEXT_PUBLIC_ARB_SEPOLIA_RPC_URL` and `NEXT_PUBLIC_SEPOLIA_RPC_URL` exist.
 3. **Default** — `https://staging-rpc.zerodev.app/api/v3/<PROJECT_ID>/chain/<CHAIN_ID>`,
-   built from `NEXT_PUBLIC_ZERODEV_PROJECT_ID`. **Anvil instead gets
+   built from `NEXT_PUBLIC_ZD_PROJECT_ID`. **Anvil instead gets
    `http://localhost:18545`**, since it's a local node.
 4. **Chain default** — viem's public RPC, reached only when the project id is unset.
 
@@ -120,7 +120,7 @@ edit the source of that default:
 | Anvil's RPC | `src/app/lib/wallet-config.ts` → `ANVIL_RPC_URL` | |
 | KMS proxy base URL | `.env` → `NEXT_PUBLIC_KMS_PROXY_BASE_URL` | |
 | AA host | `.env` → `NEXT_PUBLIC_ZERODEV_AA_HOST` | |
-| Project id | `.env` → `NEXT_PUBLIC_ZERODEV_PROJECT_ID` | also feeds the default transport URL |
+| Project id | `.env` → `NEXT_PUBLIC_ZD_PROJECT_ID` / `NEXT_PUBLIC_ZD_OTP_PROJECT_ID` | also feeds the default transport URL |
 | Arb-Sepolia / Sepolia RPC | `.env` → `NEXT_PUBLIC_ARB_SEPOLIA_RPC_URL`, `NEXT_PUBLIC_SEPOLIA_RPC_URL` | these win over the default template |
 
 **`.env` changes need a dev-server restart** — Next inlines `NEXT_PUBLIC_*` at build time.
