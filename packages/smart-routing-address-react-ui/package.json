@@ -58,7 +58,6 @@
   "dependencies": {
     "@zerodev/react-ui": "workspace:*",
     "@zerodev/smart-routing-address": "^0.2.5",
-    "uqr": "^0.1.2",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
