@@ -28,7 +28,6 @@ const containsStaging = (value?: string): CheckResult => {
 /** Where each chain's transport came from. Values themselves stay hidden. */
 const TRANSPORT_SOURCE_LABEL: Record<TransportSource, string> = {
   param: "from URL",
-  env: "from env",
   default: "zerodev staging",
   local: "local node",
   chain: "chain default",

@@ -32,16 +32,9 @@ export const SUPPORTED_CHAINS = [arbitrumSepolia, sepolia] as const;
  */
 export const DEFAULT_AUTH_METHODS = ["email", "google", "passkey"] as const;
 
-/**
- * Per-chain RPC overrides from the environment. Only the two original testnets
- * have env vars; every other chain falls through to `defaultTransportUrl`.
- */
-export const RPC_URLS: Record<number, string | undefined> = {
-  [arbitrumSepolia.id]: process.env.NEXT_PUBLIC_ARB_SEPOLIA_RPC_URL,
-  [sepolia.id]: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
-};
-
 const ZERODEV_STAGING_RPC_BASE = "https://staging-rpc.zerodev.app/api/v3";
+
+export const ANVIL_CHAIN_ID = anvil.id;
 
 /** Anvil runs locally, so it can't route through a hosted RPC. */
 export const ANVIL_RPC_URL =
@@ -93,14 +86,3 @@ export function defaultTransportUrl(
   return `${ZERODEV_STAGING_RPC_BASE}/${projectId}/chain/${chainId}`;
 }
 
-/**
- * Where a chain's transport comes from before any URL param is applied. Takes
- * the active project id so the RPC is scoped to the same project the connector
- * authenticates against.
- */
-export function envTransportUrl(
-  chainId: number,
-  projectId: string | undefined,
-): string | undefined {
-  return RPC_URLS[chainId] ?? defaultTransportUrl(chainId, projectId);
-}

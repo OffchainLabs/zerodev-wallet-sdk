@@ -1,14 +1,13 @@
 import type { Chain } from "viem";
 import {
-  ANVIL_RPC_URL,
+  ANVIL_CHAIN_ID,
   AUTH_FLAVOR_IDS,
   AUTH_FLAVORS,
   type AuthFlavorId,
   CHAIN_CATALOG,
   DEFAULT_AUTH_FLAVOR,
   DEFAULT_AUTH_METHODS,
-  envTransportUrl,
-  RPC_URLS,
+  defaultTransportUrl,
   SUPPORTED_CHAINS,
 } from "./wallet-config";
 
@@ -35,7 +34,7 @@ export type EmailAuthMethodId = (typeof EMAIL_AUTH_METHODS)[number];
 export { CHAIN_CATALOG } from "./wallet-config";
 
 /** Where a chain's transport URL came from, for the diagnostics page. */
-export type TransportSource = "param" | "env" | "default" | "local" | "chain";
+export type TransportSource = "param" | "default" | "local" | "chain";
 
 export const PARAM = {
   kms: "kms",
@@ -167,20 +166,16 @@ export function resolveWalletConfig(
   }
 
   // Transports, one lookup per selected chain. Precedence: URL param, then the
-  // chain's env var, then the ZeroDev staging RPC (localhost for Anvil). Only
-  // if all three are absent does `http(undefined)` fall back to viem's public
-  // RPC for the chain.
+  // ZeroDev staging RPC scoped to the active project (localhost for Anvil). Only
+  // if both are absent does `http(undefined)` fall back to viem's public RPC.
   const rpcUrls: Record<number, string | undefined> = {};
   const rpcSources: Record<number, TransportSource> = {};
 
   const fallbackTransport = (chainId: number) => {
-    const url = envTransportUrl(chainId, projectId);
+    const url = defaultTransportUrl(chainId, projectId);
     rpcUrls[chainId] = url;
 
-    if (RPC_URLS[chainId]) rpcSources[chainId] = "env";
-    // Anvil is a local node, not the hosted RPC — labelling it "zerodev
-    // staging" would be actively misleading when debugging a local stack.
-    else if (url === ANVIL_RPC_URL) rpcSources[chainId] = "local";
+    if (chainId === ANVIL_CHAIN_ID) rpcSources[chainId] = "local";
     else if (url) rpcSources[chainId] = "default";
     else rpcSources[chainId] = "chain";
   };
@@ -325,7 +320,7 @@ export function serializeOverrides(overrides: {
     AUTH_FLAVORS[overrides.authFlavor ?? DEFAULT_AUTH_FLAVOR].projectId;
   for (const [id, url] of Object.entries(overrides.rpcUrls ?? {})) {
     const chainId = Number(id);
-    if (url && url !== envTransportUrl(chainId, activeProjectId)) {
+    if (url && url !== defaultTransportUrl(chainId, activeProjectId)) {
       params.set(`${PARAM.rpcPrefix}${chainId}`, url);
     }
   }
