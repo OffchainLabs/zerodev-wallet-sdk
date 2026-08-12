@@ -123,7 +123,7 @@ export function zeroDevWalletCore(
      *
      * No-ops if the chain is already set up.
      */
-    const setupChain = async (
+    const doSetupChain = async (
       chainId: number,
       httpOpts?: { fetchOptions?: CreateTransportOptions['fetchOptions'] },
     ) => {
@@ -197,6 +197,29 @@ export function zeroDevWalletCore(
       })
       store.getState().setKernelAccount(chainId, kernelAccount)
       store.getState().setKernelClient(chainId, kernelClient)
+    }
+
+    // De-dupe concurrent builds of the same chain. The provider now builds
+    // chains lazily on demand, so two calls can race for a fresh chain (e.g.
+    // wallet_getCapabilities + wallet_sendCalls firing together) — without this
+    // both would run createKernelAccount. Cache the in-flight promise; drop it
+    // once settled so a failed build can be retried.
+    // ponytail: per-chain in-flight map, not a full client cache — doSetupChain
+    // already no-ops via the store once built.
+    const chainSetupInFlight = new Map<number, Promise<void>>()
+    const setupChain = (
+      chainId: number,
+      httpOpts?: { fetchOptions?: CreateTransportOptions['fetchOptions'] },
+    ): Promise<void> => {
+      let inFlight = chainSetupInFlight.get(chainId)
+      if (!inFlight) {
+        inFlight = doSetupChain(chainId, httpOpts)
+        chainSetupInFlight.set(chainId, inFlight)
+        inFlight
+          .finally(() => chainSetupInFlight.delete(chainId))
+          .catch(() => {})
+      }
+      return inFlight
     }
 
     /**
@@ -292,6 +315,9 @@ export function zeroDevWalletCore(
         config: params,
         chains: Array.from(params.chains),
         switchChain: switchActiveChain,
+        // Build-only, for cross-chain sends that never went through
+        // connect()/switchChain() (does not change the active chain).
+        ensureChain: (chainId: number) => setupChain(chainId, httpOpts),
       })
 
       console.log('ZeroDevWallet connector initialized')

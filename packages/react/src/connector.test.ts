@@ -326,3 +326,67 @@ describe('zeroDevWallet connector — mode branching', () => {
     expect(store.getState().eoaAccount).toBe(mockEoaAccount)
   })
 })
+
+describe('lazy cross-chain setup (provider builds on demand)', () => {
+  beforeEach(() => {
+    createKernelAccountMock.mockClear()
+    createKernelAccountClientMock.mockReturnValue({
+      sendUserOperation: vi.fn().mockResolvedValue('0xhash'),
+    })
+  })
+
+  function createMultiChainConnector(): ConnectorInstance {
+    const factory = zeroDevWalletCore({
+      projectId: 'proj-test',
+      chains: [sepolia, mainnet],
+      mode: '7702',
+    })
+    const wagmiConfig = {
+      transports: {},
+      emitter: { emit: vi.fn() },
+      storage: null,
+    } as unknown as Config
+    return factory(wagmiConfig as never) as ConnectorInstance
+  }
+
+  async function sendCallsOnMainnetAfterSepoliaConnect() {
+    const connector = createMultiChainConnector()
+    await seedEoa(connector)
+    await connector.connect({ chainId: sepolia.id })
+    // Ignore the sepolia build done by connect(); count only lazy builds.
+    createKernelAccountMock.mockClear()
+    // @ts-expect-error getProvider is part of the connector's provider surface.
+    const provider = await connector.getProvider()
+    return () =>
+      provider.request({
+        method: 'wallet_sendCalls',
+        params: [
+          {
+            from: mockEoaAccount.address,
+            chainId: `0x${mainnet.id.toString(16)}`,
+            calls: [{ data: '0x' }],
+          },
+        ],
+      })
+  }
+
+  it('builds the kernel client for a chain that was never connected to', async () => {
+    const sendCallsOnMainnet = await sendCallsOnMainnetAfterSepoliaConnect()
+
+    const result = await sendCallsOnMainnet()
+
+    // connect() only set up sepolia; mainnet was built lazily by the provider.
+    expect(createKernelAccountMock).toHaveBeenCalledOnce()
+    expect(result).toEqual({ id: `0xhash:${mainnet.id}` })
+  })
+
+  it('de-dupes concurrent builds of the same fresh chain (createKernelAccount runs once)', async () => {
+    const sendCallsOnMainnet = await sendCallsOnMainnetAfterSepoliaConnect()
+
+    await Promise.all([sendCallsOnMainnet(), sendCallsOnMainnet()])
+
+    // Without the in-flight guard both concurrent sends would each build the
+    // account; the guard collapses them to a single createKernelAccount call.
+    expect(createKernelAccountMock).toHaveBeenCalledOnce()
+  })
+})

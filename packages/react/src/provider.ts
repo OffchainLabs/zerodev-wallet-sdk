@@ -56,6 +56,12 @@ type CreateProviderParams = {
   config: ConnectorCoreParams
   chains: Chain[]
   switchChain?: (chainId: number) => Promise<void>
+  /**
+   * Build a chain's client without switching the active chain. Injected by the
+   * connector (its `setupChain`). Optional so the provider can be constructed
+   * standalone in tests with pre-seeded clients.
+   */
+  ensureChain?: (chainId: number) => Promise<void>
 }
 
 export type ZeroDevProvider = ReturnType<typeof Provider.createEmitter> & {
@@ -67,9 +73,30 @@ export function createProvider({
   store,
   config,
   switchChain,
+  ensureChain,
 }: CreateProviderParams): ZeroDevProvider {
   // Mirrors the default in `connector.ts` — keep these in sync.
   const mode: WalletMode = config.mode ?? '7702'
+  const configuredChainIds = new Set(config.chains.map((c) => c.id))
+
+  /**
+   * Validate + lazily build the client for `chainId` before we look it up.
+   * Fixes cross-chain calls that never went through connect()/switchChain()
+   * (wagmi's sendCalls sends with assertChainId:false, so nothing pre-switches).
+   * Unlike `switchChain`, this only builds — it does not change the active
+   * chain — which is exactly what a send on a non-active chain needs. Throws a
+   * typed UnsupportedChainIdError for chains outside the configured set so dapps
+   * get an EIP-1193 error instead of a raw "unknown RPC error".
+   */
+  const prepareChain = async (chainId: number): Promise<void> => {
+    if (!configuredChainIds.has(chainId)) {
+      throw new Provider.UnsupportedChainIdError({
+        message: `Chain ${chainId} is not configured for this wallet.`,
+      })
+    }
+    await ensureChain?.(chainId)
+  }
+
   const emitter = Provider.createEmitter()
   let sessionRefreshTimer: ReturnType<typeof setTimeout> | null = null
   let refreshPromise: Promise<void> | null = null
@@ -280,6 +307,7 @@ export function createProvider({
           const [tx] = params
           const chainId = tx.chainId ? parseInt(tx.chainId, 16) : activeChainId
           validateFromAddress(chainId, tx.from)
+          await prepareChain(chainId)
 
           // EOA mode: send via plain RPC (no bundler, no sponsorship).
           if (mode === 'EOA') {
@@ -331,6 +359,7 @@ export function createProvider({
             throw new Error('Missing calls')
           }
 
+          await prepareChain(chainId)
           const kernelClient = store.getState().kernelClients.get(chainId)
           if (!kernelClient) {
             throw new Error(`No kernel client for chain ${chainId}`)
@@ -359,6 +388,10 @@ export function createProvider({
           const chainId = encodedChainId
             ? Number(encodedChainId)
             : activeChainId
+          // Rebuild the client if it's gone (e.g. status polled after a reload,
+          // where kernelClients isn't persisted) so long-lived bundle ids stay
+          // queryable.
+          await prepareChain(chainId)
           const kernelClient = store.getState().kernelClients.get(chainId)
           if (!kernelClient) {
             throw new Error(`No kernel client for chain ${chainId}`)
@@ -406,10 +439,20 @@ export function createProvider({
           ]
           // Sponsorship is project-level (dashboard policies / Ultra Relay),
           // so we intentionally do not declare or honor dapp-supplied
-          // paymasterService.
-          const atomic =
-            mode === 'EOA' ? { status: 'unsupported' } : { status: 'supported' }
-          return Object.fromEntries(chains.map((cid) => [cid, { atomic }]))
+          // paymasterService. Atomic batching needs a kernel client, which we
+          // can build for any configured chain but never for one outside this
+          // wallet's config — so report per requested chain, not blanket.
+          return Object.fromEntries(
+            chains.map((cid) => {
+              const id =
+                typeof cid === 'string' ? parseInt(cid, 16) : Number(cid)
+              const atomic =
+                mode !== 'EOA' && configuredChainIds.has(id)
+                  ? { status: 'supported' }
+                  : { status: 'unsupported' }
+              return [cid, { atomic }]
+            }),
+          )
         }
 
         case 'personal_sign': {
@@ -448,10 +491,10 @@ export function createProvider({
 
           const [{ chainId }] = params
           const chainId_number = parseInt(chainId, 16)
-          if (
-            !config.chains.some((candidate) => candidate.id === chainId_number)
-          ) {
-            throw new Error(`Chain ${chainId_number} not found in config`)
+          if (!configuredChainIds.has(chainId_number)) {
+            throw new Provider.UnsupportedChainIdError({
+              message: `Chain ${chainId_number} is not configured for this wallet.`,
+            })
           }
           if (!switchChain) {
             throw new Error('Chain switching is not configured')
