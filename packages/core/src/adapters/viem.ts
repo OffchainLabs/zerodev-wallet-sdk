@@ -4,9 +4,14 @@ import {
   getTypesForEIP712Domain,
   type Hex,
   hashTypedData,
+  isAddress,
+  isAddressEqual,
+  keccak256,
   type LocalAccount,
   numberToHex,
   parseSignature,
+  recoverAddress,
+  recoverMessageAddress,
   type SerializeTransactionFn,
   type SignableMessage,
   serializeTransaction,
@@ -34,18 +39,31 @@ export async function toViemAccount(
   params: ToViemAccountParams,
 ): Promise<LocalAccount> {
   const { client, organizationId, projectId, getToken } = params
+  const token = await getToken()
 
-  let address: Hex = zeroAddress
+  const walletResponse = await client.getUserWallet({
+    organizationId,
+    projectId,
+    token,
+  })
+  const address = walletResponse.walletAddresses[0]
+  if (
+    !address ||
+    !isAddress(address, { strict: false }) ||
+    isAddressEqual(address, zeroAddress)
+  ) {
+    throw new Error(
+      `Cannot build account: wallet address is missing, malformed, or zero for organization ${organizationId} (got ${address ?? 'undefined'}).`,
+    )
+  }
 
-  try {
-    const walletResponse = await client.getUserWallet({
-      organizationId,
-      projectId,
-      token: await getToken(),
-    })
-    address = walletResponse.walletAddresses[0]
-  } catch {
-    address = zeroAddress
+  const assertOwner = async (recovered: Promise<Hex>) => {
+    const recoveredAddress = await recovered
+    if (!isAddressEqual(address, recoveredAddress)) {
+      throw new Error(
+        `Signing response did not recover to wallet owner ${address}.`,
+      )
+    }
   }
 
   // Modified from: https://github.com/tkhq/sdk/blob/4e439bf2973ea13b51d981d7c24a4841d4e5fd5f/packages/viem/src/index.ts#L419-L461
@@ -71,9 +89,12 @@ export async function toViemAccount(
       address,
       unsignedTransaction: nonHexPrefixedSerializedTx,
     })
+    await assertOwner(
+      recoverAddress({ hash: keccak256(serializedTx), signature }),
+    )
 
     const { r, s, v, yParity } = parseSignature(signature)
-    return serializeTransaction(transaction, { r, s, v, yParity })
+    return serializer(transaction, { r, s, v, yParity })
   }
 
   return toAccount({
@@ -81,7 +102,7 @@ export async function toViemAccount(
 
     async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
       if (typeof message === 'string') {
-        return client.signMessage({
+        const signature = await client.signMessage({
           organizationId,
           projectId,
           token: await getToken(),
@@ -89,13 +110,15 @@ export async function toViemAccount(
           message,
           encoding: 'utf8',
         })
+        await assertOwner(recoverMessageAddress({ message, signature }))
+        return signature
       }
       // Raw message (Hex or ByteArray)
       const raw =
         typeof message.raw === 'string'
           ? message.raw.replace(/^0x/, '')
           : bytesToHex(message.raw).slice(2)
-      return client.signMessage({
+      const signature = await client.signMessage({
         organizationId,
         projectId,
         token: await getToken(),
@@ -103,6 +126,13 @@ export async function toViemAccount(
         message: raw,
         encoding: 'hex',
       })
+      await assertOwner(
+        recoverMessageAddress({
+          message: { raw: `0x${raw}` as Hex },
+          signature,
+        }),
+      )
+      return signature
     },
 
     signTransaction: async <
@@ -132,17 +162,20 @@ export async function toViemAccount(
           }),
         },
       } as Parameters<typeof serializeTypedData>[0])
-      return client.signTypedDataV4({
+      const typedDataHash = hashTypedData(
+        typedData as Parameters<typeof hashTypedData>[0],
+      )
+      const signature = await client.signTypedDataV4({
         organizationId,
         projectId,
         token: await getToken(),
         address,
         unsignedTypedDataV4: serializedTypedData,
         encoding: 'utf8',
-        typedDataHash: hashTypedData(
-          typedData as Parameters<typeof hashTypedData>[0],
-        ).slice(2),
+        typedDataHash: typedDataHash.slice(2),
       })
+      await assertOwner(recoverAddress({ hash: typedDataHash, signature }))
+      return signature
     },
 
     async signAuthorization(
@@ -179,15 +212,15 @@ export async function toViemAccount(
         unsignedTransaction,
         hashedAuthorization: hashedAuthorization.slice(2),
       })
-
-      const parsedSignature = parseSignature(signature)
+      await assertOwner(
+        recoverAddress({ hash: hashedAuthorization, signature }),
+      )
 
       return {
         address: authAddress,
         chainId,
         nonce,
-        ...parsedSignature,
-        yParity: parsedSignature.v === BigInt(27) ? 0 : 1,
+        ...parseSignature(signature),
       } as SignAuthorizationReturnType
     },
   })

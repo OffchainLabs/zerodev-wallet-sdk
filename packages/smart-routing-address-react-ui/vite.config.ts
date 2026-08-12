@@ -19,7 +19,11 @@ export default defineConfig({
         'react/jsx-dev-runtime',
         '@zerodev/react-ui',
         '@zerodev/smart-routing-address',
-        'viem',
+        // Match `viem` and every subpath (`viem/chains`, `viem/utils`, etc.)
+        // — otherwise Rollup inlines `viem/chains`, ballooning the bundle.
+        /^viem(\/|$)/,
+        /^zod(\/|$)/,
+        'uqr',
       ],
     },
     sourcemap: true,

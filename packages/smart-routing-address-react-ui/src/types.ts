@@ -33,12 +33,6 @@ export type SmartRoutingAddressConfig = {
   projectId?: string
   /** Chain id where funds settle */
   targetChainId: number
-  /**
-   * Display symbol for the token received on the target chain (e.g. `"USDC"`).
-   * Fixed by the configured actions — when omitted the UI joins every possible
-   * target symbol with a separator.
-   */
-  targetTokenSymbol?: string
   /** Smart routing address version, defaults to the latest stable */
   version?: SmartRoutingAddressVersion
   /**
@@ -53,13 +47,6 @@ export type SmartRoutingAddressConfig = {
    * appended to it
    */
   baseUrl?: string
-  /** Deposit status polling interval in ms */
-  pollingInterval?: number
-  /**
-   * Expected fill time in seconds, either a flat value or per source
-   * chain id
-   */
-  estimatedFillTimeSeconds?: number | Record<number, number>
 }
 
 export type AddressState =

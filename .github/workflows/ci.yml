@@ -111,7 +111,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          files: ./coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   integration-test:
     name: Integration Tests
@@ -138,6 +145,7 @@ jobs:
         run: pnpm test:integration
         env:
           ZD_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
+          ZD_OTP_PROJECT_ID: ${{ secrets.ZD_OTP_PROJECT_ID }}
 
   e2e-test:
     name: Browser E2E Tests
@@ -160,8 +168,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build SDK
-        run: pnpm build
+      - name: Build demo SDK dependencies
+        run: pnpm build:e2e
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -172,7 +180,10 @@ jobs:
           pnpm build
           pnpm start &
         env:
-          NEXT_PUBLIC_ZERODEV_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
+          # Both ids are inlined so a URL param can select the flavor per test,
+          # instead of building the app twice as the signer demo does.
+          NEXT_PUBLIC_ZD_PROJECT_ID: ${{ secrets.ZD_PROJECT_ID }}
+          NEXT_PUBLIC_ZD_OTP_PROJECT_ID: ${{ secrets.ZD_OTP_PROJECT_ID }}
           NEXT_PUBLIC_KMS_PROXY_BASE_URL: https://kms.staging.zerodev.app/api/v1
           # Pin the bundler/paymaster to staging so the AA stack matches the
           # staging KMS above (the SDK default host is prod).
@@ -192,7 +203,7 @@ jobs:
           exit 1
 
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: pnpm exec playwright test --config e2e/playwright.config.ts
         env:
           LAB_APP_URL: http://localhost:3000
 

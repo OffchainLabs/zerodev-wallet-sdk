@@ -6,13 +6,13 @@
 // Provider
 export type { SmartRoutingAddressProviderProps } from './context/SmartRoutingAddressProvider'
 export { SmartRoutingAddressProvider } from './context/SmartRoutingAddressProvider'
-// Hooks
-export type {
-  UseDepositStatusParams,
-  UseDepositStatusResult,
-} from './hooks/useDepositStatus'
-export { useDepositStatus } from './hooks/useDepositStatus'
-export { useNewDeposits } from './hooks/useNewDeposits'
+// Widget companion hooks — for hosts embedding <SmartRoutingAddress />, not
+// for building custom deposit UIs (use @zerodev/smart-routing-address for
+// that). useSmartRoutingAddress reads state; useCreateSmartRoutingAddress
+// performs the create action. Data-plumbing hooks (useDepositStatus,
+// useNewDeposits) are internal.
+export type { UseCreateSmartRoutingAddressResult } from './hooks/useCreateSmartRoutingAddress'
+export { useCreateSmartRoutingAddress } from './hooks/useCreateSmartRoutingAddress'
 export type { UseSmartRoutingAddressResult } from './hooks/useSmartRoutingAddress'
 export { useSmartRoutingAddress } from './hooks/useSmartRoutingAddress'
 

@@ -12,12 +12,13 @@ export type SmartRoutingAddressContextValue = {
   /** Recipient of the active (or last requested) smart routing address */
   recipient?: Address | undefined
   /**
-   * Create the smart routing address for the recipient if it has not been
-   * created yet. Safe to call multiple times; concurrent calls for the
-   * same recipient share one request, while a new recipient triggers a
-   * fresh creation.
+   * Return the smart routing address for the recipient, creating it if it
+   * has not been created yet. Safe to call multiple times; concurrent calls
+   * for the same recipient share one request, while a new recipient
+   * triggers a fresh creation. Rejects when creation fails (the failure
+   * also lands in `addressState`).
    */
-  ensureAddress: (recipient: Address) => Promise<void>
+  getOrCreateAddress: (recipient: Address) => Promise<Address>
   /**
    * Re-run address creation for the current recipient. No-op if no recipient
    * has been set yet. Wired to the "Failed to create deposit address" retry

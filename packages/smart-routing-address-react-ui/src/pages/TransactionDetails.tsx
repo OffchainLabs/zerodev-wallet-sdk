@@ -4,20 +4,22 @@ import {
   DataRow,
   Icon,
   InfoCard,
-  PoweredBy,
   Section,
   Text,
+  Tooltip,
 } from '@zerodev/react-ui'
 import { type ReactNode, useState } from 'react'
 import { FeeBreakdownRows, FeeSummary } from '../components/FeeBreakdown'
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
-import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
+import { useDepositStatus } from '../hooks/useDepositStatus'
+import { useProviderFees } from '../hooks/useProviderFees'
+import { CHAIN_ICONS, PROVIDER_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositWithTimestamp } from '../types'
 import { getTxUrl } from '../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
+  resolveBaseUrl,
   resolveDestChain,
   sourceTokensFromFees,
 } from '../utils/config'
@@ -28,6 +30,28 @@ import { buildFeeBreakdown } from '../utils/providerFees'
 
 export interface TransactionDetailsProps {
   deposit: DepositWithTimestamp
+}
+
+/**
+ * Poll the deposits list and return the latest snapshot of the deposit
+ * matching `initial.deposit.transactionHash`, falling back to `initial` until
+ * the first response lands (or if the deposit falls out of the list). Keeps
+ * the details view live while the same interval is already running in
+ * `Deposit` / `PastDeposits`.
+ */
+function useLiveDeposit(initial: DepositWithTimestamp): DepositWithTimestamp {
+  const { config, addressState } = useSmartRoutingAddressContext()
+  const address =
+    addressState.status === 'success' ? addressState.address : undefined
+  const { deposits } = useDepositStatus({
+    address,
+    baseUrl: resolveBaseUrl(config),
+  })
+  const targetHash = initial.deposit.transactionHash
+  const live = deposits.find((d) => d.deposit.transactionHash === targetHash) as
+    | DepositWithTimestamp
+    | undefined
+  return live ?? initial
 }
 
 /** DOM id shared by the fee-toggle button's `aria-controls` and the panel it
@@ -52,8 +76,14 @@ function formatDate(iso?: string): string | null {
  * `ArrowCardPair` + `InfoCard`, a "Transaction details" `Section` with the
  * route metadata, and a "Transaction Progress" `Section` with the step trail.
  */
-export function TransactionDetails({ deposit }: TransactionDetailsProps) {
-  const { config, addressState } = useSmartRoutingAddressContext()
+export function TransactionDetails({
+  deposit: initialDeposit,
+}: TransactionDetailsProps) {
+  // Re-poll and pick the latest snapshot for this deposit so the details view
+  // — Transaction Progress in particular — updates live rather than staying
+  // frozen at click-time state.
+  const deposit = useLiveDeposit(initialDeposit)
+  const { config, addressState, recipient } = useSmartRoutingAddressContext()
   const estimatedFees =
     addressState.status === 'success' ? addressState.estimatedFees : []
 
@@ -77,10 +107,9 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   const sourceChainLogo = CHAIN_ICONS[chainId]
 
   const destChain = resolveDestChain(config)
-  const destSymbol = getDestTokenSymbol(config)
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
+  // Widget's default actions forward the deposited token, so destination
+  // token = source token — reuse the source logo.
+  const destTokenLogo = sourceTokenLogo
   const destChainLogo = CHAIN_ICONS[destChain.id]
 
   const stage = getDepositStage(deposit)
@@ -106,7 +135,7 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
   // this as "how much I received", so rounding to 250.00 is intuitive.
   const destHeadline =
     outAmountRaw && feeData
-      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${destSymbol}`
+      ? `${formatDisplayAmount(outAmountRaw, feeData.decimal, 'nearest')} ${sourceSymbol}`
       : '—'
 
   // `getTxUrl` looks up the chain independently of whether `source` was
@@ -117,14 +146,24 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
     ? getTxUrl(destChain.id, execution.transactionHash)
     : undefined
 
+  // Refetch current Across / Relay quotes for the same route so the "Routing"
+  // step can show which provider was used. The historic provider isn't
+  // stored server-side; the assumption is the route hasn't changed materially
+  // and current quotes still name the same winning provider.
+  const providerFees = useProviderFees(source, destChain, feeData, recipient)
   const breakdown =
-    feeData && sourceSymbol ? buildFeeBreakdown(feeData, sourceSymbol) : null
+    feeData && sourceSymbol
+      ? buildFeeBreakdown(feeData, sourceSymbol, providerFees.fees)
+      : null
   const [feeOpen, setFeeOpen] = useState(false)
 
   const date = formatDate(deposit.createdAt)
 
   return (
-    <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:gap-3 zd:pt-4 zd:pb-6">
+    // No `h-full` — the page takes its natural content height so the
+    // Screen's scroll container can activate scrolling when the fee
+    // breakdown is expanded and content exceeds the viewport.
+    <div className="zd:flex zd:w-full zd:flex-col zd:gap-3 zd:pt-4 zd:pb-6">
       <ArrowCardPair
         topCard={
           <InfoCard
@@ -213,7 +252,9 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
           // an inert pending circle above the "Failed" row.
           done={stage === 'bridging' || stage === 'completed' || failed}
           right={
-            breakdown?.provider ? (
+            providerFees.loading ? (
+              <ProviderChipSkeleton />
+            ) : breakdown?.provider ? (
               <ProviderChip provider={breakdown.provider} />
             ) : (
               <StatusText>—</StatusText>
@@ -248,8 +289,6 @@ export function TransactionDetails({ deposit }: TransactionDetailsProps) {
           />
         )}
       </Section>
-
-      <PoweredBy className="zd:mt-auto zd:justify-center zd:pt-2" />
     </div>
   )
 }
@@ -310,17 +349,19 @@ function ProgressStep({
           {label}
         </Text>
         {info && (
-          <span
-            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help"
-            data-zd-tooltip=""
-            title={info}
-          >
-            <Icon
-              name="info"
-              className="zd:w-3 zd:h-3 zd:text-greyScale/50"
-              aria-hidden
-            />
-          </span>
+          <Tooltip content={info}>
+            <button
+              type="button"
+              aria-label="More info"
+              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+            >
+              <Icon
+                name="info"
+                className="zd:w-3 zd:h-3 zd:text-greyScale/50"
+                aria-hidden
+              />
+            </button>
+          </Tooltip>
         )}
       </div>
       <div className="zd:flex zd:shrink-0 zd:items-center">{right}</div>
@@ -394,12 +435,32 @@ function StatusText({
 }
 
 function ProviderChip({ provider }: { provider: string }) {
+  const iconUrl = PROVIDER_ICONS[provider]
   return (
     <span
-      className="zd:inline-flex zd:items-center zd:gap-1 zd:rounded-full zd:bg-greyScale/10 zd:px-2 zd:py-0.5 zd:text-body3 zd:text-greyScale"
+      className="zd:inline-flex zd:items-center zd:gap-1 zd:text-body3 zd:text-greyScale"
       title={`Quoted via ${provider}`}
     >
       {provider}
+      {iconUrl && (
+        <img
+          src={iconUrl}
+          alt=""
+          aria-hidden
+          className="zd:size-3.5 zd:shrink-0 zd:rounded-sm zd:object-cover"
+        />
+      )}
     </span>
+  )
+}
+
+/** Skeleton placeholder shown while `useProviderFees` is fetching quotes. */
+function ProviderChipSkeleton() {
+  return (
+    <output
+      aria-busy="true"
+      aria-label="Loading provider"
+      className="zd:block zd:h-4 zd:w-16 zd:rounded-full zd:bg-greyScale/15 zd:animate-skel-pulse"
+    />
   )
 }

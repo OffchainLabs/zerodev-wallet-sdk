@@ -1,4 +1,4 @@
-import { Screen, TopNav } from '@zerodev/react-ui'
+import { PoweredBy, Screen, TopNav } from '@zerodev/react-ui'
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { type ReactNode, useEffect, useState } from 'react'
 import type { Address } from 'viem'
@@ -40,6 +40,7 @@ function renderStep(
         <Deposit
           {...(onQrClick && { onQrClick })}
           {...(onViewPastDeposits && { onViewPastDeposits })}
+          {...(onSelectDeposit && { onSelectDeposit })}
         />
       )
     case 'past':
@@ -69,8 +70,6 @@ export interface SmartRoutingAddressProps {
   recipient: Address
   /** Called when the top-right × close button is clicked. */
   onClose: () => void
-  /** Called when the top-left ? help button is clicked on the deposit step. */
-  onHelp?: () => void
   className?: string
   size?: 'sm' | 'md' | 'lg'
 }
@@ -78,11 +77,10 @@ export interface SmartRoutingAddressProps {
 export function SmartRoutingAddress({
   recipient,
   onClose,
-  onHelp,
   className,
   size,
 }: SmartRoutingAddressProps) {
-  const { addressState, ensureAddress } = useSmartRoutingAddressContext()
+  const { addressState, getOrCreateAddress } = useSmartRoutingAddressContext()
   const [qrOpen, setQrOpen] = useState(false)
   const [step, setStep] = useState<SmartRoutingAddressStep>('deposit')
   const [selectedDeposit, setSelectedDeposit] = useState<
@@ -92,8 +90,8 @@ export function SmartRoutingAddress({
   useEffect(() => {
     // Errors surface via `addressState.status === 'error'`; swallow rejection
     // here so React doesn't warn about an unhandled promise.
-    ensureAddress(recipient).catch(() => {})
-  }, [recipient, ensureAddress])
+    getOrCreateAddress(recipient).catch(() => {})
+  }, [recipient, getOrCreateAddress])
 
   const title = TITLE_BY_STEP[step]
 
@@ -116,18 +114,14 @@ export function SmartRoutingAddress({
   }
 
   // Sub-view chrome — sub-views swap the left slot for a back chevron that
-  // returns to the parent step. Root (deposit) step keeps the optional
-  // help (?) icon.
+  // returns to the parent step. Root (deposit) step has no left button
+  // (TopNav renders a spacer so the title stays centred).
   const goBack =
     step === 'transaction'
       ? () => setStep('past')
       : step === 'past'
         ? () => setStep('deposit')
         : undefined
-  const leftClick = goBack ?? onHelp ?? undefined
-  const leftIcon: 'chevronLeft' | 'question' = goBack
-    ? 'chevronLeft'
-    : 'question'
 
   return (
     <Screen
@@ -136,13 +130,14 @@ export function SmartRoutingAddress({
       topNav={
         <TopNav
           title={title}
-          {...(leftClick && {
-            onLeftButtonClick: leftClick,
-            leftButtonIcon: leftIcon,
+          {...(goBack && {
+            onLeftButtonClick: goBack,
+            leftButtonIcon: 'chevronLeft' as const,
           })}
           onRightButtonClick={onClose}
         />
       }
+      footer={<PoweredBy />}
     >
       {renderStep(step, {
         onQrClick: handleQrClick,

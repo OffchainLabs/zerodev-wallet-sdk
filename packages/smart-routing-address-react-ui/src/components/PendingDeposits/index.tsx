@@ -7,8 +7,8 @@ import type {
   EstimatedFee,
   SmartRoutingAddressConfig,
 } from '../../types'
+import { getTxUrl } from '../../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveDestChain,
   sourceTokensFromFees,
@@ -26,6 +26,10 @@ export interface PendingDepositsProps {
   deposits: DepositedToken[]
   estimatedFees: EstimatedFee[]
   config: SmartRoutingAddressConfig
+  /** Fired when a row is tapped — the widget uses this to open the
+   * transaction-details view for the selected deposit. When omitted, rows
+   * render as static (non-interactive). */
+  onSelectDeposit?: (deposit: DepositedToken) => void
   className?: string
 }
 
@@ -40,6 +44,7 @@ export function PendingDeposits({
   deposits,
   estimatedFees,
   config,
+  onSelectDeposit,
   className,
 }: PendingDepositsProps) {
   if (deposits.length === 0) return null
@@ -76,16 +81,20 @@ export function PendingDeposits({
                 t.chain.id === chainId &&
                 tokenAddressMatches(t.tokenType, chainId, token),
             ) ?? null
-          const sourceSymbol = source ? getSourceTokenSymbol(source) : ''
+          // Prefer the reconstructed source's symbol; fall back to the
+          // server's `feeData.name` so past deposits whose route dropped
+          // out of the current fee estimates still get a symbol / icon.
+          const sourceSymbol = source
+            ? getSourceTokenSymbol(source)
+            : (feeData?.name ?? '')
           const sourceTokenLogo = sourceSymbol
             ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
             : undefined
           const sourceChainLogo = CHAIN_ICONS[chainId]
 
-          const destSymbol = getDestTokenSymbol(config)
-          const destTokenLogo = destSymbol
-            ? TOKEN_ICONS[destSymbol.toUpperCase()]
-            : undefined
+          // Destination token equals source token — widget's default
+          // actions forward the deposited asset unchanged.
+          const destTokenLogo = sourceTokenLogo
 
           const status = STAGE_TO_STATUS[getDepositStage(deposit)]
           const amountLabel = feeData
@@ -95,31 +104,45 @@ export function PendingDeposits({
             ? (formatRelativeTime(deposit.createdAt) ?? '')
             : ''
 
-          // Block-explorer URL for the source-chain deposit tx. viem's chain
-          // objects ship `blockExplorers.default.url`; fall through to
-          // omitting `href` when the chain doesn't advertise one.
-          const explorerBase = source?.chain.blockExplorers?.default?.url
-          const href = explorerBase
-            ? `${explorerBase}/tx/${transactionHash}`
-            : undefined
+          // Explorer URL from the chain id alone — independent of whether
+          // the deposit's token was matched in the current fee estimates.
+          const href = getTxUrl(chainId, transactionHash)
+
+          const row = (
+            <TxnItem
+              amount={amountLabel}
+              address={truncateAddress(transactionHash)}
+              {...(href && { href })}
+              timestamp={timestamp}
+              status={status}
+              {...(sourceTokenLogo && {
+                sourceTokenIconUrl: sourceTokenLogo,
+              })}
+              {...(sourceChainLogo && {
+                sourceChainIconUrl: sourceChainLogo,
+              })}
+              {...(destTokenLogo && { destTokenIconUrl: destTokenLogo })}
+              {...(destChainLogo && { destChainIconUrl: destChainLogo })}
+            />
+          )
 
           return (
             <li key={transactionHash}>
-              <TxnItem
-                amount={amountLabel}
-                address={truncateAddress(transactionHash)}
-                {...(href && { href })}
-                timestamp={timestamp}
-                status={status}
-                {...(sourceTokenLogo && {
-                  sourceTokenIconUrl: sourceTokenLogo,
-                })}
-                {...(sourceChainLogo && {
-                  sourceChainIconUrl: sourceChainLogo,
-                })}
-                {...(destTokenLogo && { destTokenIconUrl: destTokenLogo })}
-                {...(destChainLogo && { destChainIconUrl: destChainLogo })}
-              />
+              {onSelectDeposit ? (
+                // -mx-1 + px-1 + a wider explicit width extend the hover
+                // surface 4px past the row content on each side, so the
+                // highlight has visible breathing room without shifting the
+                // TxnItem's visual position.
+                <button
+                  type="button"
+                  onClick={() => onSelectDeposit(deposit)}
+                  className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
+                >
+                  {row}
+                </button>
+              ) : (
+                row
+              )}
             </li>
           )
         })}

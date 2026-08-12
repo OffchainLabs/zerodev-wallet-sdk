@@ -1,6 +1,5 @@
 'use client'
 
-import { ZeroDevLogo } from '@zerodev/react-ui'
 import { type WalletMode } from '@zerodev/wallet-react'
 import { zeroDevWallet } from '@zerodev/wallet-react-ui'
 import { type Transport, createConfig, http } from 'wagmi'
@@ -32,7 +31,7 @@ export function createWalletConfig(resolved: ResolvedWalletConfig) {
     chains: resolved.chains,
     connectors: [
       zeroDevWallet({
-        projectId: process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID!,
+        projectId: resolved.projectId!,
         proxyBaseUrl: resolved.kmsProxyBaseUrl!,
         chains: [...resolved.chains],
         ...(resolved.aaHost && { aaHost: resolved.aaHost }),
@@ -42,19 +41,6 @@ export function createWalletConfig(resolved: ResolvedWalletConfig) {
           organizationId: process.env.NEXT_PUBLIC_ORG_ID,
         }),
         ...(mode && { mode }),
-        config: {
-          logo: (
-            <ZeroDevLogo
-              variant="mark"
-              tone="color"
-              className="zd:h-8 zd:w-auto"
-            />
-          ),
-          auth: {
-            enabledMethods: [...resolved.authMethods],
-            emailAuthMethod: resolved.emailAuthMethod,
-          },
-        },
       }),
     ],
     ssr: true,

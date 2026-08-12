@@ -1,11 +1,7 @@
 import { SMART_ROUTING_ADDRESS_SERVER_URL } from '@zerodev/smart-routing-address'
 import { arbitrum, base, bsc, optimism } from 'viem/chains'
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_DASHBOARD_URL,
-  DEFAULT_FILL_TIME_SECONDS,
-  DEFAULT_SOURCE_TOKENS,
-} from '../constants'
+import { DEFAULT_DASHBOARD_URL, DEFAULT_SOURCE_TOKENS } from '../constants'
 import {
   OWNER,
   SMART_ROUTING_ADDRESS,
@@ -14,13 +10,11 @@ import {
 } from '../test/fixtures'
 import type { SmartRoutingAddressConfig } from '../types'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveActions,
   resolveBaseUrl,
   resolveDashboardUrl,
   resolveDestChain,
-  resolveFillTimeSeconds,
   resolveSourceTokens,
   resolveVersion,
 } from './config'
@@ -83,34 +77,6 @@ describe('resolveDashboardUrl', () => {
   })
 })
 
-describe('resolveFillTimeSeconds', () => {
-  it('falls back to the default', () => {
-    expect(resolveFillTimeSeconds(TEST_CONFIG, optimism.id)).toBe(
-      DEFAULT_FILL_TIME_SECONDS,
-    )
-  })
-
-  it('supports flat overrides', () => {
-    expect(
-      resolveFillTimeSeconds(
-        { ...TEST_CONFIG, estimatedFillTimeSeconds: 12 },
-        optimism.id,
-      ),
-    ).toBe(12)
-  })
-
-  it('supports per-chain overrides', () => {
-    const config = {
-      ...TEST_CONFIG,
-      estimatedFillTimeSeconds: { [optimism.id]: 45 },
-    }
-    expect(resolveFillTimeSeconds(config, optimism.id)).toBe(45)
-    expect(resolveFillTimeSeconds(config, arbitrum.id)).toBe(
-      DEFAULT_FILL_TIME_SECONDS,
-    )
-  })
-})
-
 describe('resolveDestChain', () => {
   it('resolves the target chain id to a viem chain', () => {
     expect(resolveDestChain(TEST_CONFIG)).toBe(base)
@@ -143,7 +109,8 @@ describe('resolveSourceTokens', () => {
 describe('resolveActions', () => {
   it('builds an action per default token type', () => {
     // WBTC is excluded because base has no WBTC token address; wrapped
-    // native is surfaced as WETH
+    // native is surfaced as WETH. EURC is excluded via
+    // `UNSUPPORTED_TOKEN_TYPES` because the SRA server rejects it.
     const actions = resolveActions(BARE_CONFIG, OWNER)
     expect(Object.keys(actions ?? {})).toEqual([
       'NATIVE',
@@ -151,7 +118,6 @@ describe('resolveActions', () => {
       'WETH',
       'USDT',
       'DAI',
-      'EURC',
     ])
   })
 
@@ -184,18 +150,5 @@ describe('token symbols', () => {
         chain: optimism,
       }),
     ).toBe('WETH')
-  })
-
-  it('uses the configured target token, regardless of source', () => {
-    expect(
-      getDestTokenSymbol({ ...BARE_CONFIG, targetTokenSymbol: 'USDC' }),
-    ).toBe('USDC')
-  })
-
-  it('derives the destination symbol from the defaults', () => {
-    // WBTC is excluded because base has no WBTC token address
-    expect(getDestTokenSymbol(BARE_CONFIG)).toBe(
-      'ETH / USDC / WETH / USDT / DAI / EURC',
-    )
   })
 })

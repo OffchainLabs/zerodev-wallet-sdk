@@ -1,13 +1,33 @@
 'use client'
 
-import {AuthFlow, useAuth} from '@zerodev/wallet-react-ui'
+import {ZeroDevLogo} from '@zerodev/react-ui'
+import {ConnectWallet, SignUp, useAuth} from '@zerodev/wallet-react-ui'
 import {KeyRound, Layers, Loader2, Sparkles} from 'lucide-react'
 import {useRouter} from 'next/navigation'
-import {Suspense, useEffect} from 'react'
+import {Suspense, useEffect, useState} from 'react'
 import {useAccount, useConnect} from 'wagmi'
 import { AppHeader } from './components/AppHeader'
+import { Playground } from './components/playground/Playground'
+import {
+  DEFAULT_ITEMS,
+  DEFAULT_SETTINGS,
+  emailMethod,
+  parseExcludeIds,
+  type PlaygroundItem,
+  type PlaygroundSettings,
+} from './components/playground/utils/snippet'
 
 export const dynamic = 'force-dynamic'
+
+// Email auth method choice, set by the browser E2E specs (stored in localStorage).
+// Read in a mount effect (specs set the key before load) — kept out of render
+// so the SSR pass and first client render match.
+function getEmailAuthMethod(): 'otp' | 'magicLink' {
+  if (typeof window === 'undefined') return 'otp'
+  return localStorage.getItem('zd:emailAuthMethod') === 'magicLink'
+    ? 'magicLink'
+    : 'otp'
+}
 
 export default function LandingPage() {
   return (
@@ -20,10 +40,13 @@ export default function LandingPage() {
 function LandingPageInner() {
   const router = useRouter()
 
+  const [items, setItems] = useState<PlaygroundItem[]>(DEFAULT_ITEMS)
+  const [settings, setSettings] = useState<PlaygroundSettings>(DEFAULT_SETTINGS)
+
   const {connect, connectors, status: connectStatus} = useConnect()
   const {isConnected, status: accountStatus} = useAccount()
   const {step: authStep} = useAuth()
-  // Auth has succeeded (AuthFlow unmounts once step hits `authenticated`) but
+  // Auth has succeeded (ConnectWallet unmounts once step hits `authenticated`) but
   // wagmi hasn't flipped `isConnected` yet, so the redirect to /dashboard is
   // still pending. Cover this window (and the eventual redirect) with a
   // loading screen so the page doesn't sit blank and then jump.
@@ -32,7 +55,7 @@ function LandingPageInner() {
   // misleading CTA.
   const showReconnect =
     !isConnected && authStep === null && connectStatus === 'error'
-  // AuthFlow renders nothing until it has a `step`, so any time we're not
+  // ConnectWallet renders nothing until it has a `step`, so any time we're not
   // connected and have no step yet — initial session probe, auto-connect in
   // flight, or landing back here right after logout — show the loader instead
   // of a blank column. Keeps the login <-> dashboard transition smooth in
@@ -46,6 +69,11 @@ function LandingPageInner() {
 
   useEffect(() => {
     localStorage.removeItem('zd:loggedOut')
+    // Seed the Email unit's method from the E2E localStorage toggle.
+    const method = getEmailAuthMethod()
+    setItems((prev) =>
+      prev.map((i) => (i.type === 'email' ? { ...i, method } : i)),
+    )
   }, [])
 
   useEffect(() => {
@@ -124,9 +152,26 @@ function LandingPageInner() {
               </button>
             </div>
           ) : (
-
-              <AuthFlow size="md" />
-
+              // Live preview of the playground's composition. With no units
+              // selected, renderSignUp is omitted and ConnectWallet falls back
+              // to <SignUp.Default />.
+              <ConnectWallet
+                size="md"
+                logo={<ZeroDevLogo variant="mark" tone="color" className="zd:h-8 zd:w-auto" />}
+                renderSignUp={
+                  items.length === 0
+                    ? undefined
+                    : () => (
+                        <SignUp
+                          emailAuthMethod={emailMethod(items)}
+                          termsAndConditionsUrl={settings.termsUrl || undefined}
+                          privacyPolicyUrl={settings.privacyUrl || undefined}
+                        >
+                          {items.map(renderSignUpItem)}
+                        </SignUp>
+                      )
+                }
+              />
           )}
 
           <p className="mt-3 max-w-[360px] text-center text-xs leading-5 text-[var(--muted)]">
@@ -152,8 +197,40 @@ function LandingPageInner() {
           </p>
         </div>
       </main>
+
+      <Playground
+        items={items}
+        onChange={setItems}
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
     </div>
   )
+}
+
+function renderSignUpItem(item: PlaygroundItem) {
+  switch (item.type) {
+    case 'passkey':
+      return <SignUp.Passkey key={item.key} />
+    case 'google':
+      return <SignUp.Google key={item.key} />
+    case 'email':
+      return <SignUp.Email key={item.key} />
+    case 'wallet':
+      return <SignUp.Wallet key={item.key} walletId={item.walletId} />
+    case 'installedWallets':
+      return (
+        <SignUp.InstalledWallets
+          key={item.key}
+          excludeWalletIds={parseExcludeIds(item.exclude)}
+          {...(item.maxWallets !== null && { maxWallets: item.maxWallets })}
+        />
+      )
+    case 'moreWallets':
+      return <SignUp.MoreWallets key={item.key} />
+    case 'divider':
+      return <SignUp.Divider key={item.key} />
+  }
 }
 
 function DemoStep({

@@ -1,16 +1,46 @@
 /**
  * Browser E2E test for post-authentication operations.
  *
- * After OTP login, drives the QA lab's Tx Signing surface:
+ * After magic-link login, drives the QA lab's Tx Signing surface:
  * 1. Sign a plain message (Signing area)
  * 2. Sign EIP-712 typed data (Signing area)
  * 3. Mint an NFT via a contract write (Contracts area)
  * 4. Logout and verify the login surface returns
  */
 
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
-import { loginWithOtp } from '../helpers/ui-login.js'
+import { expectLabReady, loginWithMagicLink } from '../helpers/ui-login.js'
+
+/**
+ * Signs the preset message from the lab's Signing area and asserts the run
+ * succeeded and verified.
+ *
+ * Assumes a freshly-loaded page: run ids restart at 1 with the component, so
+ * calling this twice without a reload in between would look for the wrong run.
+ */
+async function signMessage(page: Page) {
+  // Client-side navigation via the sidebar — a full page load would drop the
+  // wallet into a reconnect, which isn't what these tests are about.
+  await page.getByTestId('nav-feature-tx-signing').click()
+  await expect(page.getByTestId('area-signing')).toBeVisible()
+
+  await page
+    .getByTestId('case-sign-message-presets')
+    .getByTestId('sign-message-submit')
+    .click()
+
+  const run = page.getByTestId('sign-run-1')
+  await expect(run).toHaveAttribute('data-status', 'success', {
+    timeout: 30_000,
+  })
+  // The lab verifies the returned signature against this account for the exact
+  // message it sent, so this asserts the signature is real rather than merely
+  // that the call resolved.
+  await expect(run).toHaveAttribute('data-verify', 'valid', {
+    timeout: 30_000,
+  })
+}
 
 test.describe('Post-Auth Operations', () => {
   test.beforeEach(async () => {
@@ -23,33 +53,67 @@ test.describe('Post-Auth Operations', () => {
 
   test('should sign a message after login', async ({ page }) => {
     const emailAccount = await createNewAccount()
-    await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
+    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
-    // Client-side navigation via the sidebar — a full page load would drop the
-    // wallet into a reconnect, which isn't what this test is about.
-    await page.getByTestId('nav-feature-tx-signing').click()
-    await expect(page.getByTestId('area-signing')).toBeVisible()
+    await signMessage(page)
+  })
 
-    await page
-      .getByTestId('case-sign-message-presets')
-      .getByTestId('sign-message-submit')
-      .click()
+  test('should auto-refresh, sign, reload, and sign again', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000)
+    const emailAccount = await createNewAccount()
+    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
-    const run = page.getByTestId('sign-run-1')
-    await expect(run).toHaveAttribute('data-status', 'success', {
-      timeout: 30_000,
-    })
-    // The lab verifies the returned signature against this account for the
-    // exact message it sent, so this asserts the signature is real rather than
-    // merely that the call resolved.
-    await expect(run).toHaveAttribute('data-verify', 'valid', {
-      timeout: 30_000,
-    })
+    const initialSessionId = await page.evaluate(() =>
+      localStorage.getItem('@zerodev/active_session'),
+    )
+    if (!initialSessionId) throw new Error('Expected an active browser session')
+
+    await page.evaluate((sessionId) => {
+      const stored = localStorage.getItem(sessionId)
+      if (!stored) throw new Error('Expected the active session record')
+      const session = JSON.parse(stored)
+      // Expiry 65s out: just past SESSION_WARNING_THRESHOLD_MS (60s in
+      // provider.ts), so on reload the refresh fires on the scheduled timer
+      // (~5s later) — the path under test — while still landing inside the 30s
+      // waitForResponse below. If that threshold moves, this could silently
+      // cover the immediate-refresh path (raise it well past 65s) or time out
+      // (lower it below the wait window) instead. Keep them in sync.
+      session.expiry = Date.now() + 65_000
+      localStorage.setItem(sessionId, JSON.stringify(session))
+    }, initialSessionId)
+
+    const refreshResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().endsWith('/auth/login/stamp'),
+      { timeout: 30_000 },
+    )
+    await page.reload()
+    await expectLabReady(page)
+
+    const refreshResponse = await refreshResponsePromise
+    expect(refreshResponse.ok()).toBe(true)
+    await refreshResponse.finished()
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => localStorage.getItem('@zerodev/active_session')),
+        { timeout: 30_000 },
+      )
+      .not.toBe(initialSessionId)
+
+    await signMessage(page)
+    await page.reload()
+    await expectLabReady(page)
+    await signMessage(page)
   })
 
   test('should sign typed data (EIP-712) after login', async ({ page }) => {
     const emailAccount = await createNewAccount()
-    await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
+    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
     await page.getByTestId('nav-feature-tx-signing').click()
     await expect(page.getByTestId('area-signing')).toBeVisible()
@@ -66,7 +130,7 @@ test.describe('Post-Auth Operations', () => {
 
   test('should mint NFT (send transaction) after login', async ({ page }) => {
     const emailAccount = await createNewAccount()
-    await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
+    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
     await page.getByTestId('nav-feature-tx-signing').click()
     await page.getByTestId('feature-tx-signing-tab-contracts').click()
@@ -91,7 +155,7 @@ test.describe('Post-Auth Operations', () => {
 
   test('should logout and return to the login surface', async ({ page }) => {
     const emailAccount = await createNewAccount()
-    await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
+    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
 
     await page.getByTestId('wallet-logout').click()
 

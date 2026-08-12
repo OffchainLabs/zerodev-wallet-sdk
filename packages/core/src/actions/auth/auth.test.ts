@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../client/types.js'
 import { authenticateWithEmail } from './authenticateWithEmail.js'
 import { authenticateWithOAuth } from './authenticateWithOAuth.js'
@@ -6,6 +6,7 @@ import { getAuthenticators } from './getAuthenticators.js'
 import { getOAuthLoginUrl } from './getOAuthLoginUrl.js'
 import { getWhoami } from './getWhoami.js'
 import { loginWithStamp } from './loginWithStamp.js'
+import { logout } from './logout.js'
 import { registerWithPasskey } from './registerWithPasskey.js'
 
 // Create a mock client with configurable request implementation
@@ -160,6 +161,44 @@ describe('authenticateWithEmail', () => {
 
     expect(result.turnkeySession).toBe('turnkey-jwt-token')
     expect(result.requiresMagicLink).toBe(false)
+  })
+})
+
+describe('logout', () => {
+  // setSystemTime below needs fake timers; reset after each test so the frozen
+  // clock doesn't leak into later tests in this file.
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stamps the exact Turnkey delete-api-keys activity in the header', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const mockClient = createMockClient(async () => ({}))
+
+    await logout(mockClient, {
+      projectId: 'proj-456',
+      organizationId: 'org-123',
+      userId: 'turnkey-user-1',
+      apiKeyId: 'turnkey-key-1',
+    })
+
+    expect(mockClient.request).toHaveBeenCalledWith({
+      path: 'proj-456/auth/logout',
+      method: 'POST',
+      body: {
+        organizationId: 'org-123',
+        parameters: {
+          apiKeyIds: ['turnkey-key-1'],
+          userId: 'turnkey-user-1',
+        },
+        timestampMs: '1700000000000',
+        type: 'ACTIVITY_TYPE_DELETE_API_KEYS',
+      },
+      stamp: true,
+      stampWith: 'apiKey',
+      stampPostion: 'headers',
+    })
   })
 })
 
@@ -509,7 +548,7 @@ describe('getWhoami', () => {
 
 describe('getOAuthLoginUrl', () => {
   it('GETs /oauth/google/login-url with correct query string', async () => {
-    let captured: { path: string; method?: string } | undefined
+    let captured: { path: string; method: string | undefined } | undefined
     const mockClient = createMockClient(async (params) => {
       captured = { path: params.path, method: params.method }
       return 'https://accounts.google.com/o/oauth2/v2/auth?nonce=abc'

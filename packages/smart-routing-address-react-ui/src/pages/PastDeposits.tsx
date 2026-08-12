@@ -1,4 +1,4 @@
-import { cn, PoweredBy, Text } from '@zerodev/react-ui'
+import { cn, Icon, Text } from '@zerodev/react-ui'
 import type { DepositedToken } from '@zerodev/smart-routing-address'
 import { useMemo } from 'react'
 import { TxnItem, type TxnStatus } from '../components/TxnItem'
@@ -6,12 +6,11 @@ import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressCon
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { CHAIN_ICONS, TOKEN_ICONS } from '../iconAssets'
 import type { DepositStage, DepositWithTimestamp } from '../types'
+import { getTxUrl } from '../utils/chains'
 import {
-  getDestTokenSymbol,
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
-  resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
 import { getDepositStage } from '../utils/deposits'
@@ -90,18 +89,13 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
   const address = success?.address
   const estimatedFees = success?.estimatedFees ?? []
 
-  const { deposits } = useDepositStatus({
+  const { deposits, hasLoaded } = useDepositStatus({
     address,
-    pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
   })
 
   const destChain = resolveDestChain(config)
   const destChainLogo = CHAIN_ICONS[destChain.id]
-  const destSymbol = getDestTokenSymbol(config)
-  const destTokenLogo = destSymbol
-    ? TOKEN_ICONS[destSymbol.toUpperCase()]
-    : undefined
 
   const groups = useMemo(
     () => groupByDay(deposits as DepositWithTimestamp[]),
@@ -118,7 +112,18 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
           'zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]',
         )}
       >
-        {deposits.length === 0 ? (
+        {!hasLoaded ? (
+          <output
+            aria-label="Loading past deposits"
+            className="zd:flex zd:flex-1 zd:items-center zd:justify-center zd:py-8"
+          >
+            <Icon
+              name="loading"
+              className="zd:size-5 zd:animate-spin zd:text-orange"
+              aria-hidden
+            />
+          </output>
+        ) : deposits.length === 0 ? (
           <div className="zd:flex zd:flex-1 zd:items-center zd:justify-center zd:py-8">
             <Text className="zd:text-greyScale/50">No deposits yet</Text>
           </div>
@@ -150,24 +155,29 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                           t.chain.id === chainId &&
                           tokenAddressMatches(t.tokenType, chainId, token),
                       ) ?? null
+                    // Prefer the reconstructed source's symbol; fall back to
+                    // the server's `feeData.name` so past deposits whose route
+                    // dropped out of the current fee estimates still get a
+                    // symbol / icon.
                     const sourceSymbol = source
                       ? getSourceTokenSymbol(source)
-                      : ''
+                      : (feeData?.name ?? '')
                     const sourceTokenLogo = sourceSymbol
                       ? TOKEN_ICONS[sourceSymbol.toUpperCase()]
                       : undefined
                     const sourceChainLogo = CHAIN_ICONS[chainId]
+                    // Destination token equals source token — widget's default
+                    // actions forward the deposited asset unchanged.
+                    const destTokenLogo = sourceTokenLogo
                     const amountLabel = feeData
                       ? `${formatDisplayAmount(amount, feeData.decimal, 'down')} ${sourceSymbol}`
                       : String(amount)
                     const timestamp = deposit.createdAt
                       ? (formatRelativeTime(deposit.createdAt) ?? '')
                       : ''
-                    const explorerBase =
-                      source?.chain.blockExplorers?.default?.url
-                    const href = explorerBase
-                      ? `${explorerBase}/tx/${transactionHash}`
-                      : undefined
+                    // Explorer URL from the chain id alone — independent of
+                    // whether the deposit's token matched the current fees.
+                    const href = getTxUrl(chainId, transactionHash)
                     const status = STAGE_TO_STATUS[getDepositStage(deposit)]
 
                     const row = (
@@ -194,10 +204,14 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                     return (
                       <li key={transactionHash}>
                         {onSelectDeposit ? (
+                          // -mx-1 + px-1 + a wider explicit width extend the
+                          // hover surface 4px past the row content on each
+                          // side, so the highlight has visible breathing
+                          // room without shifting the TxnItem's position.
                           <button
                             type="button"
                             onClick={() => onSelectDeposit(deposit)}
-                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:text-left zd:hover:bg-white/30"
+                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
                           >
                             {row}
                           </button>
@@ -213,8 +227,6 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
           </div>
         )}
       </section>
-
-      <PoweredBy className="zd:justify-center" />
     </div>
   )
 }
