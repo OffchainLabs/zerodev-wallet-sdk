@@ -57,7 +57,7 @@ describe('createSecureStoreStamper', () => {
     expect(h.store.has('zerodev.privateKey')).toBe(false)
   })
 
-  it('rejects a stored public/private key mismatch', async () => {
+  it('self-heals a stored public/private key mismatch by resetting to a fresh pair', async () => {
     const first = generateP256KeyPair()
     const second = generateP256KeyPair()
     h.store.set(
@@ -68,7 +68,58 @@ describe('createSecureStoreStamper', () => {
       }),
     )
 
-    await expect(createSecureStoreStamper()).rejects.toThrow(/do not match/i)
+    // A broken/mismatched stored key must not brick init (no way to log out or
+    // reset once thrown). It resets to a fresh, self-consistent pair; the user
+    // re-authenticates from a clean state.
+    const stamper = await createSecureStoreStamper()
+
+    const publicKey = await stamper.getPublicKey()
+    expect(publicKey).toBeTruthy()
+    expect(publicKey).not.toBe(first.publicKey)
+
+    // The replacement pair is internally consistent: its signature verifies.
+    const signature = await stamper.sign('recovered')
+    if (!publicKey) throw new Error('Expected a recovered public key')
+    await expect(
+      verifyStampSignature(publicKey, signature, 'recovered'),
+    ).resolves.toBe(true)
+  })
+
+  it('self-heals a broken legacy split key instead of throwing', async () => {
+    const first = generateP256KeyPair()
+    const second = generateP256KeyPair()
+    // Legacy split keys that do not match — same brick risk on the migration
+    // path; init must recover rather than throw.
+    h.store.set('zerodev.publicKey', first.publicKey)
+    h.store.set('zerodev.privateKey', second.privateKey)
+
+    const stamper = await createSecureStoreStamper()
+
+    const publicKey = await stamper.getPublicKey()
+    expect(publicKey).toBeTruthy()
+    expect(publicKey).not.toBe(first.publicKey)
+    const signature = await stamper.sign('recovered')
+    if (!publicKey) throw new Error('Expected a recovered public key')
+    await expect(
+      verifyStampSignature(publicKey, signature, 'recovered'),
+    ).resolves.toBe(true)
+  })
+
+  it('does not reset a valid key when SecureStore read transiently fails', async () => {
+    // A transient keychain read error must NOT be treated as a bad key — the
+    // stored credential is preserved (init propagates the I/O error).
+    const stamper = await createSecureStoreStamper()
+    const original = await stamper.getPublicKey()
+    const record = h.store.get('zerodev.keyPair')
+
+    h.getItemAsync.mockRejectedValueOnce(new Error('keychain unavailable'))
+    await expect(createSecureStoreStamper()).rejects.toThrow(
+      'keychain unavailable',
+    )
+
+    // Nothing was overwritten.
+    expect(h.store.get('zerodev.keyPair')).toBe(record)
+    expect(original).toBeTruthy()
   })
 
   it('preserves the active pair when a pending-key commit cannot persist', async () => {

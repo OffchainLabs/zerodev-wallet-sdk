@@ -33,15 +33,18 @@ class SecureStoreStamperInner {
 
   async init(): Promise<void> {
     const storedPair = parseKeyPair(await SecureStore.getItemAsync(KEY_PAIR))
-    if (storedPair) {
-      await this.validateKeyPair(storedPair)
+    if (storedPair && (await this.isUsable(storedPair))) {
       this.publicKeyHex = storedPair.publicKey
       return
     }
 
     const publicKey = await SecureStore.getItemAsync(LEGACY_PUBLIC_KEY)
     const privateKey = await SecureStore.getItemAsync(LEGACY_PRIVATE_KEY)
-    if (publicKey && privateKey) {
+    if (
+      publicKey &&
+      privateKey &&
+      (await this.isUsable({ publicKey, privateKey }))
+    ) {
       await this.persistKeyPair({ publicKey, privateKey })
       await Promise.all([
         SecureStore.deleteItemAsync(LEGACY_PUBLIC_KEY),
@@ -50,7 +53,27 @@ class SecureStoreStamperInner {
       return
     }
 
+    // No usable stored credential — missing, corrupt, or mismatched (e.g. a
+    // broken key written before this validation existed). Mint a fresh pair
+    // rather than throwing: a key that fails the ownership check can't produce
+    // a valid stamp anyway, and a thrown init would brick the app — it could
+    // neither log out nor reset the stamper (both need a constructed SDK). The
+    // user simply re-authenticates from a clean state. Only validation failures
+    // land here; SecureStore I/O errors still propagate (we never discard a key
+    // just because a read/write transiently failed).
     await this.resetKeyPair()
+  }
+
+  // True if the stored pair passes the ownership check. Isolates validation
+  // (pure crypto) from I/O so init() can distinguish an unusable key (reset)
+  // from a transient SecureStore failure (propagate).
+  private async isUsable(pair: StoredKeyPair): Promise<boolean> {
+    try {
+      await this.validateKeyPair(pair)
+      return true
+    } catch {
+      return false
+    }
   }
 
   async getPublicKey(): Promise<string | null> {
