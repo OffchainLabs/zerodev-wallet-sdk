@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@zerodev/react-ui": "workspace:*",
-    "@zerodev/smart-routing-address": "^0.2.5",
     "@zerodev/smart-routing-address-react-ui": "workspace:*",
     "next": "15.3.8",
     "react": "19.2.0",

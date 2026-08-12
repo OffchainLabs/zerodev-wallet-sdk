@@ -47,13 +47,6 @@ export type SmartRoutingAddressConfig = {
    * appended to it
    */
   baseUrl?: string
-  /** Deposit status polling interval in ms */
-  pollingInterval?: number
-  /**
-   * Expected fill time in seconds, either a flat value or per source
-   * chain id
-   */
-  estimatedFillTimeSeconds?: number | Record<number, number>
 }
 
 export type AddressState =

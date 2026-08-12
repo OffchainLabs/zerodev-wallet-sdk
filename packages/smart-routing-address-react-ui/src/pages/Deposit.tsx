@@ -26,6 +26,7 @@ import {
 import { FEE_INFO } from '../components/FeeBreakdown/feeInfo'
 import { LoadingCard } from '../components/LoadingCard'
 import { PendingDeposits } from '../components/PendingDeposits'
+import { DEFAULT_FILL_TIME_SECONDS } from '../constants'
 import { useSmartRoutingAddressContext } from '../context/SmartRoutingAddressContext'
 import { useDepositStatus } from '../hooks/useDepositStatus'
 import { useNewDeposits } from '../hooks/useNewDeposits'
@@ -36,8 +37,6 @@ import {
   getSourceTokenSymbol,
   resolveBaseUrl,
   resolveDestChain,
-  resolveFillTimeSeconds,
-  resolvePollingInterval,
   sourceTokensFromFees,
 } from '../utils/config'
 import { findFeeData, resolveTokenAddress } from '../utils/fees'
@@ -136,7 +135,6 @@ export function Deposit({
     refetch: refetchDeposits,
   } = useDepositStatus({
     address,
-    pollingInterval: resolvePollingInterval(config),
     baseUrl: resolveBaseUrl(config),
   })
   const newDeposits = useNewDeposits(deposits, hasLoaded)
@@ -155,9 +153,7 @@ export function Deposit({
   const feeData = source
     ? findFeeData(estimatedFees, source.chain.id, source.tokenType)
     : null
-  const fillTime = formatDuration(
-    resolveFillTimeSeconds(config, source?.chain.id ?? destChain.id),
-  )
+  const fillTime = formatDuration(DEFAULT_FILL_TIME_SECONDS)
 
   // Live bridge quotes from Across / Relay, keyed off the selected route.
   // Enriches the SRA fee estimate with the itemised legs it doesn't expose.
