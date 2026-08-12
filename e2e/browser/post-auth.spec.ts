@@ -8,7 +8,8 @@
  * 4. Logout and verify the login surface returns
  */
 
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { test } from '../fixtures/authed-session.js'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
 import {
   expectLabReady,
@@ -55,13 +56,12 @@ test.describe('Post-Auth Operations', () => {
     }
   })
 
-  test('should sign a message after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should sign a message after login', async ({ authedPage: page }) => {
     await signMessage(page)
   })
 
+  // Fresh login on purpose: this rewrites session expiry and rotates the
+  // session id, which would break every test reusing the shared one.
   test('should auto-refresh, sign, reload, and sign again', async ({
     page,
   }) => {
@@ -115,10 +115,9 @@ test.describe('Post-Auth Operations', () => {
     await signMessage(page)
   })
 
-  test('should sign typed data (EIP-712) after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should sign typed data (EIP-712) after login', async ({
+    authedPage: page,
+  }) => {
     await page.getByTestId('nav-feature-tx-signing').click()
     await expect(page.getByTestId('area-signing')).toBeVisible()
 
@@ -132,10 +131,9 @@ test.describe('Post-Auth Operations', () => {
     )
   })
 
-  test('should mint NFT (send transaction) after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should mint NFT (send transaction) after login', async ({
+    authedPage: page,
+  }) => {
     await page.getByTestId('nav-feature-tx-signing').click()
     await page.getByTestId('feature-tx-signing-tab-contracts').click()
     await expect(page.getByTestId('area-contracts')).toBeVisible()
@@ -157,6 +155,7 @@ test.describe('Post-Auth Operations', () => {
     )
   })
 
+  // Fresh login on purpose: this ends the session.
   test('should logout and return to the login surface', async ({ page }) => {
     const emailAccount = await createNewAccount()
     await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
