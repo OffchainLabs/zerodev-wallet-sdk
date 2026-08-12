@@ -355,8 +355,12 @@ describe('lazy cross-chain setup (provider builds on demand)', () => {
     await connector.connect({ chainId: sepolia.id })
     // Ignore the sepolia build done by connect(); count only lazy builds.
     createKernelAccountMock.mockClear()
-    // @ts-expect-error getProvider is part of the connector's provider surface.
-    const provider = await connector.getProvider()
+    const provider = (await connector.getProvider()) as {
+      request: (args: {
+        method: string
+        params?: unknown[]
+      }) => Promise<unknown>
+    }
     return () =>
       provider.request({
         method: 'wallet_sendCalls',

@@ -616,8 +616,8 @@ describe('lazy chain setup', () => {
   it('rejects wallet_sendCalls for an unconfigured chain (UnsupportedChainIdError)', async () => {
     const { provider, ensureChain } = createLazyProvider([sepolia])
 
-    const err = await provider
-      .request({
+    await expect(
+      provider.request({
         method: 'wallet_sendCalls',
         params: [
           {
@@ -626,10 +626,8 @@ describe('lazy chain setup', () => {
             calls: [{ data: '0x' }],
           },
         ],
-      })
-      .catch((e) => e as { code?: number })
-
-    expect(err.code).toBe(5710)
+      }),
+    ).rejects.toMatchObject({ code: 5710 })
     expect(ensureChain).not.toHaveBeenCalled()
     expect(sendUserOperationMock).not.toHaveBeenCalled()
   })
@@ -646,14 +644,12 @@ describe('lazy chain setup', () => {
       switchChain,
     })
 
-    const err = await provider
-      .request({
+    await expect(
+      provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${mainnet.id.toString(16)}` }],
-      })
-      .catch((e) => e as { code?: number })
-
-    expect(err.code).toBe(5710)
+      }),
+    ).rejects.toMatchObject({ code: 5710 })
     expect(switchChain).not.toHaveBeenCalled()
     expect(store.getState().activeChainId).toBe(sepolia.id)
   })
