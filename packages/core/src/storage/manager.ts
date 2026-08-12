@@ -35,6 +35,12 @@ type SessionTransition = {
   publicKey: string
 }
 
+// Process-wide serialization queue for storage mutations. Every mutating op
+// runs through `withMutation`, which chains onto this tail so read-modify-write
+// sequences over the shared active-session pointer and session list can't
+// interleave and corrupt each other. Module-level (not per-manager) so
+// concurrent managers over the same storage still serialize; the tail swallows
+// each outcome so one failed mutation never jams the queue.
 let mutationTail = Promise.resolve()
 
 function isStoredSession(value: unknown): value is ZeroDevWalletSession {

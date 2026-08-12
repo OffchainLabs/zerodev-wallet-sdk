@@ -7,12 +7,9 @@ import { SessionType, type ZeroDevWalletSession } from '../types/session.js'
  * @param token - The JWT to parse.
  * @returns {PartialBy<ZeroDevWalletSession, "createdAt" | "id" | "stamperType">} - The parsed session.
  */
-export function parseSession(token: string | ZeroDevWalletSession): PartialBy<
-  ZeroDevWalletSession,
-  'createdAt' | 'id' | 'stamperType'
-> & {
-  publicKey?: string
-} {
+export function parseSession(
+  token: string | ZeroDevWalletSession,
+): PartialBy<ZeroDevWalletSession, 'createdAt' | 'id' | 'stamperType'> {
   if (typeof token !== 'string') {
     return token
   }

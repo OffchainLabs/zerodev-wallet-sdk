@@ -32,6 +32,13 @@ export async function createIndexedDbStamper(): Promise<ApiKeyStamper> {
 
   let pendingKeyPair: CryptoKeyPair | null = null
 
+  // A rotation must be prepared before it can be stamped/signed with; centralize
+  // the guard so the pending-key paths don't each repeat it.
+  const requirePending = (): CryptoKeyPair => {
+    if (!pendingKeyPair) throw new Error('No pending key rotation')
+    return pendingKeyPair
+  }
+
   return {
     async getPublicKey() {
       return await inner.getPublicKey()
@@ -60,18 +67,16 @@ export async function createIndexedDbStamper(): Promise<ApiKeyStamper> {
       return await generateCompressedPublicKeyFromKeyPair(keyPair)
     },
     async stampPending(payload: string) {
-      if (!pendingKeyPair) throw new Error('No pending key rotation')
-      const publicKey =
-        await generateCompressedPublicKeyFromKeyPair(pendingKeyPair)
-      const signature = await signWithKeyPair(pendingKeyPair, payload)
+      const keyPair = requirePending()
+      const publicKey = await generateCompressedPublicKeyFromKeyPair(keyPair)
+      const signature = await signWithKeyPair(keyPair, payload)
       return {
         stampHeaderName: 'X-Stamp',
         stampHeaderValue: encodeStamp(publicKey, signature),
       }
     },
     async signPending(payload: string) {
-      if (!pendingKeyPair) throw new Error('No pending key rotation')
-      return signWithKeyPair(pendingKeyPair, payload)
+      return signWithKeyPair(requirePending(), payload)
     },
     async commitKeyRotation() {
       if (!pendingKeyPair) {
