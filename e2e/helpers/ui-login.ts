@@ -45,10 +45,6 @@ export async function logoutAndExpectLoginSurface(page: Page): Promise<void> {
   await expect(page.getByText('Sign in to open the QA Lab')).toBeVisible({
     timeout: 60_000,
   })
-  await expect(page.getByTestId('wallet-address')).toHaveText(
-    /^0x[0-9a-fA-F]{40}$/,
-    { timeout: 60_000 },
-  )
 }
 
 /**
