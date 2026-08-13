@@ -59,7 +59,7 @@ export const LAB_FEATURES: LabFeature[] = [
     id: "sra",
     name: "SRA",
     description: "Smart Routing Address deposits.",
-    status: "planned",
+    status: "wip",
     areas: [],
   },
 ];
