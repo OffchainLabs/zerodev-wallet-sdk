@@ -1,16 +1,9 @@
 /**
  * Shared by both adapters so a preset behaves identically through the proxy and
  * through the in-page `fetch` patch.
- */
-
-/**
+ *
  * Returns `response` with its `id` replaced by the request's, when both look
  * like JSON-RPC.
- *
- * A preset is authored with some fixed `id`, but a client correlates a reply to
- * its call by that field — viem rejects a mismatch, and it surfaces as a vague
- * transport error rather than anything mentioning ids. Copies rather than
- * mutates: a definition is shared module state, reused across requests.
  */
 export function echoJsonRpcId(response: object, requestBody: string): object {
   if (

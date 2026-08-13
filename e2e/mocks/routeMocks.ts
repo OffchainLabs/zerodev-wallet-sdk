@@ -9,11 +9,7 @@ import type { MockRequest, UnmatchedPolicy } from './types.js'
  * interception.
  *
  * Browser-level, so it sees what the page sends regardless of who sent it, and
- * needs no proxy, no CA and no second Playwright config. It replaced a Mockttp
- * MITM proxy, which bought nothing here: the SDK only ever uses `fetch`, so
- * there was no traffic the browser couldn't intercept, and the proxy cost a
- * dependency with a pinned transitive, runtime CA generation, and CORS headers
- * on every mocked response.
+ * needs no proxy, no CA and no second Playwright config.
  *
  * Matching is shared with the in-app `fetch` adapter (`installMockFetch`), so a
  * definition behaves the same whichever serves it.

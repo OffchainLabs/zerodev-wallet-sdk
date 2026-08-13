@@ -4,12 +4,6 @@
  * The counterpart to `routeMocks`, which serves the same definitions to
  * Playwright via browser-level interception. This one exists for driving the app
  * by hand — it needs no test runner, just the app itself.
- *
- * `matchMock` here is the shared matcher both adapters use, so a definition
- * behaves the same either way. Keep it that way; two matchers would drift.
- *
- * Runs in the browser, so it must stay free of anything Node-only — importing
- * such a module here would drag it into the client bundle.
  */
 
 import { echoJsonRpcId } from './jsonRpc.js'
@@ -122,11 +116,7 @@ async function describeRequest(
 }
 
 /**
- * Patch `globalThis.fetch`. Idempotent, and a no-op where there is no `fetch`
- * (SSR passes through untouched, so a server render never sees mocks).
- *
- * `globalThis` rather than `window` so the same function is exercisable under a
- * Node test runner — the adapter's tests run in the integration config.
+ * Patch `globalThis.fetch`
  */
 export function installMockFetch(options?: {
   mocks?: MockRequest[]
