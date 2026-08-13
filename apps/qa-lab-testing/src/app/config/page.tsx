@@ -9,12 +9,11 @@ import {
   AUTH_METHODS,
   type AuthMethodId,
   CHAIN_CATALOG,
-  EMAIL_AUTH_METHODS,
-  type EmailAuthMethodId,
   PARAM,
   resolveWalletConfig,
   serializeOverrides,
 } from "../lib/config-params";
+import { AUTH_FLAVOR_IDS, type AuthFlavorId } from "../lib/wallet-config";
 import { LAB_FEATURES, areaHref, featureHref } from "../lib/features";
 import { cn } from "../lib/utils";
 
@@ -52,8 +51,8 @@ export default function ConfigBuilderPage() {
   const [authMethods, setAuthMethods] = useState<AuthMethodId[]>(
     current.authMethods,
   );
-  const [emailAuthMethod, setEmailAuthMethod] = useState<EmailAuthMethodId>(
-    current.emailAuthMethod,
+  const [authFlavor, setAuthFlavor] = useState<AuthFlavorId>(
+    current.authFlavor,
   );
   const [target, setTarget] = useState("/");
   const [copied, setCopied] = useState(false);
@@ -68,7 +67,7 @@ export default function ConfigBuilderPage() {
         .map(([id, url]) => [Number(id), url.trim()]),
     ),
     authMethods,
-    emailAuthMethod,
+    authFlavor,
   }).toString();
 
   const url = query ? `${target}?${query}` : target;
@@ -200,16 +199,21 @@ export default function ConfigBuilderPage() {
               </div>
             </Field>
 
-            <Field label="email auth method" param={PARAM.emailAuth}>
+            {/*
+              One control, not two: the project and the email method have to
+              agree. A project with both methods configured makes the SDK fall
+              back to OTP, so a mismatch delivers the wrong thing silently.
+            */}
+            <Field label="auth flavor" param={PARAM.authFlavor}>
               <div className="flex flex-wrap gap-2">
-                {EMAIL_AUTH_METHODS.map((method) => (
+                {AUTH_FLAVOR_IDS.map((flavor) => (
                   <Toggle
-                    key={method}
-                    checked={emailAuthMethod === method}
-                    onChange={() => setEmailAuthMethod(method)}
-                    testId={`config-email-auth-${method}`}
+                    key={flavor}
+                    checked={authFlavor === flavor}
+                    onChange={() => setAuthFlavor(flavor)}
+                    testId={`config-auth-flavor-${flavor}`}
                   >
-                    {method}
+                    {flavor}
                   </Toggle>
                 ))}
               </div>

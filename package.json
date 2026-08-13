@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config e2e/vitest.integration.config.ts",
-    "build:e2e": "pnpm --filter '@zerodev/signer-demo^...' build",
+    "build:e2e": "pnpm --filter '@zerodev/qa-lab-testing^...' build",
     "test:e2e": "pnpm build:e2e && playwright test --config e2e/playwright.config.ts",
     "test:e2e:headed": "pnpm build:e2e && playwright test --config e2e/playwright.config.ts --headed",
     "check:publishable": "node scripts/check-publishable.mjs",

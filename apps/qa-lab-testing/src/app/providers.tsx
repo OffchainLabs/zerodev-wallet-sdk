@@ -2,10 +2,45 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
-import { useMemo } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { pickConfigParams, resolveWalletConfig } from './lib/config-params'
 import { createWalletConfig } from './wagmi-config'
+
+type ConfigEntry = {
+  config: ReturnType<typeof createWalletConfig>
+  queryClient: QueryClient
+}
+
+/**
+ * One wagmi config per set of config params, so Strict Mode's double mount
+ * reuses the connector instead of orphaning it.
+ *
+ * Browser only: module scope on the server is per-process, so caching there
+ * would share a config and QueryClient across all requests and never evict.
+ */
+const configCache = new Map<string, ConfigEntry>()
+
+function buildConfigFor(configKey: string): ConfigEntry {
+  return {
+    config: createWalletConfig(
+      resolveWalletConfig(new URLSearchParams(configKey)),
+    ),
+    // Tied to the config: a different connector means a different session, so
+    // the previous cache is meaningless.
+    queryClient: new QueryClient(),
+  }
+}
+
+function getConfigFor(configKey: string): ConfigEntry {
+  if (typeof window === 'undefined') return buildConfigFor(configKey)
+
+  const cached = configCache.get(configKey)
+  if (cached) return cached
+
+  const entry = buildConfigFor(configKey)
+  configCache.set(configKey, entry)
+  return entry
+}
 
 /**
  * Builds the wagmi config from the request's query params.
@@ -15,26 +50,11 @@ import { createWalletConfig } from './wagmi-config'
  * layout) this hook returns the same values during SSR and on the client. Both
  * passes therefore build an identical config, which is what keeps chain-derived
  * UI from mismatching on hydration.
- *
- * Everything derives from `configKey` — the serialised config params — so an
- * unrelated param (say `?probe=1`) doesn't tear down the wallet.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams()
   const configKey = pickConfigParams(searchParams).toString()
-
-  // Built together on purpose: a new config means a new connector and a fresh
-  // session, so cached queries from the previous one are meaningless — a
-  // different chain set, possibly a different backend entirely.
-  const { config, queryClient } = useMemo(
-    () => ({
-      config: createWalletConfig(
-        resolveWalletConfig(new URLSearchParams(configKey)),
-      ),
-      queryClient: new QueryClient(),
-    }),
-    [configKey],
-  )
+  const { config, queryClient } = getConfigFor(configKey)
 
   return (
     // `key` remounts the provider if config params ever change client-side.

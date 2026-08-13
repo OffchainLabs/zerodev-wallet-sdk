@@ -88,7 +88,7 @@ Resolved per selected chain, first match wins:
 1. **`rpc.<chainId>` param** — hand-written, not exposed in the builder.
 2. **Env var** — only `NEXT_PUBLIC_ARB_SEPOLIA_RPC_URL` and `NEXT_PUBLIC_SEPOLIA_RPC_URL` exist.
 3. **Default** — `https://staging-rpc.zerodev.app/api/v3/<PROJECT_ID>/chain/<CHAIN_ID>`,
-   built from `NEXT_PUBLIC_ZERODEV_PROJECT_ID`. **Anvil instead gets
+   built from `NEXT_PUBLIC_ZD_PROJECT_ID`. **Anvil instead gets
    `http://localhost:18545`**, since it's a local node.
 4. **Chain default** — viem's public RPC, reached only when the project id is unset.
 
@@ -120,7 +120,7 @@ edit the source of that default:
 | Anvil's RPC | `src/app/lib/wallet-config.ts` → `ANVIL_RPC_URL` | |
 | KMS proxy base URL | `.env` → `NEXT_PUBLIC_KMS_PROXY_BASE_URL` | |
 | AA host | `.env` → `NEXT_PUBLIC_ZERODEV_AA_HOST` | |
-| Project id | `.env` → `NEXT_PUBLIC_ZERODEV_PROJECT_ID` | also feeds the default transport URL |
+| Project id | `.env` → `NEXT_PUBLIC_ZD_PROJECT_ID` / `NEXT_PUBLIC_ZD_OTP_PROJECT_ID` | also feeds the default transport URL |
 | Arb-Sepolia / Sepolia RPC | `.env` → `NEXT_PUBLIC_ARB_SEPOLIA_RPC_URL`, `NEXT_PUBLIC_SEPOLIA_RPC_URL` | these win over the default template |
 
 **`.env` changes need a dev-server restart** — Next inlines `NEXT_PUBLIC_*` at build time.
@@ -256,13 +256,21 @@ dropping a component into `testing-lab/` and listing it in the relevant tab in `
 ```bash
 pnpm install                                  # from the repo root
 cp .env.example .env                          # then fill in the values
-pnpm --filter @zerodev/qa-lab-testing dev     # http://localhost:3002
+pnpm --filter @zerodev/qa-lab-testing dev     # http://localhost:3000
 ```
 
-Port **3002** so it can run alongside `zerodev-signer-demo` (3000).
+Port **3000** because the ZeroDev project's access-control policy only permits
+`http://localhost:3000` as an origin — anything else gets a 403 from the KMS backend.
+`zerodev-signer-demo` defaults to the same port, so pass an explicit `--port` to whichever
+you start second.
 
-## Note on e2e
+## e2e
 
-`e2e/playwright.config.ts` still boots `zerodev-signer-demo` on 3000. Repointing it here is a follow-up:
-`goto('/')` still lands on the login screen, but `post-auth.spec.ts` assumes a `/dashboard` route that
-this app doesn't have.
+`e2e/playwright.config.ts` boots this app and the Playwright suite runs against it. Two things
+to know when writing specs:
+
+- There is no post-login route. The auth gate swaps the login surface for the lab at the same
+  URL, so wait on the lab (`expectLabReady` in `e2e/helpers/ui-login.ts`), not a navigation.
+- Wallet config comes from URL params, not localStorage. A spec picks a non-default by
+  navigating — e.g. `goto('/?emailAuth=magicLink')` — and every later navigation in that test
+  must carry the same params, or the wagmi connector is rebuilt and the session is lost.
