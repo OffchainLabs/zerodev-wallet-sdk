@@ -32,6 +32,26 @@ export async function expectLabReady(page: Page): Promise<void> {
 }
 
 /**
+ * Clicks logout and waits until the login surface is back.
+ *
+ * Waits on the UI, not the URL: logout keeps the config params so the path never
+ * changes, and returning early lets the next navigation abort the disconnect,
+ * leaving the session alive.
+ */
+export async function logoutAndExpectLoginSurface(page: Page): Promise<void> {
+  await page.getByTestId('wallet-logout').click()
+
+  await expect(page.getByTestId('wallet-strip')).toBeHidden({ timeout: 60_000 })
+  await expect(page.getByText('Sign in to open the QA Lab')).toBeVisible({
+    timeout: 60_000,
+  })
+  await expect(page.getByTestId('wallet-address')).toHaveText(
+    /^0x[0-9a-fA-F]{40}$/,
+    { timeout: 60_000 },
+  )
+}
+
+/**
  * Completes plain-code OTP login through the UI, landing on the lab.
  *
  * The lab takes its wallet config from URL params, so `?authFlavor=otp` selects

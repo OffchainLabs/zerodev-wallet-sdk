@@ -8,7 +8,10 @@
 
 import { test } from '@playwright/test'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
-import { loginWithOtp } from '../helpers/ui-login.js'
+import {
+  loginWithOtp,
+  logoutAndExpectLoginSurface,
+} from '../helpers/ui-login.js'
 
 test.describe('OTP Flow', () => {
   test.beforeEach(async () => {
@@ -30,9 +33,7 @@ test.describe('OTP Flow', () => {
     const emailAccount = await createNewAccount()
     await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
 
-    await page.getByTestId('wallet-logout').click()
-    // Logout carries the lab's config params over, so the URL isn't a bare "/".
-    await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 })
+    await logoutAndExpectLoginSurface(page)
 
     await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
   })

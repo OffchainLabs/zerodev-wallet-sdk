@@ -5,10 +5,12 @@
  * 1. Sign a plain message (Signing area)
  * 2. Sign EIP-712 typed data (Signing area)
  * 3. Mint an NFT via a contract write (Contracts area)
- * 4. Logout and verify the login surface returns
+ *
+ * Logout lives in otp.spec.ts, which covers the same surface plus re-login.
  */
 
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
+import { test } from '../fixtures/authed-session.js'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
 import { expectLabReady, loginWithMagicLink } from '../helpers/ui-login.js'
 
@@ -51,13 +53,12 @@ test.describe('Post-Auth Operations', () => {
     }
   })
 
-  test('should sign a message after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should sign a message after login', async ({ authedPage: page }) => {
     await signMessage(page)
   })
 
+  // Fresh login on purpose: this rewrites session expiry and rotates the
+  // session id, which would break every test reusing the shared one.
   test('should auto-refresh, sign, reload, and sign again', async ({
     page,
   }) => {
@@ -111,10 +112,9 @@ test.describe('Post-Auth Operations', () => {
     await signMessage(page)
   })
 
-  test('should sign typed data (EIP-712) after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should sign typed data (EIP-712) after login', async ({
+    authedPage: page,
+  }) => {
     await page.getByTestId('nav-feature-tx-signing').click()
     await expect(page.getByTestId('area-signing')).toBeVisible()
 
@@ -128,10 +128,9 @@ test.describe('Post-Auth Operations', () => {
     )
   })
 
-  test('should mint NFT (send transaction) after login', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should mint NFT (send transaction) after login', async ({
+    authedPage: page,
+  }) => {
     await page.getByTestId('nav-feature-tx-signing').click()
     await page.getByTestId('feature-tx-signing-tab-contracts').click()
     await expect(page.getByTestId('area-contracts')).toBeVisible()
@@ -151,21 +150,5 @@ test.describe('Post-Auth Operations', () => {
       'data-hash',
       /^0x[0-9a-fA-F]{64}$/,
     )
-  })
-
-  test('should logout and return to the login surface', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
-    await page.getByTestId('wallet-logout').click()
-
-    // The lab has no logout redirect — the gate swaps the lab back out for the
-    // login surface at whatever route you were on.
-    await expect(page.getByTestId('wallet-strip')).toBeHidden({
-      timeout: 30_000,
-    })
-    await expect(page.getByText('Sign in to open the QA Lab')).toBeVisible({
-      timeout: 30_000,
-    })
   })
 })

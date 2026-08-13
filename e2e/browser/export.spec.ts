@@ -13,9 +13,9 @@
  * proof the SRP / private key are actually shown, not just that the flow ran.
  */
 
-import { expect, type FrameLocator, type Page, test } from '@playwright/test'
-import { createNewAccount, ping } from '../helpers/temp-email.js'
-import { loginWithMagicLink } from '../helpers/ui-login.js'
+import { expect, type FrameLocator, type Page } from '@playwright/test'
+import { test } from '../fixtures/authed-session.js'
+import { ping } from '../helpers/temp-email.js'
 
 /**
  * Reads rendered text out of a Turnkey export iframe. Waits until the iframe
@@ -46,10 +46,7 @@ test.describe('Wallet Export', () => {
     }
   })
 
-  test('should export the seed phrase', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should export the seed phrase', async ({ authedPage: page }) => {
     await openExportModal(page)
     await page.getByRole('button', { name: /Seed Phrase/i }).click()
 
@@ -76,10 +73,7 @@ test.describe('Wallet Export', () => {
     console.log(`Seed phrase export OK: ${words.length} words`)
   })
 
-  test('should export the private key', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
+  test('should export the private key', async ({ authedPage: page }) => {
     await openExportModal(page)
     await page.getByRole('button', { name: /Private Key/i }).click()
 
