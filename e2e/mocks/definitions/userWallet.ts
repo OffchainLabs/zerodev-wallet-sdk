@@ -3,15 +3,6 @@ import type { MockRequest } from '../types.js'
 /**
  * Replaces the wallet address the app reports.
  *
- * `GET {projectId}/user-wallet` returns its body straight through
- * (`packages/core/src/actions/wallet/getUserWallet.ts`), and the viem adapter
- * takes the address from it verbatim — `address = walletResponse.walletAddresses[0]`
- * (`packages/core/src/adapters/viem.ts:46`). So this is the shortest path from a
- * mocked response to something visible.
- *
- * A plain REST GET, which is the point: no Multicall3 in the way, unlike anything
- * wagmi reads, so matching on method and path is enough.
- *
  * The address is fabricated so the assertion cannot pass by accident — a real
  * login can't produce it.
  */
