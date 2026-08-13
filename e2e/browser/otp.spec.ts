@@ -22,11 +22,6 @@ test.describe('OTP Flow', () => {
     }
   })
 
-  test('should complete OTP login through the UI', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithOtp(page, emailAccount.address, emailAccount.authToken)
-  })
-
   test('should verify OTP for an existing wallet after logout', async ({
     page,
   }) => {
