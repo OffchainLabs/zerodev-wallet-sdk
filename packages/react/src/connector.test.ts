@@ -393,4 +393,57 @@ describe('lazy cross-chain setup (provider builds on demand)', () => {
     // account; the guard collapses them to a single createKernelAccount call.
     expect(createKernelAccountMock).toHaveBeenCalledOnce()
   })
+
+  it('does not commit a build whose owner changed mid-flight (no signer leak)', async () => {
+    // Deferred kernel construction so we can swap the owner while it's in flight.
+    let started!: () => void
+    const startedP = new Promise<void>((r) => {
+      started = r
+    })
+    let finish!: () => void
+    createKernelAccountMock.mockImplementationOnce(() => {
+      started()
+      return new Promise((resolve) => {
+        finish = () =>
+          resolve({ address: '0xcafecafecafecafecafecafecafecafecafecafe' })
+      })
+    })
+
+    const connector = createMultiChainConnector()
+    await seedEoa(connector) // owner A
+    // @ts-expect-error - getStore is added in the connector's Properties.
+    const store = await connector.getStore()
+    store.getState().setActiveChainId(sepolia.id)
+    const provider = (await connector.getProvider()) as {
+      request: (a: { method: string; params?: unknown[] }) => Promise<unknown>
+    }
+
+    // Start a build on mainnet (never connected) — hangs on the deferred build.
+    const sendP = provider
+      .request({
+        method: 'wallet_sendCalls',
+        params: [
+          {
+            from: mockEoaAccount.address,
+            chainId: `0x${mainnet.id.toString(16)}`,
+            calls: [{ data: '0x' }],
+          },
+        ],
+      })
+      .catch((e) => e)
+
+    await startedP // owner-A build is now in flight
+
+    // Owner changes to B before A's build resolves.
+    store.getState().setEoaAccount({
+      address: '0xB0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0',
+    } as never)
+
+    finish() // A's build resolves now
+    await sendP
+
+    // A's stale build must NOT land in B's store.
+    expect(store.getState().kernelAccounts.get(mainnet.id)).toBeUndefined()
+    expect(store.getState().kernelClients.get(mainnet.id)).toBeUndefined()
+  })
 })

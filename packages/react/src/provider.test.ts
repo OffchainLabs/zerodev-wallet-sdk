@@ -653,4 +653,59 @@ describe('lazy chain setup', () => {
     expect(switchChain).not.toHaveBeenCalled()
     expect(store.getState().activeChainId).toBe(sepolia.id)
   })
+
+  it('validates `from` against the built 4337 kernel account on a fresh chain', async () => {
+    // In 4337 the expected sender is the kernel account, which only exists
+    // after prepareChain() builds it. Validation must run after the build, not
+    // silently pass because the account was absent at request start.
+    sendUserOperationMock.mockResolvedValue('0xuserophash')
+    const KERNEL_ADDRESS = `0x${'ab'.repeat(20)}` as const
+    const store = createZeroDevWalletStore()
+    store.getState().setActiveChainId(sepolia.id)
+    store.getState().setEoaAccount(EOA_ACCOUNT)
+    const ensureChain = vi.fn(async (chainId: number) => {
+      store
+        .getState()
+        .setKernelAccount(chainId, { address: KERNEL_ADDRESS } as never)
+      store.getState().setKernelClient(chainId, mockKernelClient)
+    })
+    const provider = createProvider({
+      store,
+      config: {
+        projectId: 'proj-test',
+        chains: [sepolia, mainnet],
+        mode: '4337',
+      },
+      chains: [sepolia, mainnet],
+      ensureChain,
+    })
+
+    // The EOA address is NOT the 4337 sender — must be rejected.
+    await expect(
+      provider.request({
+        method: 'wallet_sendCalls',
+        params: [
+          {
+            from: EOA_ADDRESS,
+            chainId: `0x${mainnet.id.toString(16)}`,
+            calls: [{ data: '0x' }],
+          },
+        ],
+      }),
+    ).rejects.toThrow('Invalid from address')
+    expect(sendUserOperationMock).not.toHaveBeenCalled()
+
+    // The kernel address (the real 4337 sender) is accepted.
+    const result = await provider.request({
+      method: 'wallet_sendCalls',
+      params: [
+        {
+          from: KERNEL_ADDRESS,
+          chainId: `0x${mainnet.id.toString(16)}`,
+          calls: [{ data: '0x' }],
+        },
+      ],
+    })
+    expect(result).toEqual({ id: `0xuserophash:${mainnet.id}` })
+  })
 })

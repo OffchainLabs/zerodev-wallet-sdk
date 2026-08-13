@@ -260,10 +260,14 @@ export function createProvider({
       const accountAddressForChain = (
         chainId: number,
       ): `0x${string}` | undefined => {
+        // Read fresh, not the request-start snapshot: in 4337 the kernel
+        // account only exists after prepareChain() builds it, and `from`
+        // validation must see that address rather than skipping (undefined).
+        const current = store.getState()
         if (mode === '4337') {
-          return state.kernelAccounts.get(chainId)?.address
+          return current.kernelAccounts.get(chainId)?.address
         }
-        return state.eoaAccount?.address
+        return current.eoaAccount?.address
       }
 
       const validateFromAddress = (
@@ -306,8 +310,10 @@ export function createProvider({
 
           const [tx] = params
           const chainId = tx.chainId ? parseInt(tx.chainId, 16) : activeChainId
-          validateFromAddress(chainId, tx.from)
+          // Build first, then validate: in 4337 the expected sender is the
+          // kernel account, which doesn't exist until prepareChain() runs.
           await prepareChain(chainId)
+          validateFromAddress(chainId, tx.from)
 
           // EOA mode: send via plain RPC (no bundler, no sponsorship).
           if (mode === 'EOA') {
@@ -349,7 +355,6 @@ export function createProvider({
           const chainId = request.chainId
             ? parseInt(request.chainId, 16)
             : activeChainId
-          validateFromAddress(chainId, request.from)
 
           if (mode === 'EOA') {
             throw new Error('wallet_sendCalls is not supported in EOA mode')
@@ -359,7 +364,10 @@ export function createProvider({
             throw new Error('Missing calls')
           }
 
+          // Build first, then validate: in 4337 the expected sender is the
+          // kernel account, which doesn't exist until prepareChain() runs.
           await prepareChain(chainId)
+          validateFromAddress(chainId, request.from)
           const kernelClient = store.getState().kernelClients.get(chainId)
           if (!kernelClient) {
             throw new Error(`No kernel client for chain ${chainId}`)

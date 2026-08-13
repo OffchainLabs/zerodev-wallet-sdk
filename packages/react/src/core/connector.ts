@@ -138,6 +138,7 @@ export function zeroDevWalletCore(
           'Refusing to build an account from an invalid or zero-address owner (unrecoverable): the wallet address failed to resolve.',
         )
       }
+      const ownerAtStart = eoaAccount.address
 
       const chain = params.chains.find((c) => c.id === chainId)
       if (!chain) throw new Error(`Chain ${chainId} not found in config`)
@@ -195,6 +196,10 @@ export function zeroDevWalletCore(
           ),
         }),
       })
+      // The owner can change while we await kernel construction (logout /
+      // account swap). Committing here would write the previous owner's account
+      // into the new owner's store — a signer mix-up. Drop the stale build.
+      if (store.getState().eoaAccount?.address !== ownerAtStart) return
       store.getState().setKernelAccount(chainId, kernelAccount)
       store.getState().setKernelClient(chainId, kernelClient)
     }
@@ -206,18 +211,20 @@ export function zeroDevWalletCore(
     // once settled so a failed build can be retried.
     // ponytail: per-chain in-flight map, not a full client cache — doSetupChain
     // already no-ops via the store once built.
-    const chainSetupInFlight = new Map<number, Promise<void>>()
+    const chainSetupInFlight = new Map<string, Promise<void>>()
     const setupChain = (
       chainId: number,
       httpOpts?: { fetchOptions?: CreateTransportOptions['fetchOptions'] },
     ): Promise<void> => {
-      let inFlight = chainSetupInFlight.get(chainId)
+      // Key by owner + chain: a mid-flight owner change must not reuse the
+      // previous owner's build (whose commit now aborts), so the new owner
+      // gets its own build rather than an empty client.
+      const key = `${store.getState().eoaAccount?.address ?? 'anon'}:${chainId}`
+      let inFlight = chainSetupInFlight.get(key)
       if (!inFlight) {
         inFlight = doSetupChain(chainId, httpOpts)
-        chainSetupInFlight.set(chainId, inFlight)
-        inFlight
-          .finally(() => chainSetupInFlight.delete(chainId))
-          .catch(() => {})
+        chainSetupInFlight.set(key, inFlight)
+        inFlight.finally(() => chainSetupInFlight.delete(key)).catch(() => {})
       }
       return inFlight
     }
