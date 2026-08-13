@@ -243,11 +243,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
-      {/* History overlay — the widget brings its own card chrome (TopNav +
-          close), so the modal is just a dimmed backdrop. Reachable only from
-          this auth-gated dashboard, and unmounted the moment the wallet
-          disconnects (the page redirects to login). */}
+      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />git
       {showHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <TxHistory onClose={() => setShowHistory(false)} />
