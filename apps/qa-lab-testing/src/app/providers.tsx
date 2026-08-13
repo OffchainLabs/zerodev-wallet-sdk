@@ -6,24 +6,38 @@ import { WagmiProvider } from 'wagmi'
 import { pickConfigParams, resolveWalletConfig } from './lib/config-params'
 import { createWalletConfig } from './wagmi-config'
 
+type ConfigEntry = {
+  config: ReturnType<typeof createWalletConfig>
+  queryClient: QueryClient
+}
+
 /**
- * One wagmi config per distinct set of config params, cached at module scope.
+ * One wagmi config per set of config params, so Strict Mode's double mount
+ * reuses the connector instead of orphaning it.
+ *
+ * Browser only: module scope on the server is per-process, so caching there
+ * would share a config and QueryClient across all requests and never evict.
  */
-const configCache = new Map<
-  string,
-  { config: ReturnType<typeof createWalletConfig>; queryClient: QueryClient }
->()
+const configCache = new Map<string, ConfigEntry>()
 
-function getConfigFor(configKey: string) {
-  const cached = configCache.get(configKey)
-  if (cached) return cached
-
-  const entry = {
+function buildConfigFor(configKey: string): ConfigEntry {
+  return {
     config: createWalletConfig(
       resolveWalletConfig(new URLSearchParams(configKey)),
     ),
+    // Tied to the config: a different connector means a different session, so
+    // the previous cache is meaningless.
     queryClient: new QueryClient(),
   }
+}
+
+function getConfigFor(configKey: string): ConfigEntry {
+  if (typeof window === 'undefined') return buildConfigFor(configKey)
+
+  const cached = configCache.get(configKey)
+  if (cached) return cached
+
+  const entry = buildConfigFor(configKey)
   configCache.set(configKey, entry)
   return entry
 }

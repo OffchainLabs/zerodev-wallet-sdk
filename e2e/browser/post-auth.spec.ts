@@ -5,17 +5,14 @@
  * 1. Sign a plain message (Signing area)
  * 2. Sign EIP-712 typed data (Signing area)
  * 3. Mint an NFT via a contract write (Contracts area)
- * 4. Logout and verify the login surface returns
+ *
+ * Logout lives in otp.spec.ts, which covers the same surface plus re-login.
  */
 
 import { expect, type Page } from '@playwright/test'
 import { test } from '../fixtures/authed-session.js'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
-import {
-  expectLabReady,
-  loginWithMagicLink,
-  logoutAndExpectLoginSurface,
-} from '../helpers/ui-login.js'
+import { expectLabReady, loginWithMagicLink } from '../helpers/ui-login.js'
 
 /**
  * Signs the preset message from the lab's Signing area and asserts the run
@@ -153,15 +150,5 @@ test.describe('Post-Auth Operations', () => {
       'data-hash',
       /^0x[0-9a-fA-F]{64}$/,
     )
-  })
-
-  // Fresh login on purpose: this ends the session.
-  test('should logout and return to the login surface', async ({ page }) => {
-    const emailAccount = await createNewAccount()
-    await loginWithMagicLink(page, emailAccount.address, emailAccount.authToken)
-
-    // The lab has no logout redirect — the gate swaps the lab back out for the
-    // login surface at whatever route you were on.
-    await logoutAndExpectLoginSurface(page)
   })
 })

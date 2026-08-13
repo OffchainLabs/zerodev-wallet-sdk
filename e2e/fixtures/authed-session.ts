@@ -44,14 +44,19 @@ export const test = base.extend<
     { scope: 'worker' },
   ],
 
-  authedPage: async ({ authedContext }, use) => {
+  authedPage: async ({ authedContext }, use, testInfo) => {
     const page = await authedContext.newPage()
     await page.goto('/')
 
-    // Sessions expire and a long suite can outlive one. Fall back to a fresh
-    // login rather than failing every test that follows.
+    // Sessions expire and a long suite can outlive one, so fall back to a fresh
+    // login rather than failing every test after it. Annotated so a green run
+    // still shows the reuse broke — otherwise a real regression looks like a
+    // slow pass.
     if (!(await isLabReady(page))) {
-      console.log('Reused session was not usable — logging in again')
+      testInfo.annotations.push({
+        type: 'session',
+        description: 'shared session unusable — logged in again',
+      })
       await login(page)
     }
 
