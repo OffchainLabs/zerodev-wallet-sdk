@@ -8,7 +8,7 @@ const BASE_ICON =
   'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png'
 
 const meta = {
-  title: 'TxHistory/TxHistoryItem',
+  title: 'History/TxHistoryItem',
   component: TxHistoryItem,
   parameters: {
     layout: 'centered',

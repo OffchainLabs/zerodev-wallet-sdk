@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthenticators } from "@zerodev/wallet-react";
+import { TxHistory } from "@zerodev/wallet-react-ui";
 import {
   Check,
   Copy,
   ExternalLink,
   FileSignature,
+  History,
   Key,
   Loader2,
   LogOut,
@@ -103,6 +105,7 @@ export default function DashboardPage() {
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [gaslessTxCount, setGaslessTxCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isBalanceRefreshing, setIsBalanceRefreshing] = useState(false);
@@ -241,6 +244,15 @@ export default function DashboardPage() {
   return (
     <>
       <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
+      {/* History overlay — the widget brings its own card chrome (TopNav +
+          close), so the modal is just a dimmed backdrop. Reachable only from
+          this auth-gated dashboard, and unmounted the moment the wallet
+          disconnects (the page redirects to login). */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <TxHistory onClose={() => setShowHistory(false)} />
+        </div>
+      )}
       <div className="min-h-screen">
         <AppHeader />
 
@@ -258,6 +270,14 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <ChainSelector className="h-9 rounded-full px-3 text-xs" />
+                <button
+                  onClick={() => setShowHistory(true)}
+                  className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--border-warm)] bg-white px-3 text-xs font-semibold text-[#423a32] transition-colors hover:bg-[var(--surface-warm)]"
+                  title="Transaction history"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  History
+                </button>
                 <button
                   onClick={() => setShowExportModal(true)}
                   className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--border-warm)] bg-white px-3 text-xs font-semibold text-[#423a32] transition-colors hover:bg-[var(--surface-warm)]"
