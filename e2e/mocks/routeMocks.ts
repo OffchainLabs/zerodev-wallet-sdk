@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 import { matchMock } from './installMockFetch.js'
 import { orderMocks } from './orderMocks.js'
 import { resolveMockResponse } from './resolveResponse.js'
@@ -28,7 +28,11 @@ export type MockHandle = {
    * worth guarding.
    */
   hits: () => number
+  /** Remove this install, leaving any other untouched. */
+  dispose: () => Promise<void>
 }
+
+const ALL_REQUESTS = '**/*'
 
 export async function routeMocks(
   page: Page,
@@ -39,7 +43,7 @@ export async function routeMocks(
   const ordered = orderMocks(mocks)
   let hits = 0
 
-  await page.route('**/*', async (route) => {
+  const handler = async (route: Route) => {
     const request = route.request()
     const context: MockRequestContext = {
       url: request.url(),
@@ -60,7 +64,10 @@ export async function routeMocks(
           }),
         })
       }
-      return route.continue()
+      // `fallback`, not `continue`: handlers run newest-first, and `continue`
+      // would send the request off without consulting an earlier install,
+      // silently blinding it.
+      return route.fallback()
     }
 
     hits += 1
@@ -71,7 +78,12 @@ export async function routeMocks(
       contentType: 'application/json',
       body: JSON.stringify(resolveMockResponse(mock, context)),
     })
-  })
+  }
 
-  return { hits: () => hits }
+  await page.route(ALL_REQUESTS, handler)
+
+  return {
+    hits: () => hits,
+    dispose: () => page.unroute(ALL_REQUESTS, handler),
+  }
 }
