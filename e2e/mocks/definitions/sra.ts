@@ -1,6 +1,15 @@
 import type { Address, Hash } from 'viem'
-import { getAddress, numberToHex } from 'viem'
-import { arbitrum, base, optimism } from 'viem/chains'
+import { getAddress, numberToHex, parseUnits } from 'viem'
+import {
+  arbitrum,
+  base,
+  bsc,
+  linea,
+  mainnet,
+  mode,
+  optimism,
+  polygon,
+} from 'viem/chains'
 import type { MockRequest, MockRequestContext } from '../types.js'
 
 /**
@@ -46,14 +55,30 @@ export type SraSymbol = 'USDC' | 'USDT'
  * `sourceTokensFromFees` resolves nothing and the widget shows "No routes
  * found" even on the happy path.
  */
-const TOKENS: Record<number, Record<SraSymbol, Address>> = {
+const TOKENS: Record<number, Partial<Record<SraSymbol, Address>>> = {
+  [mainnet.id]: {
+    USDT: getAddress('0xdac17f958d2ee523a2206206994597c13d831ec7'),
+  },
   [optimism.id]: {
     USDC: getAddress('0x0b2c639c533813f4aa9d7837caf62653d097ff85'),
     USDT: getAddress('0x94b008aa00579c1307b0ef2c499ad98a8ce58e58'),
   },
+  [bsc.id]: {
+    USDC: getAddress('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'),
+    USDT: getAddress('0x55d398326f99059ff775485246999027b3197955'),
+  },
+  [polygon.id]: {
+    USDT: getAddress('0xc2132d05d31c914a87c6611c10748aeb04b58e8f'),
+  },
   [base.id]: {
     USDC: getAddress('0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'),
     USDT: getAddress('0xfde4c96c8593536e31f229ea8f37b2ada2699bb2'),
+  },
+  [mode.id]: {
+    USDT: getAddress('0xf0f161fda2712db8b566946122a5af183995e2ed'),
+  },
+  [linea.id]: {
+    USDT: getAddress('0xa219439258ca9da29e9cc4ce5596924745e12b93'),
   },
   [arbitrum.id]: {
     USDC: getAddress('0xaf88d065e77c8cc2239327c5edb3a432268e5831'),
@@ -63,7 +88,12 @@ const TOKENS: Record<number, Record<SraSymbol, Address>> = {
 
 const DECIMALS: Record<SraSymbol, number> = { USDC: 6, USDT: 6 }
 
-export type SraRoute = { chainId: number; symbol: SraSymbol }
+export type SraRoute = {
+  chainId: number
+  symbol: SraSymbol
+  /** Whole tokens, e.g. `'0.52'`. Rendered as "Min deposit" in the widget. */
+  minDeposit?: string
+}
 
 export function sraTokenAddress(chainId: number, symbol: SraSymbol): Address {
   const token = TOKENS[chainId]?.[symbol]
@@ -72,27 +102,35 @@ export function sraTokenAddress(chainId: number, symbol: SraSymbol): Address {
 }
 
 /**
- * Two symbols over two chains, so the token picker has something to choose
- * between and each token reports more than one network.
+ * Two symbols over an uneven spread of chains, so the token picker has
+ * something to choose between and each token reports a different network
+ * count. Distinct `minDeposit`s per symbol make it visible which route the
+ * widget is quoting.
  */
 export const SRA_DEFAULT_ROUTES: readonly SraRoute[] = [
-  { chainId: optimism.id, symbol: 'USDC' },
-  { chainId: base.id, symbol: 'USDC' },
-  { chainId: optimism.id, symbol: 'USDT' },
-  { chainId: base.id, symbol: 'USDT' },
+  { chainId: optimism.id, symbol: 'USDC', minDeposit: '1.25' },
+  { chainId: bsc.id, symbol: 'USDC', minDeposit: '1.25' },
+  { chainId: base.id, symbol: 'USDC', minDeposit: '1.25' },
+  { chainId: mainnet.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: optimism.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: bsc.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: polygon.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: base.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: mode.id, symbol: 'USDT', minDeposit: '0.52' },
+  { chainId: linea.id, symbol: 'USDT', minDeposit: '0.52' },
 ]
 
-/** 250 whole tokens gross, 0.15 as the fee. */
-const WHOLE_AMOUNT = 250n
-const WHOLE_FEE = 15n
+/** 250 whole tokens gross, 0.15 as the fee, 1 as the default minimum. */
+const DEPOSIT_WHOLE = '250'
+const FEE_WHOLE = '0.15'
+const MIN_DEPOSIT_WHOLE = '1'
 
-const atomic = (whole: bigint, decimals: number, divisor = 1n) =>
-  ((whole * 10n ** BigInt(decimals)) / divisor).toString()
+const atomic = (whole: string, symbol: SraSymbol) =>
+  parseUnits(whole, DECIMALS[symbol]).toString()
 
 export const sraDepositAmount = (symbol: SraSymbol) =>
-  atomic(WHOLE_AMOUNT, DECIMALS[symbol])
-const sraFeeAmount = (symbol: SraSymbol) =>
-  atomic(WHOLE_FEE, DECIMALS[symbol], 100n)
+  atomic(DEPOSIT_WHOLE, symbol)
+const sraFeeAmount = (symbol: SraSymbol) => atomic(FEE_WHOLE, symbol)
 
 export type SraFeeData = {
   token: Address
@@ -121,7 +159,9 @@ function feesFromRoutes(
       name: route.symbol,
       decimal,
       fee: numberToHex(BigInt(sraFeeAmount(route.symbol))),
-      minDeposit: numberToHex(10n ** BigInt(decimal)),
+      minDeposit: numberToHex(
+        BigInt(atomic(route.minDeposit ?? MIN_DEPOSIT_WHOLE, route.symbol)),
+      ),
       maxDeposit: numberToHex(5_000n * 10n ** BigInt(decimal)),
       isSponsored: sponsored,
     })
