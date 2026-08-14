@@ -27,6 +27,11 @@ import { ExportWalletModal } from "../components/ExportWalletModal";
 import { SendTransactionTest } from "../components/SendTransactionTest";
 import { SigningTest } from "../components/SigningTest";
 import { submitToHubSpot } from "../lib/hubspot";
+import {
+  fetchTxHistory,
+  toTxHistoryEntries,
+  TX_HISTORY_TEST_ADDRESS,
+} from "../lib/txHistory";
 import { cn } from "../lib/utils";
 
 export const dynamic = 'force-dynamic';
@@ -148,6 +153,21 @@ export default function DashboardPage() {
     }
   )
 
+  // Real tx history from the local zerodev-data-api (Zerion-backed) — test
+  // wiring; fetched lazily when the overlay opens. Queries a fixed busy
+  // mainnet address (not the connected testnet wallet) so there's real data
+  // to render; still gated on login via `address`.
+  const { data: historyEntries, error: historyError } = useQuery({
+    queryKey: ["tx-history", TX_HISTORY_TEST_ADDRESS],
+    queryFn: async () => {
+      const page = await fetchTxHistory(TX_HISTORY_TEST_ADDRESS);
+      return toTxHistoryEntries(page.items);
+    },
+    enabled: showHistory && !!address,
+    staleTime: 30_000,
+    retry: false,
+  });
+
   const loadBalances = useCallback(async () => {
     if (!address || !isAddress(address) || !publicClient) return;
 
@@ -243,10 +263,20 @@ export default function DashboardPage() {
 
   return (
     <>
-      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />git
+      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
       {showHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <TxHistory onClose={() => setShowHistory(false)} />
+          {/* `entries ?? []` keeps the widget empty while the fetch is in
+              flight instead of flashing the kit's mock feed. */}
+          <TxHistory
+            entries={historyEntries ?? []}
+            onClose={() => setShowHistory(false)}
+          />
+          {historyError && (
+            <p className="absolute bottom-6 rounded-full bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">
+              Failed to load history: {historyError.message}
+            </p>
+          )}
         </div>
       )}
       <div className="min-h-screen">

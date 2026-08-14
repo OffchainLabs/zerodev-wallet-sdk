@@ -4,6 +4,17 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
+  // Proxy the local zerodev-data-api through the Next dev server so browser
+  // fetches stay same-origin — the api has no CORS layer. Target matches the
+  // api's `dev` script port (PORT=3100).
+  async rewrites() {
+    return [
+      {
+        source: '/data-api/:path*',
+        destination: `${process.env.DATA_API_URL ?? 'http://127.0.0.1:3100'}/:path*`,
+      },
+    ]
+  },
   transpilePackages: [
     '@zerodev/wallet-react',
     '@zerodev/wallet-react-ui',
