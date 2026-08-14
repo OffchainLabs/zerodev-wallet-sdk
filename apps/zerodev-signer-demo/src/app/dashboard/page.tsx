@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthenticators } from "@zerodev/wallet-react";
-import { TxHistory } from "@zerodev/wallet-react-ui";
+import { toTxHistoryEntries, TxHistory } from "@zerodev/wallet-react-ui";
 import {
   Check,
   Copy,
@@ -27,11 +27,7 @@ import { ExportWalletModal } from "../components/ExportWalletModal";
 import { SendTransactionTest } from "../components/SendTransactionTest";
 import { SigningTest } from "../components/SigningTest";
 import { submitToHubSpot } from "../lib/hubspot";
-import {
-  fetchTxHistory,
-  toTxHistoryEntries,
-  TX_HISTORY_TEST_ADDRESS,
-} from "../lib/txHistory";
+import { fetchTxHistory, TX_HISTORY_TEST_ADDRESS } from "../lib/txHistory";
 import { cn } from "../lib/utils";
 
 export const dynamic = 'force-dynamic';

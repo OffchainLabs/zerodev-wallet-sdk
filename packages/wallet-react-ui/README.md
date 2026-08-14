@@ -165,11 +165,15 @@ import { ConnectWallet, SignUp } from '@zerodev/wallet-react-ui'
 | `<ConnectWallet />` | Renders the current auth step (sign-in, OTP, verifying, etc.). Props: `logo`, `renderSignUp`, `size`, `onClose`. |
 | `<SignUp />` | Compound sign-up page: `SignUp.Default` plus the composable units (`Passkey`, `Google`, `Email`, `Wallet`, `InstalledWallets`, `MoreWallets`, `Divider`). |
 | `useAuth` | Read / drive the auth flow state. |
+| `<TxHistory />` | Day-grouped transaction-history widget. Props: `entries` (host-fetched feed), `onClose`, `onSelectEntry?`, `onViewPortal?`, `size?`, `className?`. |
+| `toTxHistoryEntries` | Maps the zerodev-data-api activity feed to `TxHistory` entries (titles, icons, chain names, seconds → ms timestamps). |
 
 ### Types
 
 `AuthMethod`, `AuthStep`, `EmailAuthMethod`, `WalletId`,
-`ZeroDevKitConnectorParams`.
+`ZeroDevKitConnectorParams`, `TxHistoryProps`, `TxHistoryStep`,
+`TxHistoryEntry`, `HistoryTransaction`, `HistoryFeedItem`, `HistoryToken`,
+`HistoryQuantity`, `UnparsedHistoryItem`.
 
 ## Development
 

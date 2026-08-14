@@ -14,8 +14,8 @@ const TITLE_BY_STEP: Record<TxHistoryStep, string> = {
 export interface TxHistoryProps {
   /** Called when the top-right × close button is clicked. */
   onClose: () => void
-  /** Activity feed; defaults to the mock feed until a real source lands. */
-  entries?: TxHistoryEntry[] | undefined
+  /** Activity feed — typically the output of `toTxHistoryEntries`. */
+  entries: TxHistoryEntry[]
   /** Fired when a row is tapped. Rows are inert when omitted. */
   onSelectEntry?: ((entry: TxHistoryEntry) => void) | undefined
   className?: string | undefined
@@ -46,7 +46,7 @@ export function TxHistory({
       case 'history':
         return (
           <History
-            {...(entries && { entries })}
+            entries={entries}
             {...(onSelectEntry && { onSelectEntry })}
           />
         )
