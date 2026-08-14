@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     '@zerodev/wallet-react-ui',
     '@zerodev/wallet-core',
   ],
+  experimental: {
+    externalDir: true,
+    extensionAlias: { '.js': ['.ts', '.js'] },
+  },
   webpack: (config) => {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings ?? []),

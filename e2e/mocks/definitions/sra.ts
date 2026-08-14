@@ -45,6 +45,10 @@ const BRIDGE_HASH = hash('b41d', '6e00')
 const EXECUTION_HASH = hash('e4ec', '0001')
 const pastHash = (index: number) =>
   hash('9a57', index.toString(16).padStart(4, '0'))
+/** Second and later live deposits; the first keeps `SRA_DEPOSIT_HASH`. The
+ * index sits in the tail so truncated rows stay tellable apart on screen. */
+const liveHash = (index: number) =>
+  hash('dead', `beef${index.toString(16).padStart(2, '0')}`)
 
 export const SRA_DEST_CHAIN_ID = arbitrum.id
 
@@ -218,8 +222,15 @@ export type SraMockHandle = {
   mocks: MockRequest[]
   routes: readonly SraRoute[]
   stage: () => SraStage | null
-  /** No argument walks pending → bridging → completed and stops. */
+  /** No argument walks pending → bridging → completed and stops. Acts on the
+   * most recent deposit. */
   advance: (stage?: SraStage) => SraStage
+  /**
+   * Begin a new deposit with its own hash, and make it the one `advance`
+   * acts on. Reusing a hash would mutate a row the widget has already seen,
+   * which it never re-reports as newly arrived.
+   */
+  startDeposit: (stage?: SraStage) => SraStage
   fail: (reason?: string) => void
   /** Move the deposit onto another route, to match a picker selection. */
   setDepositRoute: (route: SraRoute) => void
@@ -230,7 +241,8 @@ export type SraMockHandle = {
     count: number,
     options?: { failed?: boolean; route?: SraRoute },
   ) => void
-  clearPastDeposits: () => void
+  /** Live and past alike — the clean slate the lab's "Clear" offers. */
+  clearDeposits: () => void
   reset: () => void
   /** Per-RPC counts; `MockHandle.hits()` is an aggregate over both. */
   calls: () => { create: number; status: number }
@@ -355,13 +367,19 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
     bridged: boolean
     reason: string | null
     createdAt: string
+    /** Own hash, so a second deposit is a second row rather than a mutation
+     * of the first — which the widget would never show as newly arrived. */
+    hash: Hash
+    route: SraRoute
   }
 
-  const startLive = (stage: SraStage): Live => ({
+  const startLive = (stage: SraStage, index: number, on: SraRoute): Live => ({
     stage,
     bridged: stage === 'bridging' || stage === 'completed',
     reason: null,
     createdAt: new Date().toISOString(),
+    hash: index === 0 ? SRA_DEPOSIT_HASH : liveHash(index),
+    route: on,
   })
 
   const routes = options.routes ?? SRA_DEFAULT_ROUTES
@@ -369,7 +387,7 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
   const firstRoute = routes[0]
   if (!firstRoute) throw new Error('createSraMocks needs at least one route')
 
-  let live: Live | null = null
+  let lives: Live[] = []
   let route: SraRoute = firstRoute
   let errorMode: SraErrorMode = 'none'
   let sponsored = false
@@ -378,19 +396,19 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
   let statusSucceeded = false
   const counters = { create: 0, status: 0 }
 
-  const liveDeposit = (): SraDeposit | null => {
-    if (!live) return null
-    return depositOn(route, destChainId, SRA_DEPOSIT_HASH, {
-      ...(live.bridged && { bridgeHash: BRIDGE_HASH }),
-      ...(live.stage === 'completed' && { executionHash: EXECUTION_HASH }),
-      error: live.stage === 'failed' ? live.reason : null,
-      createdAt: live.createdAt,
-    })
-  }
+  const liveDeposits = (): SraDeposit[] =>
+    lives.map((entry) =>
+      depositOn(entry.route, destChainId, entry.hash, {
+        ...(entry.bridged && { bridgeHash: BRIDGE_HASH }),
+        ...(entry.stage === 'completed' && { executionHash: EXECUTION_HASH }),
+        error: entry.stage === 'failed' ? entry.reason : null,
+        createdAt: entry.createdAt,
+      }),
+    )
 
   const statusResult = (request: MockRequestContext): object => {
-    const current = liveDeposit()
-    const all = current ? [current, ...past] : [...past]
+    // Newest first, as the server reports them.
+    const all = [...liveDeposits().reverse(), ...past]
     const { page, pageSize } = readPaging(request.body)
     const totalPages = Math.max(1, Math.ceil(all.length / pageSize))
     const start = (page - 1) * pageSize
@@ -403,8 +421,8 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
   }
 
   const reset = (): void => {
-    live = options.stage ? startLive(options.stage) : null
     route = options.depositRoute ?? firstRoute
+    lives = options.stage ? [startLive(options.stage, 0, route)] : []
     errorMode = options.errorMode ?? 'none'
     sponsored = options.sponsored ?? false
     past = [...(options.pastDeposits ?? [])]
@@ -455,25 +473,32 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
     },
   ]
 
+  const current = (): Live | undefined => lives[lives.length - 1]
+
+  const startDeposit = (stage: SraStage = 'pending'): SraStage => {
+    lives.push(startLive(stage, lives.length, route))
+    return stage
+  }
+
   const advance = (stage?: SraStage): SraStage => {
-    if (!live) {
-      live = startLive(stage ?? 'pending')
-      return live.stage
-    }
-    const next = stage ?? NEXT_STAGE[live.stage]
-    live.stage = next
-    live.bridged ||= next === 'bridging' || next === 'completed'
+    const entry = current()
+    if (!entry) return startDeposit(stage ?? 'pending')
+    const next = stage ?? NEXT_STAGE[entry.stage]
+    entry.stage = next
+    entry.bridged ||= next === 'bridging' || next === 'completed'
     return next
   }
 
   return {
     mocks,
     routes,
-    stage: () => live?.stage ?? null,
+    stage: () => current()?.stage ?? null,
     advance,
+    startDeposit,
     fail: (reason) => {
       advance('failed')
-      if (live) live.reason = reason ?? SRA_FAILURE_REASONS[0]
+      const entry = current()
+      if (entry) entry.reason = reason ?? SRA_FAILURE_REASONS[0]
     },
     setDepositRoute: (next) => {
       route = next
@@ -496,7 +521,8 @@ export function createSraMocks(options: SraMockOptions = {}): SraMockHandle {
       ]
       pastCount += count
     },
-    clearPastDeposits: () => {
+    clearDeposits: () => {
+      lives = []
       past = []
     },
     reset,

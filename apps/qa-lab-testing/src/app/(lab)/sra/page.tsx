@@ -13,9 +13,10 @@ export default function SraPage() {
     <>
       <FeatureHeader featureId="sra">
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-          Live against the real SRA server: deposit addresses and routes are
-          genuine, and anything sent to one moves real funds. Deposit simulation
-          is not wired up yet.
+          Live against the real SRA server by default: deposit addresses and
+          routes are genuine, and anything sent to one moves real funds. Turn on{" "}
+          <b>Mock SRA server</b> to drive the widget against canned responses
+          instead — no network, no funds, and deposits you can step through.
         </p>
       </FeatureHeader>
 
