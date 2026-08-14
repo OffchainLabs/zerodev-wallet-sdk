@@ -103,6 +103,31 @@ rather than quietly hit staging:
 await routeMocks(page, userWallet, { unmatched: 'block' })
 ```
 
+### Several installs on one page
+
+`routeMocks` can be called more than once. Playwright runs handlers
+newest-first, and an install that matches nothing defers to the one before it,
+so definitions compose which results in a clash:
+
+```ts
+await routeMocks(page, userWallet)
+await routeMocks(page, sraDeposit.mocks)
+```
+
+`handle.dispose()` removes one install and leaves the rest, for a spec that
+wants to prove the mock was what changed the result:
+
+```ts
+const mocked = await routeMocks(page, userWallet)
+await expect(address).toHaveText(MOCK_WALLET_ADDRESS)
+
+await mocked.dispose()
+await page.reload()
+await expect(address).not.toHaveText(MOCK_WALLET_ADDRESS)
+```
+
+Otherwise no teardown is needed — routes belong to the page.
+
 ### JSON-RPC ids
 
 You don't need to get `id` right in a definition. Both adapters copy the
