@@ -197,6 +197,68 @@ test.describe('SRA deposits', () => {
     await expect(page.getByRole('option')).toHaveCount(claimed)
   })
 
+  test('shows the create-failure card and recovers on retry', async ({
+    authedPage: page,
+  }) => {
+    const sra = createSraMocks({ errorMode: 'address-create-failed' })
+    await openSra(page, sra)
+    const widget = widgetOf(page)
+
+    await expect(widget.getByRole('alert')).toContainText(
+      'Failed to create deposit address...',
+      { timeout: POLL_WINDOW_MS },
+    )
+
+    sra.setErrorMode('none')
+    await widget.getByRole('button', { name: 'Retry' }).click()
+
+    await expect(widget.getByTestId('address-display-address')).toHaveText(
+      SRA_MOCK_ADDRESS,
+      { timeout: POLL_WINDOW_MS },
+    )
+    await expect(widget.getByRole('alert')).toHaveCount(0)
+    expect(sra.calls().create).toBeGreaterThan(1)
+  })
+
+  test('shows the no-routes card when creation returns no estimates', async ({
+    authedPage: page,
+  }) => {
+    const sra = createSraMocks({ errorMode: 'route-not-found' })
+    await openSra(page, sra)
+    const widget = widgetOf(page)
+
+    await expect(widget.getByRole('alert')).toContainText(
+      'No routes found, try one more time...',
+      { timeout: POLL_WINDOW_MS },
+    )
+
+    await expect(widget.getByTestId('address-display-address')).toHaveText(
+      SRA_MOCK_ADDRESS,
+    )
+  })
+
+  test('shows the polling-failure card only once a poll has succeeded', async ({
+    authedPage: page,
+  }) => {
+    const sra = createSraMocks()
+    await openSra(page, sra)
+    const widget = widgetOf(page)
+
+    await waitForFirstPoll(sra)
+    await expect(widget.getByRole('alert')).toHaveCount(0)
+
+    sra.setErrorMode('polling-failed')
+    await expect(widget.getByRole('alert')).toContainText(
+      'Failed to load deposits, try again...',
+      { timeout: POLL_WINDOW_MS },
+    )
+
+    sra.setErrorMode('none')
+    await expect(widget.getByRole('alert')).toHaveCount(0, {
+      timeout: POLL_WINDOW_MS,
+    })
+  })
+
   test('opens a past deposit and shows the route it was made on', async ({
     authedPage: page,
   }) => {
