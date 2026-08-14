@@ -8,6 +8,17 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
  */
 export type UnmatchedPolicy = 'passthrough' | 'block'
 
+/** The request as both adapters see it. `body` is `''` when there is none. */
+export interface MockRequestContext {
+  url: string
+  method: string
+  body: string
+}
+
+export type MockResponseFn = (request: MockRequestContext) => object
+
+export type MockResponse = object | MockResponseFn
+
 export interface MockRequest {
   /**
    * Matched against the request's REAL full URL (host + path), because the
@@ -29,8 +40,8 @@ export interface MockRequest {
    * them apart, e.g. `'0x70a08231'` for `balanceOf`.
    */
   bodyIncludes?: string
-  /** JSON body returned on match. */
-  response: object
+  /** JSON body returned on match, or a function computing it per request. */
+  response: MockResponse
   /** HTTP status returned on match. Defaults to 200. */
   status?: number
   /** Higher wins when multiple mocks match. Defaults to 0. */

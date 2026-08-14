@@ -6,9 +6,13 @@
  * by hand — it needs no test runner, just the app itself.
  */
 
-import { echoJsonRpcId } from './jsonRpc.js'
 import { orderMocks } from './orderMocks.js'
-import type { MockRequest, UnmatchedPolicy } from './types.js'
+import { resolveMockResponse } from './resolveResponse.js'
+import type {
+  MockRequest,
+  MockRequestContext,
+  UnmatchedPolicy,
+} from './types.js'
 
 let active: MockRequest[] = []
 let unmatchedPolicy: UnmatchedPolicy = 'passthrough'
@@ -66,7 +70,7 @@ function urlMatches(pattern: string | RegExp, url: string): boolean {
 /** First match wins, after `orderMocks` has sorted by priority. */
 export function matchMock(
   mocks: readonly MockRequest[],
-  request: { url: string; method: string; body: string },
+  request: MockRequestContext,
 ): MockRequest | undefined {
   return mocks.find((mock) => {
     if (mock.method !== request.method) return false
@@ -97,7 +101,7 @@ function jsonResponse(body: object, status: number): Response {
 async function describeRequest(
   input: RequestInfo | URL,
   init?: RequestInit,
-): Promise<{ url: string; method: string; body: string }> {
+): Promise<MockRequestContext> {
   if (input instanceof Request) {
     let body = ''
     try {
@@ -137,7 +141,7 @@ export function installMockFetch(options?: {
 
     if (mock) {
       return jsonResponse(
-        echoJsonRpcId(mock.response, request.body),
+        resolveMockResponse(mock, request),
         mock.status ?? 200,
       )
     }

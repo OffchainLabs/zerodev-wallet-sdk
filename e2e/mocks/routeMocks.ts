@@ -1,8 +1,12 @@
 import type { Page } from '@playwright/test'
 import { matchMock } from './installMockFetch.js'
-import { echoJsonRpcId } from './jsonRpc.js'
 import { orderMocks } from './orderMocks.js'
-import type { MockRequest, UnmatchedPolicy } from './types.js'
+import { resolveMockResponse } from './resolveResponse.js'
+import type {
+  MockRequest,
+  MockRequestContext,
+  UnmatchedPolicy,
+} from './types.js'
 
 /**
  * Serves `MockRequest[]` to a page through Playwright's own request
@@ -37,12 +41,12 @@ export async function routeMocks(
 
   await page.route('**/*', async (route) => {
     const request = route.request()
-    const body = request.postData() ?? ''
-    const mock = matchMock(ordered, {
+    const context: MockRequestContext = {
       url: request.url(),
       method: request.method(),
-      body,
-    })
+      body: request.postData() ?? '',
+    }
+    const mock = matchMock(ordered, context)
 
     if (!mock) {
       if (unmatched === 'block') {
@@ -51,8 +55,8 @@ export async function routeMocks(
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'No mock matched',
-            method: request.method(),
-            url: request.url(),
+            method: context.method,
+            url: context.url,
           }),
         })
       }
@@ -65,7 +69,7 @@ export async function routeMocks(
     await route.fulfill({
       status: mock.status ?? 200,
       contentType: 'application/json',
-      body: JSON.stringify(echoJsonRpcId(mock.response, body)),
+      body: JSON.stringify(resolveMockResponse(mock, context)),
     })
   })
 
