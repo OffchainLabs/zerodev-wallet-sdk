@@ -52,44 +52,57 @@ function formatAmount(quantity: HistoryQuantity): string {
   })
 }
 
-function toEntry(tx: HistoryTransaction): TxHistoryEntry {
+function toTitle(tx: HistoryTransaction): string {
   const verb =
     OPERATION_VERBS[tx.operation] ??
     tx.operation.charAt(0).toUpperCase() + tx.operation.slice(1)
 
-  const title =
-    tx.operation === 'swap' && tx.token && tx.destToken
-      ? `Swapped ${tx.token.symbol} → ${tx.destToken.symbol}`
-      : tx.nft
-        ? `${verb} NFT`
-        : tx.token
-          ? `${verb} ${tx.token.symbol}`
-          : verb
+  if (tx.operation === 'swap' && tx.token && tx.destToken) {
+    return `Swapped ${tx.token.symbol} → ${tx.destToken.symbol}`
+  }
+  if (tx.nft) return `${verb} NFT`
+  if (tx.token) return `${verb} ${tx.token.symbol}`
+  return verb
+}
 
-  const value = tx.nft
-    ? tx.nft.name
-    : tx.quantity && tx.token
-      ? `${formatAmount(tx.quantity)} ${tx.token.symbol}`
-      : ''
+function toValue(tx: HistoryTransaction): string {
+  if (tx.nft) return tx.nft.name
+  if (tx.quantity && tx.token) {
+    return `${formatAmount(tx.quantity)} ${tx.token.symbol}`
+  }
+  return ''
+}
 
+function toIcon(tx: HistoryTransaction): TxHistoryEntry['icon'] {
+  if (tx.nft) return 'imageFill'
+  return OPERATION_ICONS[tx.operation] ?? 'transaction'
+}
+
+function toStatus(
+  status: HistoryTransaction['status'],
+): TxHistoryEntry['status'] {
+  switch (status) {
+    case 'pending':
+      return 'Pending'
+    case 'failed':
+      return 'Failed'
+    case 'success':
+      return 'Success'
+  }
+}
+
+function toEntry(tx: HistoryTransaction): TxHistoryEntry {
   const destChainId = tx.destToken?.chainId
   const crossChain = destChainId !== undefined && destChainId !== tx.chainId
 
   return {
     id: tx.id,
-    icon: tx.nft
-      ? 'imageFill'
-      : (OPERATION_ICONS[tx.operation] ?? 'transaction'),
-    title,
-    value,
+    icon: toIcon(tx),
+    title: toTitle(tx),
+    value: toValue(tx),
     chainName: chainName(tx.chainId),
     ...(crossChain && { destChainName: chainName(destChainId) }),
-    status:
-      tx.status === 'pending'
-        ? 'Pending'
-        : tx.status === 'failed'
-          ? 'Failed'
-          : 'Success',
+    status: toStatus(tx.status),
     timestamp: tx.timestamp * 1000, // data-api sends unix seconds
   }
 }
