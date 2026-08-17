@@ -63,10 +63,6 @@ export default function Home() {
   const [lastMainnetRecipient, setLastMainnetRecipient] =
     useState<Address | null>(null)
   const [targetChainId, setTargetChainId] = useState<number>(arbitrum.id)
-  // Required since @zerodev/smart-routing-address 0.2.6 — the server no
-  // longer supplies a default. 100 bps (1%) keeps `minDeposit` reasonable:
-  // tight values (e.g. 50 bps) massively inflate it since the server
-  // computes it as ~fee / slippage.
   const [slippage, setSlippage] = useState<number>(100)
   // Bumped by `MockControls` after inserting/clearing mock deposits or
   // toggling error/sponsored modes — re-mounts the widget so freshly-added

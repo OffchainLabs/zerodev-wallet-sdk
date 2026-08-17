@@ -41,10 +41,7 @@ export type SmartRoutingAddressConfig = {
    */
   actions?: CreateSmartRoutingAddressParams['actions']
   /**
-   * Max slippage in basis points (50 = 0.5%). Required — the SRA server no
-   * longer supplies a default (@zerodev/smart-routing-address ≥ 0.2.6).
-   * Note: tight values inflate `minDeposit`, which the server computes as
-   * ~fee / slippage.
+   * Max slippage in basis points (50 = 0.5%).
    */
   slippage: number
   /**
