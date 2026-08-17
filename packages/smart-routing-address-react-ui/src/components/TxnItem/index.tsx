@@ -80,7 +80,11 @@ export function TxnItem({
         {...(badgeIconUrl && { badgeIconUrl })}
       />
 
-      <div className="zd:flex zd:min-w-0 zd:flex-1 zd:flex-col zd:gap-2 zd:py-2">
+      {/* gap-1, not the Figma node's 8px: the design measures between
+          leading-trimmed text boxes (text-box-trim), while our Text renders
+          130% line-height — ~2px of leading above and below each line — so
+          4px + leading visually lands on the design's 8px. */}
+      <div className="zd:flex zd:min-w-0 zd:flex-1 zd:flex-col zd:gap-1 zd:py-2">
         <div className="zd:flex zd:min-w-0 zd:items-center zd:gap-1">
           <Text className="zd:truncate zd:text-body2">{amount}</Text>
           {detailed && (

@@ -279,7 +279,12 @@ export function Deposit({
   ])
 
   return (
-    <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
+    // min-h-full, not h-full: with a fixed height, overflowing content
+    // scrolls past the padding box and pb-6 never lands after the last row
+    // (the "Past deposits" row hits the bottom edge). min-h keeps short
+    // content filling the viewport while letting tall content grow so the
+    // bottom padding is honoured.
+    <div className="zd:flex zd:min-h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
       <Text className="zd:w-full zd:text-center">{SUBTITLE}</Text>
 
       <div className="zd:relative zd:flex zd:w-full zd:flex-1 zd:flex-col zd:gap-2">
@@ -487,6 +492,7 @@ export function Deposit({
                 address={address}
                 onQrClick={onQrClick}
               />
+              {address && <CopyAddressButton address={address} />}
               {errorMessage && (
                 <ErrorRetryCard
                   message={errorMessage}
@@ -557,6 +563,51 @@ export function Deposit({
           ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * Full-width dark "Copy Address" pill under the address row (Figma
+ * `20002:36049`). Not react-ui's `Button`: that primitive is locked to the
+ * 64px/24px-radius spec, while this is the design system's smaller
+ * 48px/14px button — worth promoting as a Button size variant if it
+ * recurs. Label flips to "Copied!" for 2s as tap feedback (the design has
+ * no pressed state).
+ */
+function CopyAddressButton({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can reject on insecure contexts / denied permission —
+      // keep the label unchanged rather than claim a copy happened.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        'zd:relative zd:flex zd:h-12 zd:w-full zd:shrink-0 zd:cursor-pointer zd:items-center zd:justify-center zd:gap-2',
+        'zd:rounded-[14px] zd:backdrop-blur-[15px] zd:transition-colors zd:hover:bg-greyScale',
+        'zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]',
+      )}
+      style={{ backgroundColor: 'rgba(19, 14, 11, 0.9)' }}
+    >
+      <Text className="zd:text-body1 zd:text-offWhite">
+        {copied ? 'Copied!' : 'Copy Address'}
+      </Text>
+      <Icon
+        name="copy"
+        className="zd:size-4 zd:shrink-0 zd:text-offWhite"
+        aria-hidden
+      />
+    </button>
   )
 }
 
