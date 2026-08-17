@@ -12,6 +12,7 @@ import {
   Text,
   TokenListItem,
   Tooltip,
+  WrappedPressable,
   Wrapper,
 } from '@zerodev/react-ui'
 import type { DepositedToken, TOKEN_TYPE } from '@zerodev/smart-routing-address'
@@ -537,43 +538,52 @@ export function Deposit({
 
         {pastDepositsCount > 0 &&
           (onViewPastDeposits ? (
-            <button
-              type="button"
+            <WrappedPressable
               onClick={onViewPastDeposits}
-              className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4 zd:cursor-pointer"
+              className={cn('zd:w-full', PAST_DEPOSITS_CARD)}
             >
-              <Icon
-                name="clock"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-              <Text className="zd:flex-1 zd:text-left zd:text-body1">
-                Past deposits ({pastDepositsCount})
-              </Text>
-              <Icon
-                name="chevronRight"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-            </button>
+              <PastDepositsRow count={pastDepositsCount} />
+            </WrappedPressable>
           ) : (
-            <div className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4">
-              <Icon
-                name="clock"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-              <Text className="zd:flex-1 zd:text-left zd:text-body1">
-                Past deposits ({pastDepositsCount})
-              </Text>
-              <Icon
-                name="chevronRight"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-            </div>
+            <Wrapper
+              variant="ghost"
+              className={cn(
+                'zd:flex zd:w-full zd:items-center',
+                PAST_DEPOSITS_CARD,
+              )}
+            >
+              <PastDepositsRow count={pastDepositsCount} />
+            </Wrapper>
           ))}
       </div>
+    </div>
+  )
+}
+
+// Past-deposits card treatment (Figma 20002:36111): 16px radius plus the
+// universal inner shadow; border/blur/tint come from the ghost Wrapper.
+const PAST_DEPOSITS_CARD =
+  'zd:rounded-2xl zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]'
+
+/** Row content shared by the tappable and inert past-deposits variants. */
+function PastDepositsRow({ count }: { count: number }) {
+  return (
+    <div className="zd:flex zd:w-full zd:items-center zd:gap-3 zd:p-4">
+      <div className="zd:flex zd:min-w-0 zd:flex-1 zd:items-center zd:gap-2">
+        <Icon
+          name="clockFill"
+          className="zd:size-4 zd:shrink-0 zd:text-solarOrange"
+          aria-hidden
+        />
+        <Text className="zd:flex-1 zd:text-left zd:text-h3">
+          Past deposits ({count})
+        </Text>
+      </div>
+      <Icon
+        name="chevronRight"
+        className="zd:size-4.5 zd:shrink-0 zd:text-greyScale"
+        aria-hidden
+      />
     </div>
   )
 }
