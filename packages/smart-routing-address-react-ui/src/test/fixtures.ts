@@ -19,7 +19,6 @@ export const TEST_CONFIG: SmartRoutingAddressConfig = {
   projectId: TEST_PROJECT_ID,
   targetChainId: base.id,
   slippage: 50,
-  pollingInterval: 25,
 }
 
 export const TEST_ESTIMATED_FEES: EstimatedFee[] = [

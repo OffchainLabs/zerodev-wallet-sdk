@@ -63,10 +63,11 @@ export default function Home() {
   const [lastMainnetRecipient, setLastMainnetRecipient] =
     useState<Address | null>(null)
   const [targetChainId, setTargetChainId] = useState<number>(arbitrum.id)
-  // `undefined` = don't send `slippage` to the widget/SDK, so the SRA server
-  // uses its own default. Tight client-set values (e.g. 50 bps) massively
-  // inflate `minDeposit` since the server computes it as ~fee / slippage.
-  const [slippage, setSlippage] = useState<number | undefined>(undefined)
+  // Required since @zerodev/smart-routing-address 0.2.6 — the server no
+  // longer supplies a default. 100 bps (1%) keeps `minDeposit` reasonable:
+  // tight values (e.g. 50 bps) massively inflate it since the server
+  // computes it as ~fee / slippage.
+  const [slippage, setSlippage] = useState<number>(100)
   // Bumped by `MockControls` after inserting/clearing mock deposits or
   // toggling error/sponsored modes — re-mounts the widget so freshly-added
   // deposits re-baseline as past and new mock state takes effect.
@@ -84,9 +85,7 @@ export default function Home() {
     SIMULATED_DEFAULT_RECIPIENT,
   )
   const [draftChain, setDraftChain] = useState<number>(targetChainId)
-  const [draftSlippage, setDraftSlippage] = useState<number | undefined>(
-    slippage,
-  )
+  const [draftSlippage, setDraftSlippage] = useState<number>(slippage)
 
   // Mock lifecycle owned at page level so the toggle can flip it cleanly.
   // Simulated → install the fetch interceptor + seed past-deposits from
@@ -158,12 +157,7 @@ export default function Home() {
   }
 
   const config = useMemo<SmartRoutingAddressConfig>(
-    // Omit `slippage` when unset so the server picks its default — sending
-    // a tight value (e.g. 50 bps) blows up `minDeposit`.
-    () => ({
-      targetChainId,
-      ...(slippage !== undefined && { slippage }),
-    }),
+    () => ({ targetChainId, slippage }),
     [targetChainId, slippage],
   )
 
@@ -367,39 +361,22 @@ export default function Home() {
                   <span className="flex items-baseline justify-between text-sm font-semibold">
                     Max slippage
                     <span className="text-muted tabular-nums">
-                      {draftSlippage === undefined
-                        ? 'Server default'
-                        : `${(draftSlippage / 100).toFixed(2)}%`}
+                      {`${(draftSlippage / 100).toFixed(2)}%`}
                     </span>
                   </span>
-                  <span className="flex items-center gap-2 text-[13px] text-muted">
-                    <input
-                      type="checkbox"
-                      checked={draftSlippage !== undefined}
-                      onChange={(e) =>
-                        setDraftSlippage(e.target.checked ? 100 : undefined)
-                      }
-                      className="accent-ink"
-                    />
-                    Override server default
-                  </span>
-                  {draftSlippage !== undefined && (
-                    <input
-                      type="range"
-                      min={50}
-                      max={500}
-                      step={10}
-                      value={draftSlippage}
-                      onChange={(e) => setDraftSlippage(Number(e.target.value))}
-                      className="w-full accent-ink"
-                    />
-                  )}
+                  <input
+                    type="range"
+                    min={50}
+                    max={500}
+                    step={10}
+                    value={draftSlippage}
+                    onChange={(e) => setDraftSlippage(Number(e.target.value))}
+                    className="w-full accent-ink"
+                  />
                   <span className="text-[13px] text-muted">
                     Max price movement tolerated while swapping. A tighter value
                     protects the price but raises the minimum deposit, and can
-                    make it fluctuate significantly with gas. Leaving it on{' '}
-                    <b>Server default</b> keeps the minimum deposit at the
-                    lowest.
+                    make it fluctuate significantly with gas.
                   </span>
                 </label>
 

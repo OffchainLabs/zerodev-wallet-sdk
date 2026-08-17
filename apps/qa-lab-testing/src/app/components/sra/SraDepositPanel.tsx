@@ -16,6 +16,8 @@ const TARGET_CHAIN = arbitrum;
 
 const SRA_CONFIG: SmartRoutingAddressConfig = {
   targetChainId: TARGET_CHAIN.id,
+  // Required since @zerodev/smart-routing-address 0.2.6 (no server default).
+  slippage: 100,
 };
 
 export function SraDepositPanel() {
