@@ -26,13 +26,34 @@ describe('TxnItem', () => {
     expect(screen.getByText('Routing')).toBeDefined()
   })
 
-  it.each<TxnStatus>(['Routing', 'Detected', 'Received', 'Failed'])(
-    'accepts %s status without crashing',
-    (status) => {
-      render(<TxnItem {...BASE} status={status} />)
-      expect(screen.getByText(status)).toBeDefined()
-    },
-  )
+  it.each<TxnStatus>([
+    'Routing',
+    'Detected',
+    'Received',
+    'Delivered',
+    'Failed',
+  ])('accepts %s status without crashing', (status) => {
+    render(<TxnItem {...BASE} status={status} />)
+    expect(screen.getByText(status)).toBeDefined()
+  })
+
+  it('shows the spinner marker only while Routing', () => {
+    const { container, unmount } = render(
+      <TxnItem {...BASE} status="Routing" />,
+    )
+    expect(container.querySelector('.zd\\:animate-spin')).not.toBeNull()
+    unmount()
+    const { container: done } = render(<TxnItem {...BASE} status="Delivered" />)
+    expect(done.querySelector('.zd\\:animate-spin')).toBeNull()
+  })
+
+  it('renders Received in plain ink and Delivered in green', () => {
+    const { unmount } = render(<TxnItem {...BASE} status="Received" />)
+    expect(screen.getByText('Received').className).not.toContain('positive')
+    unmount()
+    render(<TxnItem {...BASE} status="Delivered" />)
+    expect(screen.getByText('Delivered').className).toContain('positive')
+  })
 
   it('renders the address as a link when href is provided', () => {
     render(
@@ -53,7 +74,7 @@ describe('TxnItem', () => {
     expect(screen.queryByRole('link')).toBeNull()
   })
 
-  it('renders source and destination token/chain images', () => {
+  it('compact rows show the token with the source-chain badge only', () => {
     const { container } = render(
       <TxnItem
         {...BASE}
@@ -70,7 +91,40 @@ describe('TxnItem', () => {
     )
     expect(srcs).toContain('data:image/svg+xml;base64,c3JjLXRvaw==')
     expect(srcs).toContain('data:image/svg+xml;base64,c3JjLWNoIQ==')
+    // Dest icons only appear on the detailed variant
+    expect(srcs).not.toContain('data:image/svg+xml;base64,ZHN0LXRvaw==')
+    expect(srcs).not.toContain('data:image/svg+xml;base64,ZHN0LWNoIQ==')
+  })
+
+  it('detailed rows show both amounts, the chain route, and the dest badge', () => {
+    const { container } = render(
+      <TxnItem
+        {...BASE}
+        destAmount="$247.10 USD"
+        status="Delivered"
+        sourceTokenIconUrl="data:image/svg+xml;base64,c3JjLXRvaw=="
+        sourceChainIconUrl="data:image/svg+xml;base64,c3JjLWNoIQ=="
+        destTokenIconUrl="data:image/svg+xml;base64,ZHN0LXRvaw=="
+        destChainIconUrl="data:image/svg+xml;base64,ZHN0LWNoIQ=="
+        sourceChainName="Arbitrum"
+        destChainName="Robinhood"
+      />,
+    )
+    expect(screen.getByText('$248.00 USD')).toBeDefined()
+    expect(screen.getByText('$247.10 USD')).toBeDefined()
+    expect(screen.getByText('Arbitrum')).toBeDefined()
+    expect(screen.getByText('Robinhood')).toBeDefined()
+    const srcs = Array.from(container.querySelectorAll('img')).map(
+      (img) => img.getAttribute('src') ?? '',
+    )
+    // Mark badge = dest token; route line carries both chain icons
     expect(srcs).toContain('data:image/svg+xml;base64,ZHN0LXRvaw==')
+    expect(srcs).toContain('data:image/svg+xml;base64,c3JjLWNoIQ==')
     expect(srcs).toContain('data:image/svg+xml;base64,ZHN0LWNoIQ==')
+  })
+
+  it('omits the chain-route line on compact rows even with chain names absent', () => {
+    render(<TxnItem {...BASE} status="Routing" />)
+    expect(screen.queryByText('Arbitrum')).toBeNull()
   })
 })
