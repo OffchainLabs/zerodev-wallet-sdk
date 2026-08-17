@@ -525,22 +525,26 @@ export function Deposit({
           }
         />
 
-        {newDeposits.length > 0 ? (
-          <PendingDeposits
-            deposits={newDeposits}
-            estimatedFees={estimatedFees}
-            config={config}
-            {...(onSelectDeposit && { onSelectDeposit })}
-          />
-        ) : (
-          <LoadingCard
-            text={
-              source
-                ? `Watching for your deposit on ${source.chain.name}…`
-                : 'Watching for your deposit…'
-            }
-          />
-        )}
+        {/* Deposit watching only makes sense once the address exists —
+            while creation is loading (or failed) there is nothing to watch,
+            so neither card renders. */}
+        {address &&
+          (newDeposits.length > 0 ? (
+            <PendingDeposits
+              deposits={newDeposits}
+              estimatedFees={estimatedFees}
+              config={config}
+              {...(onSelectDeposit && { onSelectDeposit })}
+            />
+          ) : (
+            <LoadingCard
+              text={
+                source
+                  ? `Watching for your deposit on ${source.chain.name}…`
+                  : 'Watching for your deposit…'
+              }
+            />
+          ))}
 
         {pastDepositsCount > 0 &&
           (onViewPastDeposits ? (
