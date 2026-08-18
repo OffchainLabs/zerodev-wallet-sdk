@@ -28,7 +28,6 @@ const containsStaging = (value?: string): CheckResult => {
 /** Where each chain's transport came from. Values themselves stay hidden. */
 const TRANSPORT_SOURCE_LABEL: Record<TransportSource, string> = {
   param: "from URL",
-  env: "from env",
   default: "zerodev staging",
   local: "local node",
   chain: "chain default",
@@ -59,8 +58,12 @@ export default async function EnvironmentPage({
 
   const checks = [
     {
-      variable: "NEXT_PUBLIC_ZERODEV_PROJECT_ID",
-      result: isSet(process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID),
+      variable: "NEXT_PUBLIC_ZD_PROJECT_ID",
+      result: isSet(process.env.NEXT_PUBLIC_ZD_PROJECT_ID),
+    },
+    {
+      variable: "NEXT_PUBLIC_ZD_OTP_PROJECT_ID",
+      result: isSet(process.env.NEXT_PUBLIC_ZD_OTP_PROJECT_ID),
     },
     {
       variable: "NEXT_PUBLIC_KMS_PROXY_BASE_URL",
@@ -238,10 +241,19 @@ export default async function EnvironmentPage({
             </ConfigRow>
 
             <ConfigRow
-              id="email-auth"
-              label="email auth method"
-              overridden={isOverridden(PARAM.emailAuth)}
+              id="auth-flavor"
+              label="auth flavor"
+              overridden={isOverridden(PARAM.authFlavor)}
             >
+              <Chip testId={`env-auth-flavor-${resolved.authFlavor}`}>
+                {resolved.authFlavor}
+              </Chip>
+              <Chip
+                testId="env-auth-flavor-project"
+                tone={resolved.projectId ? "pass" : "neutral"}
+              >
+                {resolved.projectId ? "project id set" : "project id MISSING"}
+              </Chip>
               <Chip testId={`env-email-auth-${resolved.emailAuthMethod}`}>
                 {resolved.emailAuthMethod}
               </Chip>

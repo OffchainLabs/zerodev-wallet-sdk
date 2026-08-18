@@ -40,6 +40,10 @@ export default defineConfig({
         'packages/*/src/**/*.d.ts',
       ],
     },
-    include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],
+    include: [
+      'packages/*/src/**/*.test.ts',
+      'packages/*/src/**/*.test.tsx',
+      'e2e/mocks/**/*.test.ts',
+    ],
   },
 })
