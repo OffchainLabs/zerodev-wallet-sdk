@@ -221,10 +221,9 @@ export function Deposit({
     return out
   }, [srcTokens, selectedTokenType])
 
-  // Only formatted when the consumer explicitly sets a slippage — otherwise
-  // the server picks its own default and there is no meaningful value to show.
-  const slippage =
-    typeof config.slippage === 'number' ? formatSlippage(config.slippage) : null
+  // Always present: config.slippage is required now that the SRA server no
+  // longer supplies a default.
+  const slippage = formatSlippage(config.slippage)
 
   const minDepositAmount =
     feeData && tokenSymbol
@@ -378,38 +377,36 @@ export function Deposit({
                 }
               />
               <div className="zd:flex zd:w-full zd:flex-col zd:items-start zd:gap-2 zd:px-2 zd:py-4">
-                {slippage && (
-                  <DataRow
-                    label="Max slippage"
-                    value={slippage}
-                    info
-                    infoTooltip={FEE_INFO.maxSlippage}
-                    trailing={
-                      breakdown?.provider &&
-                      PROVIDER_ICONS[breakdown.provider] ? (
-                        <LiveValue
-                          loading={providerFees.loading}
-                          flashKey={breakdown.provider}
-                        >
-                          <Tooltip content={`Quoted via ${breakdown.provider}`}>
-                            <button
-                              type="button"
-                              aria-label={`Quoted via ${breakdown.provider}`}
-                              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
-                            >
-                              <img
-                                src={PROVIDER_ICONS[breakdown.provider]}
-                                alt=""
-                                aria-hidden
-                                className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
-                              />
-                            </button>
-                          </Tooltip>
-                        </LiveValue>
-                      ) : null
-                    }
-                  />
-                )}
+                <DataRow
+                  label="Max slippage"
+                  value={slippage}
+                  info
+                  infoTooltip={FEE_INFO.maxSlippage}
+                  trailing={
+                    breakdown?.provider &&
+                    PROVIDER_ICONS[breakdown.provider] ? (
+                      <LiveValue
+                        loading={providerFees.loading}
+                        flashKey={breakdown.provider}
+                      >
+                        <Tooltip content={`Quoted via ${breakdown.provider}`}>
+                          <button
+                            type="button"
+                            aria-label={`Quoted via ${breakdown.provider}`}
+                            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+                          >
+                            <img
+                              src={PROVIDER_ICONS[breakdown.provider]}
+                              alt=""
+                              aria-hidden
+                              className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
+                            />
+                          </button>
+                        </Tooltip>
+                      </LiveValue>
+                    ) : null
+                  }
+                />
                 <DataRow
                   label="Estimated fee"
                   value={

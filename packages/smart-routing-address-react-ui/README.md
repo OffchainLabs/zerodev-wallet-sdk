@@ -47,6 +47,7 @@ function Funding({ recipient }: { recipient: `0x${string}` }) {
       config={{
         projectId: 'your-project-id', // from https://dashboard.zerodev.app
         targetChainId: arbitrum.id,
+        slippage: 100, // max slippage in basis points (100 = 1%)
       }}
     >
       <SmartRoutingAddress recipient={recipient} onClose={() => {}} />
@@ -88,7 +89,7 @@ Everything the widget needs is on the config passed to the provider.
 | `targetChainId` | `number` | Chain id where funds settle. **Required.** |
 | `version` | `SmartRoutingAddressVersion?` | SRA manager version. Defaults to the latest stable. |
 | `actions` | `CreateSmartRoutingAddressParams['actions']?` | Destination actions per token type. When omitted, deposits are simply transferred to the recipient. |
-| `slippage` | `number?` | Max slippage in basis points (50 = 0.5%). When omitted, the SRA server picks its default. |
+| `slippage` | `number` | Max slippage in basis points (50 = 0.5%). **Required.** Tight values inflate `minDeposit` (server computes it as ~fee / slippage). |
 | `baseUrl` | `string?` | Override the SRA server root URL; the `projectId` is appended. |
 
 ## API

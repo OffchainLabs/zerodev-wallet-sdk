@@ -26,6 +26,7 @@ const TARGET_CHAIN = arbitrum;
 
 const SRA_CONFIG: SmartRoutingAddressConfig = {
   targetChainId: TARGET_CHAIN.id,
+  slippage: 100,
 };
 
 /**
