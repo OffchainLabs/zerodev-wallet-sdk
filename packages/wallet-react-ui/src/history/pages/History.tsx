@@ -1,4 +1,4 @@
-import { cn, Icon, Text, Wrapper } from '@zerodev/react-ui'
+import { Text, Wrapper } from '@zerodev/react-ui'
 import { Fragment } from 'react'
 import { TxHistoryItem } from '../components/TxHistoryItem'
 import { MOCK_HISTORY } from '../mocks'
@@ -11,19 +11,11 @@ export interface HistoryProps {
   entries?: TxHistoryEntry[]
   /** Fired when a row is tapped. Rows are inert when omitted. */
   onSelectEntry?: (entry: TxHistoryEntry) => void
-  /** Opens the full history on the ZeroDev Portal. The footer button is
-   * hidden when omitted. */
-  onViewPortal?: () => void
 }
 
-/**
- * Transaction history page (Figma `15873:58582`): day-grouped activity rows
- * inside one card, with a "See Full History on Portal" footer button.
- */
 export function History({
   entries = MOCK_HISTORY,
   onSelectEntry,
-  onViewPortal,
 }: HistoryProps) {
   const groups = groupByDay(entries)
 
@@ -54,24 +46,6 @@ export function History({
             )}
           </Fragment>
         ))}
-
-        {onViewPortal && (
-          <button
-            type="button"
-            onClick={onViewPortal}
-            className={cn(
-              'zd:mt-auto zd:flex zd:w-full zd:shrink-0 zd:cursor-pointer zd:items-center zd:justify-center zd:gap-2',
-              'zd:rounded-3xl zd:bg-white/50 zd:px-6 zd:py-5 zd:backdrop-blur-[15px]',
-            )}
-          >
-            <Text className="zd:text-body1">See Full History on Portal</Text>
-            <Icon
-              name="export"
-              className="zd:size-3.5 zd:shrink-0"
-              aria-hidden
-            />
-          </button>
-        )}
       </Wrapper>
     </div>
   )

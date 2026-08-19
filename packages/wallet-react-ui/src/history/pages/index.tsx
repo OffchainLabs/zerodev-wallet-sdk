@@ -18,9 +18,6 @@ export interface TxHistoryProps {
   entries?: TxHistoryEntry[] | undefined
   /** Fired when a row is tapped. Rows are inert when omitted. */
   onSelectEntry?: ((entry: TxHistoryEntry) => void) | undefined
-  /** Opens the full history on the ZeroDev Portal; footer hidden when
-   * omitted. */
-  onViewPortal?: (() => void) | undefined
   className?: string | undefined
   size?: 'sm' | 'md' | 'lg' | undefined
 }
@@ -37,7 +34,6 @@ export function TxHistory({
   onClose,
   entries,
   onSelectEntry,
-  onViewPortal,
   className,
   size,
 }: TxHistoryProps) {
@@ -52,7 +48,6 @@ export function TxHistory({
           <History
             {...(entries && { entries })}
             {...(onSelectEntry && { onSelectEntry })}
-            {...(onViewPortal && { onViewPortal })}
           />
         )
     }
