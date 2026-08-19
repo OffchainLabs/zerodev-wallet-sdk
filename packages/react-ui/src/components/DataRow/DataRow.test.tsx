@@ -156,14 +156,36 @@ describe('DataRow', () => {
     expect(screen.getByText('X').className).not.toContain('solarOrange')
   })
 
-  it('applies warning styling to label and value', () => {
-    render(
+  it('warning variant tints the card but keeps label and value in default ink', () => {
+    const { container } = render(
       <DataRow label="Minimum deposit" value="27.88 USDC" variant="warning" />,
     )
-    expect(screen.getByText('Minimum deposit').className).toContain(
+    // Card treatment: orange-tinted background on the root
+    const root = container.firstChild as HTMLElement
+    expect(root.style.backgroundColor).toBe('rgba(242, 123, 62, 0.1)')
+    // Text stays default ink (design review: no orange label/value)
+    expect(screen.getByText('Minimum deposit').className).not.toContain(
       'solarOrange',
     )
-    expect(screen.getByText('27.88 USDC').className).toContain('solarOrange')
+    expect(screen.getByText('27.88 USDC').className).not.toContain(
+      'solarOrange',
+    )
+  })
+
+  it('warning variant uses the outline info glyph; default uses the filled one', () => {
+    const { unmount } = render(
+      <DataRow
+        label="Minimum deposit"
+        value="27.88 USDC"
+        info
+        variant="warning"
+      />,
+    )
+    expect(screen.getByTestId('icon-infoOutline')).toBeDefined()
+    unmount()
+
+    render(<DataRow label="Max slippage" value="1.00%" info />)
+    expect(screen.getByTestId('icon-info')).toBeDefined()
   })
 
   it('merges custom className onto the root element', () => {

@@ -20,7 +20,7 @@ const meta: Meta<typeof TxnItem> = {
   argTypes: {
     status: {
       control: 'select',
-      options: ['Routing', 'Detected', 'Received', 'Failed'],
+      options: ['Routing', 'Detected', 'Received', 'Delivered', 'Failed'],
     },
   },
 }
@@ -28,9 +28,8 @@ const meta: Meta<typeof TxnItem> = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// Base scenario: USDT on Arbitrum → USDC on Base. Both the token AND the
-// chain differ between source and destination so the two overlapping
-// pair-marks read distinctly left-to-right as "from → to".
+// Base scenario (compact / active-deposits variant, Figma 20002:36061):
+// the mark shows the source token with the source-chain badge.
 const BASE_ARGS = {
   amount: '$248.00 USD',
   address: '0x4d2a…ba99',
@@ -42,7 +41,8 @@ const BASE_ARGS = {
   destChainIconUrl: CHAIN_ICONS[8453], // base
 } as const
 
-/** Terminal success state — green label. */
+/** Arrived on the active list — plain-ink label; green is reserved for the
+ * terminal Delivered state on past deposits. */
 export const Received: Story = {
   args: { ...BASE_ARGS, status: 'Received' },
 }
@@ -101,5 +101,18 @@ export const NoIcons: Story = {
     href: 'https://arbiscan.io/tx/0x…',
     timestamp: '2 mo ago',
     status: 'Received',
+  },
+}
+
+/** Detailed past-deposits variant (Figma 20002:37771): both amounts, the
+ * chain route line, and the destination token as the mark badge. */
+export const DetailedDelivered: Story = {
+  args: {
+    ...BASE_ARGS,
+    destAmount: '$248.00 USD',
+    sourceChainName: 'Arbitrum',
+    destChainName: 'Base',
+    status: 'Delivered',
+    timestamp: '2 m ago',
   },
 }

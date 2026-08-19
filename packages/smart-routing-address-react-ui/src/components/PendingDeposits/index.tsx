@@ -54,16 +54,18 @@ export function PendingDeposits({
 
   return (
     <section
-      aria-label="Pending deposits"
+      aria-label="Active deposits"
       className={cn(
-        'zd:relative zd:flex zd:w-full zd:flex-col zd:gap-2 zd:overflow-hidden zd:rounded-2xl zd:p-4',
+        // Figma 20002:36058: tighter bottom padding than top so the last
+        // row's own padding doesn't double up against the card edge.
+        'zd:relative zd:flex zd:w-full zd:flex-col zd:gap-4 zd:overflow-hidden zd:rounded-2xl zd:px-4 zd:pt-4 zd:pb-2',
         'zd:border-offWhite zd:border-[0.3px] zd:bg-white/20',
         'zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]',
         className,
       )}
     >
-      <Text className="zd:text-h3">Pending Deposit</Text>
-      <ul className="zd:flex zd:w-full zd:flex-col">
+      <Text className="zd:text-h3">Active Deposit</Text>
+      <ul className="zd:flex zd:w-full zd:flex-col zd:gap-1">
         {deposits.map((raw) => {
           const deposit = raw as DepositWithTimestamp
           const { chainId, token, amount, transactionHash } = deposit.deposit
@@ -129,14 +131,13 @@ export function PendingDeposits({
           return (
             <li key={transactionHash}>
               {onSelectDeposit ? (
-                // -mx-1 + px-1 + a wider explicit width extend the hover
-                // surface 4px past the row content on each side, so the
-                // highlight has visible breathing room without shifting the
-                // TxnItem's visual position.
+                // No padding of its own: the TxnItem's built-in p-2 (the
+                // Figma Txn Row inset) doubles as the hover highlight's
+                // breathing room. Radius matches the row's rounded-2xl.
                 <button
                   type="button"
                   onClick={() => onSelectDeposit(deposit)}
-                  className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
+                  className="zd:w-full zd:cursor-pointer zd:rounded-2xl zd:text-left zd:hover:bg-white/30"
                 >
                   {row}
                 </button>

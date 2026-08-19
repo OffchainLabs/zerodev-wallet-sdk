@@ -24,7 +24,9 @@ import {
 const STAGE_TO_STATUS: Record<DepositStage, TxnStatus> = {
   pending: 'Detected',
   bridging: 'Routing',
-  completed: 'Received',
+  // Past deposits use the terminal label — "Received" (plain ink) is the
+  // active list's arrival state; "Delivered" renders green.
+  completed: 'Delivered',
   failed: 'Failed',
 }
 
@@ -179,14 +181,29 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                     // whether the deposit's token matched the current fees.
                     const href = getTxUrl(chainId, transactionHash)
                     const status = STAGE_TO_STATUS[getDepositStage(deposit)]
+                    // Delivered amount for the detailed row headline
+                    // (`amount → destAmount`). `'nearest'` rounding — the
+                    // server reports the actual post-fee on-chain amount and
+                    // users read this as "what I received". Falls back to the
+                    // deposited amount while execution details are absent so
+                    // the detailed layout stays stable across stages.
+                    const destAmountLabel =
+                      deposit.execution?.outputAmount && feeData
+                        ? `${formatDisplayAmount(deposit.execution.outputAmount, feeData.decimal, 'nearest')} ${sourceSymbol}`
+                        : amountLabel
 
                     const row = (
                       <TxnItem
                         amount={amountLabel}
+                        destAmount={destAmountLabel}
                         address={truncateAddress(transactionHash)}
                         {...(href && { href })}
                         timestamp={timestamp}
                         status={status}
+                        {...(source?.chain.name && {
+                          sourceChainName: source.chain.name,
+                        })}
+                        destChainName={destChain.name}
                         {...(sourceTokenLogo && {
                           sourceTokenIconUrl: sourceTokenLogo,
                         })}
@@ -204,14 +221,14 @@ export function PastDeposits({ onSelectDeposit }: PastDepositsProps) {
                     return (
                       <li key={transactionHash}>
                         {onSelectDeposit ? (
-                          // -mx-1 + px-1 + a wider explicit width extend the
-                          // hover surface 4px past the row content on each
-                          // side, so the highlight has visible breathing
-                          // room without shifting the TxnItem's position.
+                          // No padding of its own: the TxnItem's built-in
+                          // p-2 (the Figma Txn Row inset) doubles as the
+                          // hover highlight's breathing room. Radius matches
+                          // the row's rounded-2xl.
                           <button
                             type="button"
                             onClick={() => onSelectDeposit(deposit)}
-                            className="zd:w-full zd:cursor-pointer zd:rounded-xl zd:px-1 zd:text-left zd:hover:bg-white/30"
+                            className="zd:w-full zd:cursor-pointer zd:rounded-2xl zd:text-left zd:hover:bg-white/30"
                           >
                             {row}
                           </button>
