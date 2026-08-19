@@ -1,8 +1,12 @@
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 import { matchMock } from './installMockFetch.js'
-import { echoJsonRpcId } from './jsonRpc.js'
 import { orderMocks } from './orderMocks.js'
-import type { MockRequest, UnmatchedPolicy } from './types.js'
+import { resolveMockResponse } from './resolveResponse.js'
+import type {
+  MockRequest,
+  MockRequestContext,
+  UnmatchedPolicy,
+} from './types.js'
 
 /**
  * Serves `MockRequest[]` to a page through Playwright's own request
@@ -24,7 +28,11 @@ export type MockHandle = {
    * worth guarding.
    */
   hits: () => number
+  /** Remove this install, leaving any other untouched. */
+  dispose: () => Promise<void>
 }
+
+const ALL_REQUESTS = '**/*'
 
 export async function routeMocks(
   page: Page,
@@ -35,14 +43,14 @@ export async function routeMocks(
   const ordered = orderMocks(mocks)
   let hits = 0
 
-  await page.route('**/*', async (route) => {
+  const handler = async (route: Route) => {
     const request = route.request()
-    const body = request.postData() ?? ''
-    const mock = matchMock(ordered, {
+    const context: MockRequestContext = {
       url: request.url(),
       method: request.method(),
-      body,
-    })
+      body: request.postData() ?? '',
+    }
+    const mock = matchMock(ordered, context)
 
     if (!mock) {
       if (unmatched === 'block') {
@@ -51,12 +59,15 @@ export async function routeMocks(
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'No mock matched',
-            method: request.method(),
-            url: request.url(),
+            method: context.method,
+            url: context.url,
           }),
         })
       }
-      return route.continue()
+      // `fallback`, not `continue`: handlers run newest-first, and `continue`
+      // would send the request off without consulting an earlier install,
+      // silently blinding it.
+      return route.fallback()
     }
 
     hits += 1
@@ -65,9 +76,14 @@ export async function routeMocks(
     await route.fulfill({
       status: mock.status ?? 200,
       contentType: 'application/json',
-      body: JSON.stringify(echoJsonRpcId(mock.response, body)),
+      body: JSON.stringify(resolveMockResponse(mock, context)),
     })
-  })
+  }
 
-  return { hits: () => hits }
+  await page.route(ALL_REQUESTS, handler)
+
+  return {
+    hits: () => hits,
+    dispose: () => page.unroute(ALL_REQUESTS, handler),
+  }
 }

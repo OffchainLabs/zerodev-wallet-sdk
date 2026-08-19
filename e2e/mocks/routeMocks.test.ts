@@ -7,55 +7,73 @@ type Fulfilled = { status?: number; contentType?: string; body?: string }
 type RouteHandler = (route: unknown) => Promise<unknown>
 
 /**
- * Stands in for a Playwright `Page`. `routeMocks` only ever calls `page.route`,
- * so capturing the handler is enough to exercise it without a browser — these
- * stay in the fast suite alongside the matcher's own tests.
+ * Stands in for a Playwright `Page`, modelling the parts `routeMocks` uses:
+ * handlers run in reverse registration order, `fallback()` defers to the next
+ * one, and `continue()` goes straight to the network without consulting it.
  */
 function createRouter() {
-  let handler: RouteHandler | undefined
-  let pattern: string | undefined
+  let installed: { pattern: string; handler: RouteHandler }[] = []
 
   const page = {
-    route: async (p: string, h: RouteHandler) => {
-      pattern = p
-      handler = h
+    route: async (pattern: string, handler: RouteHandler) => {
+      installed.push({ pattern, handler })
+    },
+    unroute: async (_pattern: string, handler: RouteHandler) => {
+      installed = installed.filter((entry) => entry.handler !== handler)
     },
   }
 
-  /** Drives one request through the installed handler. */
+  /** Drives one request through the installed handlers. */
   async function send(request: {
     url: string
     method?: string
     /** Absent means a body-less request, where Playwright returns null. */
     postData?: string
   }) {
-    if (!handler) throw new Error('routeMocks never installed a route')
-
     let fulfilled: Fulfilled | undefined
     let continued = false
+    /** Every handler deferred, so Playwright would perform the request. */
+    let fellThrough = false
 
-    await handler({
-      request: () => ({
-        url: () => request.url,
-        method: () => request.method ?? 'GET',
-        postData: () => request.postData ?? null,
-      }),
-      fulfill: async (options: Fulfilled) => {
-        fulfilled = options
-      },
-      continue: async () => {
-        continued = true
-      },
-    })
+    const ordered = [...installed].reverse()
+    let next = 0
+    const run = async (): Promise<void> => {
+      const entry = ordered[next++]
+      if (!entry) {
+        fellThrough = true
+        return
+      }
+      await entry.handler({
+        request: () => ({
+          url: () => request.url,
+          method: () => request.method ?? 'GET',
+          postData: () => request.postData ?? null,
+        }),
+        fulfill: async (options: Fulfilled) => {
+          fulfilled = options
+        },
+        continue: async () => {
+          continued = true
+        },
+        fallback: run,
+      })
+    }
+    await run()
 
     return {
       fulfilled,
       continued,
+      fellThrough,
       json: fulfilled?.body ? JSON.parse(fulfilled.body) : undefined,
     }
   }
 
-  return { page: page as unknown as Page, send, pattern: () => pattern }
+  return {
+    page: page as unknown as Page,
+    send,
+    pattern: () => installed[0]?.pattern,
+    installed: () => installed.length,
+  }
 }
 
 const RPC_URL = 'https://rpc.test/v1'
@@ -115,7 +133,7 @@ describe('routeMocks', () => {
 
     const res = await router.send({ url: 'https://kms.test/p/something-else' })
 
-    expect(res.continued).toBe(true)
+    expect(res.fellThrough).toBe(true)
     expect(res.fulfilled).toBeUndefined()
   })
 
@@ -147,7 +165,7 @@ describe('routeMocks', () => {
       method: 'POST',
     })
 
-    expect(res.continued).toBe(true)
+    expect(res.fellThrough).toBe(true)
   })
 
   it('lets a higher-priority mock win regardless of listed order', async () => {
@@ -279,7 +297,7 @@ describe('routeMocks', () => {
 
     // Reaching the substring check with a null body would throw inside the
     // route handler rather than simply not match.
-    expect(res.continued).toBe(true)
+    expect(res.fellThrough).toBe(true)
     expect(res.fulfilled).toBeUndefined()
   })
 
@@ -307,5 +325,152 @@ describe('routeMocks', () => {
     await router.send({ url: 'https://kms.test/p/unmatched' })
 
     expect(handle.hits()).toBe(0)
+  })
+
+  it('defers unmatched traffic to an earlier install instead of the network', async () => {
+    const router = createRouter()
+    await routeMocks(router.page, [userWallet])
+    await routeMocks(router.page, [
+      { url: RPC_URL, method: 'POST', response: { unrelated: true } },
+    ])
+
+    const res = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    // Playwright runs the last registration first and `continue()` skips the
+    // rest, so a second install would otherwise silently blind the first —
+    // serving real data rather than failing.
+    expect(res.json).toEqual({ walletAddresses: ['0xabc'] })
+    expect(res.continued).toBe(false)
+  })
+
+  it('stops serving once disposed', async () => {
+    const router = createRouter()
+    const handle = await routeMocks(router.page, [userWallet])
+
+    await handle.dispose()
+    const res = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    expect(res.fulfilled).toBeUndefined()
+    expect(res.fellThrough).toBe(true)
+  })
+
+  it('disposes only its own handler', async () => {
+    const router = createRouter()
+    const first = await routeMocks(router.page, [userWallet])
+    await routeMocks(router.page, [
+      { ...userWallet, response: { walletAddresses: ['0xsecond'] } },
+    ])
+
+    await first.dispose()
+    const res = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    expect(router.installed()).toBe(1)
+    expect(res.json).toEqual({ walletAddresses: ['0xsecond'] })
+  })
+
+  it('resolves a function response instead of serialising the function', async () => {
+    const router = createRouter()
+    await routeMocks(router.page, [
+      { ...userWallet, response: () => ({ walletAddresses: ['0xdynamic'] }) },
+    ])
+
+    const res = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    // `JSON.stringify(fn)` is `undefined`, so an unresolved function serves an
+    // empty body instead of failing loudly.
+    expect(res.json).toEqual({ walletAddresses: ['0xdynamic'] })
+  })
+
+  it('re-evaluates a function response on every request', async () => {
+    const router = createRouter()
+    let served = 0
+    await routeMocks(router.page, [
+      { ...userWallet, response: () => ({ served: ++served }) },
+    ])
+
+    const first = await router.send({ url: 'https://kms.test/p/user-wallet' })
+    const second = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    // A definition that changes state between assertions depends on this;
+    // resolving once at install would serve the same body forever.
+    expect(first.json).toEqual({ served: 1 })
+    expect(second.json).toEqual({ served: 2 })
+  })
+
+  it("echoes the request's JSON-RPC id onto a function response", async () => {
+    const router = createRouter()
+    await routeMocks(router.page, [
+      {
+        url: RPC_URL,
+        method: 'POST',
+        payload: { method: 'eth_chainId' },
+        response: () => ({ jsonrpc: '2.0', id: 0, result: '0x1' }),
+      },
+    ])
+
+    const res = await router.send({
+      url: RPC_URL,
+      method: 'POST',
+      postData: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 7,
+        method: 'eth_chainId',
+      }),
+    })
+
+    // `echoJsonRpcId` takes an `object` and a function passes that check, so a
+    // function resolved in the wrong order slips through un-echoed.
+    expect(res.json).toEqual({ jsonrpc: '2.0', id: 7, result: '0x1' })
+  })
+
+  it('never invokes the function of a mock that lost on priority', async () => {
+    const router = createRouter()
+    let loserCalls = 0
+    await routeMocks(router.page, [
+      {
+        ...userWallet,
+        priority: 5,
+        response: () => ({ winner: true }),
+      },
+      {
+        ...userWallet,
+        priority: 1,
+        response: () => {
+          loserCalls += 1
+          return { winner: false }
+        },
+      },
+    ])
+
+    const res = await router.send({ url: 'https://kms.test/p/user-wallet' })
+
+    // A stateful definition advances on being served, so invoking a loser
+    // would move state no test asked to move.
+    expect(res.json).toEqual({ winner: true })
+    expect(loserCalls).toBe(0)
+  })
+
+  it('passes the matched url, method and body to a function response', async () => {
+    const router = createRouter()
+    const postData = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_call',
+    })
+    await routeMocks(router.page, [
+      {
+        url: RPC_URL,
+        method: 'POST',
+        response: (request) => ({ seen: request }),
+      },
+    ])
+
+    const res = await router.send({ url: RPC_URL, method: 'POST', postData })
+
+    // Reading the request is what lets a response depend on what was asked —
+    // sizing a multicall reply to its batch, or paging a list.
+    expect(res.json).toEqual({
+      seen: { url: RPC_URL, method: 'POST', body: postData },
+    })
   })
 })
