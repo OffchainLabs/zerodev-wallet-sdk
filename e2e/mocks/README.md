@@ -48,7 +48,7 @@ Then the assertion can only pass if the mock actually served it.
 | --- | --- |
 | `url` | Exact string or `RegExp`, matched against the **full** URL (host + path). |
 | `method` | `GET` \| `POST` \| `PUT` \| `PATCH` \| `DELETE`. |
-| `response` | JSON body returned on match. |
+| `response` | JSON body returned on match, or `(request) => body` computed per request. |
 | `status` | Defaults to `200`. |
 | `payload` | Optional **subset** match on the JSON body — listed keys must match, extra keys are ignored. |
 | `bodyIncludes` | Optional raw substring match on the body. |
@@ -103,9 +103,89 @@ rather than quietly hit staging:
 await routeMocks(page, userWallet, { unmatched: 'block' })
 ```
 
+### Several installs on one page
+
+`routeMocks` can be called more than once. Playwright runs handlers
+newest-first, and an install that matches nothing defers to the one before it,
+so definitions compose which results in a clash:
+
+```ts
+await routeMocks(page, userWallet)
+await routeMocks(page, sraDeposit.mocks)
+```
+
+`handle.dispose()` removes one install and leaves the rest, for a spec that
+wants to prove the mock was what changed the result:
+
+```ts
+const mocked = await routeMocks(page, userWallet)
+await expect(address).toHaveText(MOCK_WALLET_ADDRESS)
+
+await mocked.dispose()
+await page.reload()
+await expect(address).not.toHaveText(MOCK_WALLET_ADDRESS)
+```
+
+Otherwise no teardown is needed — routes belong to the page.
+
 ### JSON-RPC ids
 
 You don't need to get `id` right in a definition. Both adapters copy the
 request's `id` onto a JSON-RPC response (`jsonRpc.ts`) — clients correlate a
 reply to its call by that field, and viem rejects a mismatch with a vague
 transport error that never mentions ids.
+
+### Dynamic responses
+
+`response` can be a function of `{ url, method, body }`, re-evaluated on every
+request. Two things need that.
+
+**The answer changes over time.** A polled endpoint only progresses because
+successive responses differ; a static `response` would repeat the first one
+forever. Keep the state in a factory and return a control beside the mocks —
+never at module scope, since specs share one module instance (`workers: 1`) and
+module state leaks into the next test.
+
+```ts
+export function depositMocks() {
+  let stage = 'pending'
+
+  const mocks: MockRequest[] = [
+    {
+      url: /\/v2$/,
+      method: 'POST',
+      payload: { method: 'zd_getSmartRoutingAddressStatus' },
+      response: () => ({ jsonrpc: '2.0', result: { stage } }),
+    },
+  ]
+
+  return { mocks, advance: (next: string) => void (stage = next) }
+}
+```
+
+```ts
+const deposit = depositMocks()
+await routeMocks(page, deposit.mocks)
+
+await expect(row).toHaveText('Detected')
+deposit.advance('completed') // the next poll reads the new value
+await expect(row).toHaveText('Received')
+```
+
+No sleeps: `advance()` changes what the next poll returns, and Playwright's
+assertions retry until it lands.
+
+**The answer depends on the request.** Read `body` to size a reply to what was
+asked — a multicall must return one result per batched call:
+
+```ts
+response: ({ body }) => ({
+  jsonrpc: '2.0',
+  result: JSON.parse(body).params[0].calls.map(() => '0x1'),
+})
+```
+
+Both adapters resolve it through `resolveMockResponse`, which invokes the
+function *then* echoes the JSON-RPC id. Never call `echoJsonRpcId` directly on
+a `MockRequest.response`: a function satisfies its `object` parameter, so it
+would pass through un-invoked and serialise to an empty body.

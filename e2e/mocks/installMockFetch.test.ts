@@ -342,4 +342,73 @@ describe('installMockFetch', () => {
     const res = await fetch(RPC_URL, { method: 'POST', body: '{}' })
     expect(await res.json()).toEqual({ v: 'second' })
   })
+
+  it('resolves a function response instead of stringifying the function', async () => {
+    installMockFetch({
+      mocks: [
+        { url: RPC_URL, method: 'POST', response: () => ({ v: 'computed' }) },
+      ],
+    })
+
+    const res = await fetch(RPC_URL, { method: 'POST', body: '{}' })
+
+    // The symptom differs from the Playwright adapter's — here an unresolved
+    // function reaches `new Response(undefined)` and serves an empty body — so
+    // parity is tested rather than assumed.
+    expect(await res.json()).toEqual({ v: 'computed' })
+  })
+
+  it('re-evaluates a function response on every request', async () => {
+    let served = 0
+    installMockFetch({
+      mocks: [
+        {
+          url: RPC_URL,
+          method: 'POST',
+          response: () => ({ served: ++served }),
+        },
+      ],
+    })
+
+    const first = await fetch(RPC_URL, { method: 'POST', body: '{}' })
+    const second = await fetch(RPC_URL, { method: 'POST', body: '{}' })
+
+    expect(await first.json()).toEqual({ served: 1 })
+    expect(await second.json()).toEqual({ served: 2 })
+  })
+
+  it("echoes the request's JSON-RPC id onto a function response", async () => {
+    installMockFetch({
+      mocks: [
+        {
+          url: RPC_URL,
+          method: 'POST',
+          payload: { method: 'eth_getBalance' },
+          response: () => ({ jsonrpc: '2.0', id: 1, result: '0xbalance' }),
+        },
+      ],
+    })
+
+    const res = await fetch(RPC_URL, rpcInit('eth_getBalance', [], 99))
+
+    expect(await res.json()).toMatchObject({ id: 99, result: '0xbalance' })
+  })
+
+  it('passes the matched url, method and body to a function response', async () => {
+    installMockFetch({
+      mocks: [
+        { url: RPC_URL, method: 'POST', response: (request) => ({ request }) },
+      ],
+    })
+
+    const init = rpcInit('eth_call', ['0xdead'])
+    const res = await fetch(RPC_URL, init)
+
+    // Mirrors the assertion in routeMocks.test.ts: `describeRequest` builds
+    // this context itself, so a regression there is invisible to the shared
+    // matcher tests.
+    expect(await res.json()).toEqual({
+      request: { url: RPC_URL, method: 'POST', body: init.body },
+    })
+  })
 })
