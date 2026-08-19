@@ -12,6 +12,7 @@
 import { expect, type Page } from '@playwright/test'
 import { test } from '../fixtures/authed-session.js'
 import { createNewAccount, ping } from '../helpers/temp-email.js'
+import { expectTxRunSucceeded } from '../helpers/tx-runs.js'
 import { expectLabReady, loginWithMagicLink } from '../helpers/ui-login.js'
 
 /**
@@ -142,13 +143,6 @@ test.describe('Post-Auth Operations', () => {
     await expect(mint.getByTestId('demo-nft-address')).not.toHaveText('—')
     await mint.getByTestId('demo-nft-mint-submit').click()
 
-    const run = mint.getByTestId('tx-run-1')
-    await expect(run).toHaveAttribute('data-status', 'success', {
-      timeout: 60_000,
-    })
-    await expect(run.getByTestId('tx-run-hash')).toHaveAttribute(
-      'data-hash',
-      /^0x[0-9a-fA-F]{64}$/,
-    )
+    await expectTxRunSucceeded(mint.getByTestId('tx-run-1'))
   })
 })
