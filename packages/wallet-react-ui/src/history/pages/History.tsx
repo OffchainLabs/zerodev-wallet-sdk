@@ -1,20 +1,19 @@
 import { Text, Wrapper } from '@zerodev/react-ui'
 import { Fragment } from 'react'
 import { TxHistoryItem } from '../components/TxHistoryItem'
-import { MOCK_HISTORY } from '../mocks'
 import type { TxHistoryEntry } from '../types'
 import { groupByDay } from '../utils/groupByDay'
 
 export interface HistoryProps {
-  /** Activity feed, newest anywhere (sorted internally). Defaults to the
-   * mock feed until the real activity source lands. */
-  entries?: TxHistoryEntry[]
+  /** Activity feed, newest anywhere (sorted internally) — typically the
+   * output of `toTxHistoryEntries`. */
+  entries: TxHistoryEntry[]
   /** Fired when a row is tapped. Rows are inert when omitted. */
   onSelectEntry?: (entry: TxHistoryEntry) => void
 }
 
 export function History({
-  entries = MOCK_HISTORY,
+  entries,
   onSelectEntry,
 }: HistoryProps) {
   const groups = groupByDay(entries)

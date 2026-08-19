@@ -23,7 +23,15 @@ export {
   type TxHistoryProps,
   type TxHistoryStep,
 } from './history/pages'
-export type { TxHistoryEntry } from './history/types'
+export type {
+  HistoryFeedItem,
+  HistoryQuantity,
+  HistoryToken,
+  HistoryTransaction,
+  TxHistoryEntry,
+  UnparsedHistoryItem,
+} from './history/types'
+export { toTxHistoryEntries } from './history/utils/toTxHistoryEntries'
 
 // Signing
 // export type { SignatureRequestProps } from './signing'
