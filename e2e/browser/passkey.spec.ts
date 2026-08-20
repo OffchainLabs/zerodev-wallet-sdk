@@ -14,6 +14,7 @@
 
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { expectTxRunSucceeded } from '../helpers/tx-runs.js'
 import { expectLabReady } from '../helpers/ui-login.js'
 import {
   getVirtualCredentials,
@@ -123,12 +124,7 @@ test.describe('Passkey Flow', () => {
       await expect(mint.getByTestId('demo-nft-address')).not.toHaveText('—')
       await mint.getByTestId('demo-nft-mint-submit').click()
 
-      await expect(mint.getByTestId('tx-run-1')).toHaveAttribute(
-        'data-status',
-        'success',
-        { timeout: 60_000 },
-      )
-      console.log('Mint NFT (send transaction) successful')
+      await expectTxRunSucceeded(mint.getByTestId('tx-run-1'))
     } finally {
       await teardownVirtualAuthenticator(virtualAuth)
     }
