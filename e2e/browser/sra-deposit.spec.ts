@@ -102,7 +102,7 @@ test.describe('SRA deposits', () => {
     expect(sra.calls().create).toBeGreaterThan(0)
 
     await waitForFirstPoll(sra)
-    const pending = widget.getByRole('region', { name: 'Pending deposits' })
+    const pending = widget.getByRole('region', { name: 'Active deposits' })
 
     sra.advance('pending')
     await expect(pending.getByText('Detected', { exact: true })).toBeVisible({
@@ -131,7 +131,7 @@ test.describe('SRA deposits', () => {
     const widget = widgetOf(page)
     await waitForFirstPoll(sra)
 
-    const pending = widget.getByRole('region', { name: 'Pending deposits' })
+    const pending = widget.getByRole('region', { name: 'Active deposits' })
 
     sra.advance('bridging')
     await expect(pending.getByText('Routing', { exact: true })).toBeVisible({

@@ -17,6 +17,14 @@ export type {
 } from './connector.js'
 export { zeroDevWallet } from './connector.js'
 
+// History
+export {
+  TxHistory,
+  type TxHistoryProps,
+  type TxHistoryStep,
+} from './history/pages'
+export type { TxHistoryEntry } from './history/types'
+
 // Signing
 // export type { SignatureRequestProps } from './signing'
 // export { SignatureRequest } from './signing'

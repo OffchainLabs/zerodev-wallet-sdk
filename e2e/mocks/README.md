@@ -107,7 +107,7 @@ await routeMocks(page, userWallet, { unmatched: 'block' })
 
 `routeMocks` can be called more than once. Playwright runs handlers
 newest-first, and an install that matches nothing defers to the one before it,
-so definitions compose which results in a clash:
+so definitions compose without clashing:
 
 ```ts
 await routeMocks(page, userWallet)

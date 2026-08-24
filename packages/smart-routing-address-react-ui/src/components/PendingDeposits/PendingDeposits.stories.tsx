@@ -162,7 +162,7 @@ export const AllStages: Story = {
   },
 }
 
-/** Single in-flight deposit — matches the Figma "Pending Deposit" screenshot. */
+/** Single in-flight deposit — matches the Figma "Active Deposit" card. */
 export const SingleRouting: Story = {
   args: {
     deposits: [deposits[1]] as DepositedToken[],

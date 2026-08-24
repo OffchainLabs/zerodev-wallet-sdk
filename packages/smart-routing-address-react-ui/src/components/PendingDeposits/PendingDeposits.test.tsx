@@ -83,7 +83,7 @@ describe('PendingDeposits', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the "Pending Deposit" section header', () => {
+  it('renders the "Active Deposit" section header', () => {
     render(
       <PendingDeposits
         deposits={[detectedDeposit]}
@@ -91,7 +91,7 @@ describe('PendingDeposits', () => {
         config={config}
       />,
     )
-    expect(screen.getByText('Pending Deposit')).toBeDefined()
+    expect(screen.getByText('Active Deposit')).toBeDefined()
   })
 
   it('renders one row per deposit', () => {
