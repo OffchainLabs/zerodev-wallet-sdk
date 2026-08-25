@@ -36,13 +36,9 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
   useReportPending(isPending)
   useLayoutEffect(() => registerWallet(wallet.id), [registerWallet, wallet.id])
 
-  // Same claim rule as the MoreWallets grid: a 6963 announcement or a
-  // configured SDK connector both make the row connectable. Only an
-  // announcement proves a live extension (or the wallet's own in-app
-  // browser) and earns the badge.
+  // Only a 6963 announcement proves a live extension (or the wallet's own
+  // in-app browser) — it earns the badge and a direct connect.
   const announced = connectors.find((c) => announcesWallet(c, wallet))
-  const installed =
-    announced ?? connectors.find((c) => matchesWallet(c, wallet))
 
   const shared = {
     title: wallet.name,
@@ -67,7 +63,12 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
     )
   }
 
-  if (!installed) {
+  // Same claim rule as the MoreWallets grid: announced, or — without a WC
+  // handoff — a configured connector (e.g. a vendor SDK) that claims the
+  // wallet.
+  const claimed = announced ?? connectors.find((c) => matchesWallet(c, wallet))
+
+  if (!claimed) {
     return (
       <ListItem {...shared} asChild>
         {/* biome-ignore lint/a11y/useAnchorContent: the row layout (incl. the title text) is injected into the anchor via Slot */}
@@ -85,7 +86,7 @@ export function SignUpWallet({ walletId }: { walletId: WalletId }) {
     if (!guardAgreement()) return
     setError(null)
     connect(
-      { connector: installed },
+      { connector: claimed },
       {
         // The external wallet is now the active wagmi connection — the
         // embedded-wallet flow is done, so close it (mirrors SignUp.MoreWallets).

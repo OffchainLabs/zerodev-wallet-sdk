@@ -77,11 +77,9 @@ export function SignUpMoreWallets({
         }
         // No WC handoff available — a configured connector that claims the
         // wallet (e.g. a vendor SDK) is the last way to connect.
-        const fallbackConnector = walletConnectors.find((c) =>
-          matchesWallet(c, wallet),
-        )
-        if (fallbackConnector) {
-          startConnect(fallbackConnector)
+        const claimed = walletConnectors.find((c) => matchesWallet(c, wallet))
+        if (claimed) {
+          startConnect(claimed)
           return
         }
         setOpen(false)
