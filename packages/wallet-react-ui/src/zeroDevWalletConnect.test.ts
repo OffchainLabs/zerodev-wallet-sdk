@@ -126,6 +126,42 @@ describe('zeroDevWalletConnect', () => {
     expect(localStorage.getItem(KEY)).toBeNull()
   })
 
+  it('clears a stale choice when the new session is ineligible', async () => {
+    // Seeded by a previous mobile session — a desktop session must not leave
+    // it armed, or signing requests deep-link into the previous wallet.
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ href: 'rabby://', name: 'Rabby' }),
+    )
+    mobile.value = false
+    const provider = await connectorProvider(fakeProvider(metamaskSession))
+    provider.emit('connect')
+    expect(localStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('clears a stale choice when the wallet registers no native redirect', async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ href: 'rabby://', name: 'Rabby' }),
+    )
+    const provider = await connectorProvider(
+      fakeProvider({ peer: { metadata: { name: 'NoRedirect' } } }),
+    )
+    provider.emit('connect')
+    expect(localStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('clears a stale choice for an ineligible restored session', async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ href: 'rabby://', name: 'Rabby' }),
+    )
+    mobile.value = false
+    // Restored session present at provider creation — no events fire.
+    await connectorProvider(fakeProvider(metamaskSession))
+    expect(localStorage.getItem(KEY)).toBeNull()
+  })
+
   it('clears the choice on disconnect', async () => {
     const provider = await connectorProvider(fakeProvider())
     provider.session = metamaskSession

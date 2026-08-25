@@ -31,7 +31,10 @@ const watched = new WeakSet<object>()
 function storeDeepLinkChoice(provider: WcSessionProvider) {
   const metadata = provider.session?.peer?.metadata
   const href = metadata?.redirect?.native
-  if (!href || !isMobile()) return
+  if (!href || !isMobile()) {
+    clearDeepLinkChoice()
+    return
+  }
   try {
     localStorage.setItem(
       DEEPLINK_CHOICE_KEY,
