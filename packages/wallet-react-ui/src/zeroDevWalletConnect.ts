@@ -5,7 +5,11 @@ import { walletConnect } from 'wagmi/connectors'
  * required — the kit renders its own pairing UI, and WalletConnect's bundled
  * Reown modal would pop over it otherwise.
  */
-export function zeroDevWalletConnect({ projectId }: { projectId: string }) {
+export function zeroDevWalletConnect({
+  projectId,
+}: {
+  projectId: string
+}): ReturnType<typeof walletConnect> {
   if (!projectId) {
     throw new Error('zeroDevWalletConnect requires a WalletConnect projectId')
   }
