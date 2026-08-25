@@ -46,6 +46,7 @@ export function announcesWallet(
 ): boolean {
   if (!!wallet.rdns && connector.id === wallet.rdns) return true
   return (
+    !!wallet.rdns &&
     connector.type === 'injected' &&
     connector.id !== 'injected' &&
     connector.id !== 'zerodev-wallet' &&
