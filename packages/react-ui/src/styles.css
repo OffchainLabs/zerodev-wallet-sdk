@@ -1,4 +1,12 @@
-@import "tailwindcss" prefix(zd);
+/* Layers use our own names instead of theme/base/utilities, so they never
+   merge with a Tailwind consumer's layers of the same name. Preflight is not
+   imported. It is a global element reset that would restyle the host app;
+   reset.css holds the scoped replacement under `.zd-scope`. Mirrors
+   wallet-react-ui/src/styles.css. */
+@layer zd-theme, zd-base, zd-utilities;
+@import "tailwindcss/theme.css" layer(zd-theme) prefix(zd);
+@import "tailwindcss/utilities.css" layer(zd-utilities) prefix(zd);
+@import "./reset.css";
 @config "../tailwind.config.ts";
 
 /* Density base. --zd-density is a unitless multiplier (1 = default) that the

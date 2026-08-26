@@ -1,0 +1,78 @@
+/* ---------------------------------------------------------------------------
+   Scoped reset
+   ---------------------------------------------------------------------------
+   Replaces Tailwind's preflight, which we do not import anywhere. Preflight
+   is a global element reset, and a stylesheet import must not restyle the
+   host app.
+
+   `.zd-scope` marks a style-boundary root. Screen carries the class, and
+   portalled surfaces land in the singleton portal root from utils/portal.ts,
+   which also carries it. BottomSheet portals into the Screen, so the
+   Screen's class covers it.
+
+   The rules below cover only the elements these packages render: span,
+   button, img, p, input, a, svg, textarea, pre, label, h1-h6, video. When a
+   component adds a new intrinsic element, add its reset here.
+
+   `:where()` keeps selector specificity at zero, and zd-base sits before
+   zd-utilities in the layer order, so utilities always win. */
+@layer zd-base {
+  /* The html-level rules from preflight, moved to the boundary element. The
+     descendant rule below skips the boundary element itself, so the
+     universal reset props repeat here. */
+  :where(.zd-scope) {
+    font-family: var(--zd-default-font-family, ui-sans-serif, system-ui, sans-serif);
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* `border: 0 solid` presets the border-style, so a zd:border-* width
+     utility renders a line without needing a style utility next to it. */
+  .zd-scope :where(*, ::before, ::after) {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  .zd-scope :where(img, svg, video) {
+    display: block;
+    max-width: 100%;
+  }
+  .zd-scope :where(img, video) {
+    height: auto;
+  }
+
+  .zd-scope :where(button, input, textarea) {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    background: transparent;
+    border-radius: 0;
+    appearance: none;
+  }
+  .zd-scope :where(input, textarea)::placeholder {
+    opacity: 1;
+    color: color-mix(in oklab, currentColor 50%, transparent);
+  }
+  .zd-scope :where(textarea) {
+    resize: vertical;
+  }
+
+  .zd-scope :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+  .zd-scope :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .zd-scope :where(pre) {
+    font-family: var(--zd-font-mono);
+  }
+}

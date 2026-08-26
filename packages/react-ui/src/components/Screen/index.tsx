@@ -60,6 +60,9 @@ export function Screen({
     <div
       data-zd-size={size}
       className={cn(
+        // Style boundary. reset.css scopes its preflight replacement under
+        // this class.
+        'zd-scope',
         // 400×810 by default, but never taller/wider than the parent — a
         // consumer wrapper with its own size caps the Screen (max-w/h-full =
         // 100% of the parent). overflow-hidden clips the frame to its rounded
