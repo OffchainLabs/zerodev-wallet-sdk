@@ -1,5 +1,5 @@
 ---
-'@zerodev/wallet-react': minor
+'@zerodev/wallet-react': patch
 ---
 
 Invalidate owner-sensitive account caches and recreate destroyed session
