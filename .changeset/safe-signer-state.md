@@ -1,5 +1,5 @@
 ---
-'@zerodev/wallet-core': minor
+'@zerodev/wallet-core': patch
 ---
 
 Harden signer and session state transitions across authentication, refresh,
