@@ -1,6 +1,6 @@
 {
   "name": "@zerodev/wallet-react",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "React hooks for ZeroDev Wallet SDK",
   "repository": {
     "type": "git",
