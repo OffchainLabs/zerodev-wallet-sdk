@@ -1,5 +1,14 @@
 # @zerodev/wallet-react
 
+## 0.0.6
+
+### Patch Changes
+
+- dfb4daa: Invalidate owner-sensitive account caches and recreate destroyed session
+  providers across disconnect, logout, chain switching, and re-login.
+- Updated dependencies [2757a61]
+  - @zerodev/wallet-core@0.0.4
+
 ## 0.0.5
 
 ### Patch Changes
