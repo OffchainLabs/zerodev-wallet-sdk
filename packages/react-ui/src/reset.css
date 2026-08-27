@@ -22,7 +22,7 @@
 /* The html-level rules from preflight, moved to the boundary element. The
    descendant rule below skips the boundary element itself, so the
    universal reset props repeat here. */
-:where(.zd-scope) {
+.zd-scope {
   font-family: var(--zd-default-font-family, ui-sans-serif, system-ui, sans-serif);
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
