@@ -243,7 +243,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />git
+      <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
       {showHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <TxHistory onClose={() => setShowHistory(false)} />
