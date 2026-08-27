@@ -11,68 +11,80 @@
    Screen's class covers it.
 
    The rules below cover only the elements these packages render: span,
-   button, img, p, input, a, svg, textarea, pre, label, h1-h6, video. When a
-   component adds a new intrinsic element, add its reset here.
+   button, img, p, input, a, svg, textarea, pre, label, h1-h6, video, ul,
+   ol, li, section. When a component adds a new intrinsic element, add its
+   reset here.
 
-   `:where()` keeps selector specificity at zero, and zd-base sits before
-   zd-utilities in the layer order, so utilities always win. */
-@layer zd-base {
-  /* The html-level rules from preflight, moved to the boundary element. The
-     descendant rule below skips the boundary element itself, so the
-     universal reset props repeat here. */
-  :where(.zd-scope) {
-    font-family: var(--zd-default-font-family, ui-sans-serif, system-ui, sans-serif);
-    line-height: 1.5;
-    -webkit-text-size-adjust: 100%;
-    -webkit-tap-highlight-color: transparent;
-    box-sizing: border-box;
-    border: 0 solid;
-    margin: 0;
-    padding: 0;
-  }
+   `:where()` keeps element-selector specificity at zero, so each rule costs
+   only the `.zd-scope` class (0,1,0) — the same as a utility. styles.css
+   imports this file BEFORE the utilities, so utilities win the source-order
+   tiebreak. Unlayered on purpose: see styles.css. */
+/* The html-level rules from preflight, moved to the boundary element. The
+   descendant rule below skips the boundary element itself, so the
+   universal reset props repeat here. */
+:where(.zd-scope) {
+  font-family: var(--zd-default-font-family, ui-sans-serif, system-ui, sans-serif);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  border: 0 solid;
+  margin: 0;
+  padding: 0;
+}
 
-  /* `border: 0 solid` presets the border-style, so a zd:border-* width
-     utility renders a line without needing a style utility next to it. */
-  .zd-scope :where(*, ::before, ::after) {
-    box-sizing: border-box;
-    border: 0 solid;
-    margin: 0;
-    padding: 0;
-  }
+/* `border: 0 solid` presets the border-style, so a zd:border-* width
+   utility renders a line without needing a style utility next to it. */
+.zd-scope :where(*, ::before, ::after) {
+  box-sizing: border-box;
+  border: 0 solid;
+  margin: 0;
+  padding: 0;
+}
 
-  .zd-scope :where(img, svg, video) {
-    display: block;
-    max-width: 100%;
-  }
-  .zd-scope :where(img, video) {
-    height: auto;
-  }
+.zd-scope :where(img, svg, video) {
+  display: block;
+  max-width: 100%;
+}
+.zd-scope :where(img, video) {
+  height: auto;
+}
 
-  .zd-scope :where(button, input, textarea) {
-    font: inherit;
-    letter-spacing: inherit;
-    color: inherit;
-    background: transparent;
-    border-radius: 0;
-    appearance: none;
-  }
-  .zd-scope :where(input, textarea)::placeholder {
-    opacity: 1;
-    color: color-mix(in oklab, currentColor 50%, transparent);
-  }
-  .zd-scope :where(textarea) {
-    resize: vertical;
-  }
+.zd-scope :where(button, input, textarea) {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+  appearance: none;
+}
+/* The blanket `appearance: none` above is for text-like fields; native
+   checkbox/radio chrome must survive (preflight never stripped it either).
+   Same zero specificity, so source order lets this win. */
+.zd-scope :where(input[type="checkbox"], input[type="radio"]) {
+  appearance: auto;
+}
+.zd-scope :where(input, textarea)::placeholder {
+  opacity: 1;
+  color: color-mix(in oklab, currentColor 50%, transparent);
+}
+.zd-scope :where(textarea) {
+  resize: vertical;
+}
 
-  .zd-scope :where(a) {
-    color: inherit;
-    text-decoration: inherit;
-  }
-  .zd-scope :where(h1, h2, h3, h4, h5, h6) {
-    font-size: inherit;
-    font-weight: inherit;
-  }
-  .zd-scope :where(pre) {
-    font-family: var(--zd-font-mono);
-  }
+.zd-scope :where(a) {
+  color: inherit;
+  text-decoration: inherit;
+}
+/* Bare lists (e.g. the SRA deposit rows) — preflight killed the markers
+   globally; margins/padding are already zeroed by the universal rule. */
+.zd-scope :where(ol, ul) {
+  list-style: none;
+}
+.zd-scope :where(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+.zd-scope :where(pre) {
+  font-family: var(--zd-font-mono);
 }
