@@ -106,4 +106,3 @@ export {
   type ZeroDevLogoProps,
 } from './components/ZeroDevLogo'
 export { camelCaseToTitle, cn } from './utils/common'
-export { getZdPortalRoot, useZdPortalContainer } from './utils/portal'
