@@ -31,6 +31,11 @@ import { cn } from "../lib/utils";
 
 export const dynamic = 'force-dynamic';
 
+// Transaction history is still under development — only surfaced in local
+// dev (`next dev`). NODE_ENV is inlined at build time, so production builds
+// drop the button and modal entirely.
+const HISTORY_ENABLED = process.env.NODE_ENV === "development";
+
 type ActiveTab = "signing" | "mint" | "send";
 type BatchAsset = "ETH" | "USDC";
 
@@ -244,7 +249,7 @@ export default function DashboardPage() {
   return (
     <>
       <ExportWalletModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
-      {showHistory && (
+      {HISTORY_ENABLED && showHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <TxHistory onClose={() => setShowHistory(false)} />
         </div>
@@ -266,14 +271,16 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <ChainSelector className="h-9 rounded-full px-3 text-xs" />
-                <button
-                  onClick={() => setShowHistory(true)}
-                  className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--border-warm)] bg-white px-3 text-xs font-semibold text-[#423a32] transition-colors hover:bg-[var(--surface-warm)]"
-                  title="Transaction history"
-                >
-                  <History className="h-3.5 w-3.5" />
-                  History
-                </button>
+                {HISTORY_ENABLED && (
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--border-warm)] bg-white px-3 text-xs font-semibold text-[#423a32] transition-colors hover:bg-[var(--surface-warm)]"
+                    title="Transaction history"
+                  >
+                    <History className="h-3.5 w-3.5" />
+                    History
+                  </button>
+                )}
                 <button
                   onClick={() => setShowExportModal(true)}
                   className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--border-warm)] bg-white px-3 text-xs font-semibold text-[#423a32] transition-colors hover:bg-[var(--surface-warm)]"
