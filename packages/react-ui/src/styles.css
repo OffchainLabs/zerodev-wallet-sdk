@@ -1,4 +1,18 @@
-@import "tailwindcss" prefix(zd);
+/* We do not import preflight. It is a global element reset that would
+   restyle the host app; reset.css holds the scoped replacement under
+   `.zd-scope`.
+
+   Nothing here sits in @layer. Unlayered author CSS beats all layered CSS,
+   so the SDK's styling wins over a Tailwind host's layers (its preflight in
+   `@layer base` in particular) regardless of stylesheet import order. With
+   named layers, whichever sheet the bundler emitted first would lose, and no
+   library controls that ordering from inside a package.
+
+   The import order below matters. reset.css comes before utilities.css so a
+   utility beats the reset on equal specificity (both are one class deep). */
+@import "tailwindcss/theme.css" prefix(zd);
+@import "./reset.css";
+@import "tailwindcss/utilities.css" prefix(zd);
 @config "../tailwind.config.ts";
 
 /* Density base. --zd-density is a unitless multiplier (1 = default) that the

@@ -2,6 +2,7 @@ import { Select as SelectPrimitive } from 'radix-ui'
 import type { ComponentProps, Ref } from 'react'
 
 import { cn } from '../../utils/common'
+import { useZdPortalContainer } from '../../utils/portal'
 import { Icon } from '../Icon'
 import { Wrapper } from '../Wrapper'
 
@@ -74,8 +75,9 @@ export function SelectContent({
 }: ComponentProps<typeof SelectPrimitive.Content> & {
   ref?: Ref<HTMLDivElement>
 }) {
+  const portalContainer = useZdPortalContainer()
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={portalContainer}>
       <SelectPrimitive.Content
         ref={ref}
         position={position}

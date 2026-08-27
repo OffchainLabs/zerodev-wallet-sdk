@@ -4,7 +4,14 @@ import '../src/styles.css'
 
 const withScreen: Decorator = (Story, context) => {
   const screen = context.globals.screen as 'on' | 'off'
-  if (screen !== 'on') return <Story />
+  // Screen-off stories render outside a Screen, so this wrapper carries the
+  // zd-scope class the scoped reset applies to.
+  if (screen !== 'on')
+    return (
+      <div className="zd-scope">
+        <Story />
+      </div>
+    )
   // Storybook-flavored mimic of <Screen>: same gradient + rounded
   // offWhite card, but with no TopNav padding and content-driven height
   // (with a 500x500 floor). This way the story is genuinely centered and
