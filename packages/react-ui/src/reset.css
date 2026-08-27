@@ -56,13 +56,6 @@
   color: inherit;
   background: transparent;
   border-radius: 0;
-  appearance: none;
-}
-/* The blanket `appearance: none` above targets text-like fields. Native
-   checkbox/radio chrome must survive, and preflight never stripped it
-   either. Same zero specificity, so source order lets this win. */
-.zd-scope :where(input[type="checkbox"], input[type="radio"]) {
-  appearance: auto;
 }
 .zd-scope :where(input, textarea)::placeholder {
   opacity: 1;
