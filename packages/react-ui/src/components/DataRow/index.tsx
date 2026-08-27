@@ -28,7 +28,8 @@ export interface DataRowProps {
    * chevron or trailing icon. */
   trailing?: ReactNode
   /** `'default'` for a plain inline row; `'warning'` for the orange-tinted
-   * card treatment (Figma "Minimum deposit"). */
+   * card treatment (Figma "Minimum deposit") — tinted card and orange info
+   * icon, default-ink text. */
   variant?: 'default' | 'warning'
   className?: string
 }
@@ -44,8 +45,9 @@ export function DataRow({
   variant = 'default',
   className,
 }: DataRowProps) {
+  // Design review (Min deposit): label/value read in the default ink even on
+  // the warning card — only the card tint and info icon are orange.
   const isWarning = variant === 'warning'
-  const textColorClass = isWarning ? 'zd:text-solarOrange' : undefined
 
   return (
     <div
@@ -67,9 +69,7 @@ export function DataRow({
         isWarning ? { backgroundColor: 'rgba(242, 123, 62, 0.1)' } : undefined
       }
     >
-      <Text className={cn('zd:whitespace-nowrap', textColorClass)}>
-        {label}
-      </Text>
+      <Text className="zd:whitespace-nowrap">{label}</Text>
       {info && (
         <Tooltip content={infoTooltip}>
           {onInfoClick ? (
@@ -85,10 +85,14 @@ export function DataRow({
               data-testid="data-row-info"
             >
               <Icon
-                name="info"
+                name={isWarning ? 'infoOutline' : 'info'}
                 className={cn(
                   'zd:w-3.5 zd:h-3.5',
-                  isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
+                  // Warning rows use the thin outline glyph at half opacity
+                  // (Figma 20002:36053) instead of the filled disc.
+                  isWarning
+                    ? 'zd:text-solarOrange zd:opacity-50'
+                    : 'zd:text-greyScale/50',
                 )}
                 aria-hidden
               />
@@ -108,10 +112,14 @@ export function DataRow({
               data-testid="data-row-info"
             >
               <Icon
-                name="info"
+                name={isWarning ? 'infoOutline' : 'info'}
                 className={cn(
                   'zd:w-3.5 zd:h-3.5',
-                  isWarning ? 'zd:text-solarOrange' : 'zd:text-greyScale/50',
+                  // Warning rows use the thin outline glyph at half opacity
+                  // (Figma 20002:36053) instead of the filled disc.
+                  isWarning
+                    ? 'zd:text-solarOrange zd:opacity-50'
+                    : 'zd:text-greyScale/50',
                 )}
                 aria-hidden
               />
@@ -128,9 +136,7 @@ export function DataRow({
       >
         {leading}
         {typeof value === 'string' ? (
-          <Text className={cn('zd:whitespace-nowrap', textColorClass)}>
-            {value}
-          </Text>
+          <Text className="zd:whitespace-nowrap">{value}</Text>
         ) : (
           value
         )}

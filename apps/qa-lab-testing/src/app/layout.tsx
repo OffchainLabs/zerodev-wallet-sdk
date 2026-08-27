@@ -15,6 +15,7 @@ import { Providers } from './providers';
 export const dynamic = "force-dynamic";
 
 import "@zerodev/wallet-react-ui/styles.css";
+import "@zerodev/smart-routing-address-react-ui/styles.css";
 import "./globals.css";
 
 const geistSans = Geist({

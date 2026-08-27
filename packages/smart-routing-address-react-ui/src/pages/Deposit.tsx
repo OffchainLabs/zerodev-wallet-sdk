@@ -12,6 +12,7 @@ import {
   Text,
   TokenListItem,
   Tooltip,
+  WrappedPressable,
   Wrapper,
 } from '@zerodev/react-ui'
 import type { DepositedToken, TOKEN_TYPE } from '@zerodev/smart-routing-address'
@@ -221,10 +222,9 @@ export function Deposit({
     return out
   }, [srcTokens, selectedTokenType])
 
-  // Only formatted when the consumer explicitly sets a slippage — otherwise
-  // the server picks its own default and there is no meaningful value to show.
-  const slippage =
-    typeof config.slippage === 'number' ? formatSlippage(config.slippage) : null
+  // Always present: config.slippage is required now that the SRA server no
+  // longer supplies a default.
+  const slippage = formatSlippage(config.slippage)
 
   const minDepositAmount =
     feeData && tokenSymbol
@@ -279,7 +279,12 @@ export function Deposit({
   ])
 
   return (
-    <div className="zd:flex zd:h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
+    // min-h-full, not h-full: with a fixed height, overflowing content
+    // scrolls past the padding box and pb-6 never lands after the last row
+    // (the "Past deposits" row hits the bottom edge). min-h keeps short
+    // content filling the viewport while letting tall content grow so the
+    // bottom padding is honoured.
+    <div className="zd:flex zd:min-h-full zd:w-full zd:flex-col zd:items-center zd:gap-4 zd:pt-4 zd:pb-6">
       <Text className="zd:w-full zd:text-center">{SUBTITLE}</Text>
 
       <div className="zd:relative zd:flex zd:w-full zd:flex-1 zd:flex-col zd:gap-2">
@@ -378,38 +383,36 @@ export function Deposit({
                 }
               />
               <div className="zd:flex zd:w-full zd:flex-col zd:items-start zd:gap-2 zd:px-2 zd:py-4">
-                {slippage && (
-                  <DataRow
-                    label="Max slippage"
-                    value={slippage}
-                    info
-                    infoTooltip={FEE_INFO.maxSlippage}
-                    trailing={
-                      breakdown?.provider &&
-                      PROVIDER_ICONS[breakdown.provider] ? (
-                        <LiveValue
-                          loading={providerFees.loading}
-                          flashKey={breakdown.provider}
-                        >
-                          <Tooltip content={`Quoted via ${breakdown.provider}`}>
-                            <button
-                              type="button"
-                              aria-label={`Quoted via ${breakdown.provider}`}
-                              className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
-                            >
-                              <img
-                                src={PROVIDER_ICONS[breakdown.provider]}
-                                alt=""
-                                aria-hidden
-                                className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
-                              />
-                            </button>
-                          </Tooltip>
-                        </LiveValue>
-                      ) : null
-                    }
-                  />
-                )}
+                <DataRow
+                  label="Max slippage"
+                  value={slippage}
+                  info
+                  infoTooltip={FEE_INFO.maxSlippage}
+                  trailing={
+                    breakdown?.provider &&
+                    PROVIDER_ICONS[breakdown.provider] ? (
+                      <LiveValue
+                        loading={providerFees.loading}
+                        flashKey={breakdown.provider}
+                      >
+                        <Tooltip content={`Quoted via ${breakdown.provider}`}>
+                          <button
+                            type="button"
+                            aria-label={`Quoted via ${breakdown.provider}`}
+                            className="zd:inline-flex zd:items-center zd:justify-center zd:cursor-help zd:outline-none zd:bg-transparent"
+                          >
+                            <img
+                              src={PROVIDER_ICONS[breakdown.provider]}
+                              alt=""
+                              aria-hidden
+                              className="zd:size-4 zd:shrink-0 zd:rounded-[4px] zd:object-cover"
+                            />
+                          </button>
+                        </Tooltip>
+                      </LiveValue>
+                    ) : null
+                  }
+                />
                 <DataRow
                   label="Estimated fee"
                   value={
@@ -489,6 +492,7 @@ export function Deposit({
                 address={address}
                 onQrClick={onQrClick}
               />
+              {address && <CopyAddressButton address={address} />}
               {errorMessage && (
                 <ErrorRetryCard
                   message={errorMessage}
@@ -521,62 +525,120 @@ export function Deposit({
           }
         />
 
-        {newDeposits.length > 0 ? (
-          <PendingDeposits
-            deposits={newDeposits}
-            estimatedFees={estimatedFees}
-            config={config}
-            {...(onSelectDeposit && { onSelectDeposit })}
-          />
-        ) : (
-          <LoadingCard
-            text={
-              source
-                ? `Watching for your deposit on ${source.chain.name}…`
-                : 'Watching for your deposit…'
-            }
-          />
-        )}
+        {/* Deposit watching only makes sense once the address exists —
+            while creation is loading (or failed) there is nothing to watch,
+            so neither card renders. */}
+        {address &&
+          (newDeposits.length > 0 ? (
+            <PendingDeposits
+              deposits={newDeposits}
+              estimatedFees={estimatedFees}
+              config={config}
+              {...(onSelectDeposit && { onSelectDeposit })}
+            />
+          ) : (
+            <LoadingCard
+              text={
+                source
+                  ? `Watching for your deposit on ${source.chain.name}…`
+                  : 'Watching for your deposit…'
+              }
+            />
+          ))}
 
         {pastDepositsCount > 0 &&
           (onViewPastDeposits ? (
-            <button
-              type="button"
+            <WrappedPressable
               onClick={onViewPastDeposits}
-              className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4 zd:cursor-pointer"
+              className={cn('zd:w-full', PAST_DEPOSITS_CARD)}
             >
-              <Icon
-                name="clock"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-              <Text className="zd:flex-1 zd:text-left zd:text-body1">
-                Past deposits ({pastDepositsCount})
-              </Text>
-              <Icon
-                name="chevronRight"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-            </button>
+              <PastDepositsRow count={pastDepositsCount} />
+            </WrappedPressable>
           ) : (
-            <div className="zd:flex zd:w-full zd:items-center zd:gap-2 zd:px-4 zd:py-4">
-              <Icon
-                name="clock"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-              <Text className="zd:flex-1 zd:text-left zd:text-body1">
-                Past deposits ({pastDepositsCount})
-              </Text>
-              <Icon
-                name="chevronRight"
-                className="zd:size-4 zd:text-greyScale/50"
-                aria-hidden
-              />
-            </div>
+            <Wrapper
+              variant="ghost"
+              className={cn(
+                'zd:flex zd:w-full zd:items-center',
+                PAST_DEPOSITS_CARD,
+              )}
+            >
+              <PastDepositsRow count={pastDepositsCount} />
+            </Wrapper>
           ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Full-width dark "Copy Address" pill under the address row (Figma
+ * `20002:36049`). Not react-ui's `Button`: that primitive is locked to the
+ * 64px/24px-radius spec, while this is the design system's smaller
+ * 48px/14px button — worth promoting as a Button size variant if it
+ * recurs. Label flips to "Copied!" for 2s as tap feedback (the design has
+ * no pressed state).
+ */
+function CopyAddressButton({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can reject on insecure contexts / denied permission —
+      // keep the label unchanged rather than claim a copy happened.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        'zd:relative zd:flex zd:h-12 zd:w-full zd:shrink-0 zd:cursor-pointer zd:items-center zd:justify-center zd:gap-2',
+        'zd:rounded-[14px] zd:backdrop-blur-[15px] zd:transition-colors zd:hover:bg-greyScale',
+        'zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]',
+      )}
+      style={{ backgroundColor: 'rgba(19, 14, 11, 0.9)' }}
+    >
+      <Text className="zd:text-body1 zd:text-offWhite">
+        {copied ? 'Copied!' : 'Copy Address'}
+      </Text>
+      <Icon
+        name="copy"
+        className="zd:size-4 zd:shrink-0 zd:text-offWhite"
+        aria-hidden
+      />
+    </button>
+  )
+}
+
+// Past-deposits card treatment (Figma 20002:36111): 16px radius plus the
+// universal inner shadow; border/blur/tint come from the ghost Wrapper.
+const PAST_DEPOSITS_CARD =
+  'zd:rounded-2xl zd:shadow-[inset_0_-4px_4px_0_rgba(255,255,255,0.1),inset_0_3px_4px_0_rgba(0,0,0,0.02)]'
+
+/** Row content shared by the tappable and inert past-deposits variants. */
+function PastDepositsRow({ count }: { count: number }) {
+  return (
+    <div className="zd:flex zd:w-full zd:items-center zd:gap-3 zd:p-4">
+      <div className="zd:flex zd:min-w-0 zd:flex-1 zd:items-center zd:gap-2">
+        <Icon
+          name="clockFill"
+          className="zd:size-4 zd:shrink-0 zd:text-solarOrange"
+          aria-hidden
+        />
+        <Text className="zd:flex-1 zd:text-left zd:text-h3">
+          Past deposits ({count})
+        </Text>
+      </div>
+      <Icon
+        name="chevronRight"
+        className="zd:size-4.5 zd:shrink-0 zd:text-greyScale"
+        aria-hidden
+      />
     </div>
   )
 }

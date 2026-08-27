@@ -22,6 +22,7 @@ import {
 /** Minimal config without routes, exercising the defaults */
 const BARE_CONFIG: SmartRoutingAddressConfig = {
   targetChainId: base.id,
+  slippage: 100,
 }
 
 describe('resolveVersion', () => {

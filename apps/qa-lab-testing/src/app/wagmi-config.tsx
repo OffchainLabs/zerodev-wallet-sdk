@@ -31,7 +31,7 @@ export function createWalletConfig(resolved: ResolvedWalletConfig) {
     chains: resolved.chains,
     connectors: [
       zeroDevWallet({
-        projectId: process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID!,
+        projectId: resolved.projectId!,
         proxyBaseUrl: resolved.kmsProxyBaseUrl!,
         chains: [...resolved.chains],
         ...(resolved.aaHost && { aaHost: resolved.aaHost }),

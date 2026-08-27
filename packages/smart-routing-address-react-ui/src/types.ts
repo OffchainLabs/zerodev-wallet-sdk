@@ -40,8 +40,10 @@ export type SmartRoutingAddressConfig = {
    * transferred to the owner.
    */
   actions?: CreateSmartRoutingAddressParams['actions']
-  /** Max slippage in basis points (50 = 0.5%) */
-  slippage?: number
+  /**
+   * Max slippage in basis points (50 = 0.5%).
+   */
+  slippage: number
   /**
    * Override the smart routing address server root URL; the projectId is
    * appended to it

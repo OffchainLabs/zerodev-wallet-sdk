@@ -68,9 +68,7 @@ export function SmartRoutingAddressProvider({
           const result = await createSmartRoutingAddress({
             owner: nextRecipient,
             destChain: resolveDestChain(config),
-            ...(config.slippage !== undefined && {
-              slippage: config.slippage,
-            }),
+            slippage: config.slippage,
             srcTokens: resolveSourceTokens(config),
             ...(resolveActions(config, nextRecipient) && {
               actions: resolveActions(config, nextRecipient),

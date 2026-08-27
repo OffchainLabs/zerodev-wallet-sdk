@@ -16,15 +16,44 @@ export interface TxRun {
 
 const shortHex = (hex: string) => `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 
-const errorMessage = (err: unknown): string => {
-  if (
-    err &&
-    typeof err === "object" &&
-    "shortMessage" in err &&
-    typeof (err as { shortMessage: unknown }).shortMessage === "string"
-  ) {
-    return (err as { shortMessage: string }).shortMessage;
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const asText = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length > 0 ? value : undefined;
+
+/**
+ * HTTP status from anywhere in viem's cause chain. It sits on the innermost
+ * `HttpRequestError`, so the outer `ContractFunctionExecutionError` alone never
+ * tells you a request was throttled rather than rejected.
+ */
+const httpStatus = (err: unknown): number | undefined => {
+  let current = asRecord(err);
+  for (let depth = 0; current && depth < 10; depth++) {
+    if (typeof current.status === "number") return current.status;
+    current = asRecord(current.cause);
   }
+  return undefined;
+};
+
+/**
+ * viem's `shortMessage` collapses a throttled paymaster into "An unknown RPC
+ * error occurred", which is indistinguishable from a real revert in a CI log.
+ * `details` carries the server's own explanation and the status says whether it
+ * was the transport, so both are kept.
+ */
+const errorMessage = (err: unknown): string => {
+  const error = asRecord(err);
+  const status = httpStatus(err);
+  const parts = [
+    asText(error?.shortMessage),
+    asText(error?.details),
+    status ? `HTTP ${status}` : undefined,
+  ].filter(Boolean);
+
+  if (parts.length > 0) return parts.join(" · ");
   return err instanceof Error ? err.message : "Transaction failed";
 };
 
@@ -75,7 +104,7 @@ export function TxRunList({ runs }: { runs: TxRun[] }) {
   if (runs.length === 0) return null;
 
   return (
-    <ul className="mt-4 space-y-2">
+    <ul className="mt-4 space-y-2" data-testid="tx-runs">
       {runs.map((run) => {
         const explorerUrl =
           run.hash && explorerBaseUrl
@@ -84,6 +113,9 @@ export function TxRunList({ runs }: { runs: TxRun[] }) {
         return (
           <li
             key={run.id}
+            data-testid={`tx-run-${run.id}`}
+            data-status={run.status}
+            data-error={run.error}
             className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
           >
             <span className="shrink-0">
@@ -110,6 +142,8 @@ export function TxRunList({ runs }: { runs: TxRun[] }) {
               <span
                 className="shrink-0 font-mono text-[11px] text-gray-400"
                 title={run.hash}
+                data-testid="tx-run-hash"
+                data-hash={run.hash}
               >
                 {shortHex(run.hash)}
               </span>
