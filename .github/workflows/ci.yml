@@ -127,8 +127,6 @@ jobs:
     needs: [build]
     concurrency:
       group: integration-tests-staging
-      # Queue waiting runs (FIFO, still one at a time) instead of the default
-      # single pending slot, which cancels older waiters.
       queue: max
     steps:
       - name: Checkout
