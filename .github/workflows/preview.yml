@@ -60,9 +60,10 @@ jobs:
             exit 1
           fi
           echo "Publishing previews for:" $pkgs
-          pnpm dlx pkg-pr-new publish --pnpm $pkgs | tee "$RUNNER_TEMP/publish.log"
+          pnpm dlx pkg-pr-new publish --pnpm $pkgs 2>&1 | tee "$RUNNER_TEMP/publish.log"
 
-          urls=$(grep -oE 'https://pkg\.pr\.new/@[^ ]+' "$RUNNER_TEMP/publish.log" | sort -u)
+          urls=$(sed 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/publish.log" \
+            | grep -oE 'https://pkg\.pr\.new/@[^ ]+' | sort -u || true)
           if [ -z "$urls" ]; then
             echo "pkg-pr-new printed no install URLs — nothing to hand to the E2E job" >&2
             exit 1
