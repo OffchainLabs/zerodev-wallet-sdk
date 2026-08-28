@@ -3,32 +3,40 @@ name: Preview
 # Publishes throwaway preview packages for each PR via pkg.pr.new, installable
 # from its CDN (e.g. `npm i https://pkg.pr.new/@zerodev/wallet-react@<sha>`).
 #
-# SECURITY (public repo): uses `pull_request` — NOT `pull_request_target` — and
-# NO secrets. Fork PRs run with a read-only token and cannot access anything
-# sensitive. pkg.pr.new publishes to its own CDN (never npm) using the Actions
-# OIDC identity; its GitHub App posts the PR comment. No NPM_TOKEN is involved.
+# SECURITY (public repo): the only caller triggers on `pull_request` — NOT
+# `pull_request_target` — and passes NO secrets. Fork PRs run with a read-only
+# token and cannot reach anything sensitive. pkg.pr.new publishes to its own CDN
+# (never npm) using the Actions OIDC identity; its GitHub App posts the PR
+# comment. No NPM_TOKEN is involved.
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
+    outputs:
+      sha:
+        description: >-
+          The commit the previews were published for. Callers must install by
+          this value rather than recomputing it, so the packages under test and
+          the packages that were published cannot drift apart.
+        value: ${{ jobs.preview.outputs.sha }}
 
 permissions:
   contents: read
-
-concurrency:
-  group: preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 jobs:
   preview:
     name: Publish preview packages
     runs-on: ubuntu-latest
-    # Previews are advisory — a hiccup (or the pkg.pr.new app not yet installed)
-    # must never block a PR from merging.
-    continue-on-error: true
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Resolve published commit
+        id: resolve
+        run: echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -45,11 +53,15 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      # Only the four publishable packages (skips react-kit / native-kit / apps).
+      # Derived rather than hardcoded, because a spelled-out list drifts. Captured
+      # to a variable first so a script failure cannot become an empty argument
+      # list that publishes nothing and still exits 0.
       - name: Publish previews
-        run: >
-          pnpm dlx pkg-pr-new publish --pnpm
-          './packages/core'
-          './packages/react'
-          './packages/react-ui'
-          './packages/wallet-react-ui'
+        run: |
+          pkgs=$(node scripts/check-publishable.mjs --list | sed 's|^|./|')
+          if [ -z "$pkgs" ]; then
+            echo "check-publishable produced no packages — refusing to publish nothing" >&2
+            exit 1
+          fi
+          echo "Publishing previews for:" $pkgs
+          pnpm dlx pkg-pr-new publish --pnpm $pkgs
