@@ -1,5 +1,44 @@
 # @zerodev/wallet-react-ui
 
+## 0.0.12
+
+### Patch Changes
+
+- 2fe1800: feat: WalletConnect pairing for external wallets
+
+  wallet-react-ui:
+
+  - New export `zeroDevWalletConnect` — WalletConnect connector preconfigured
+    for the kit.
+  - New sign-up unit `SignUp.WalletConnect` — generic pairing row with a QR
+    sheet.
+  - `SignUp.Wallet` and `SignUp.MoreWallets` open a WalletConnect pairing
+    sheet (QR + deep link) for wallets not present in the browser; on mobile,
+    signing requests deep-link into the connected wallet app.
+  - fix: duplicate wallet entries in wallet in-app browsers; expired pairing
+    proposals now surface an error with retry.
+
+  ```tsx
+  connectors: [
+    zeroDevWallet({ ... }),
+    zeroDevWalletConnect({ projectId: 'your-reown-project-id' }),
+  ]
+
+  <SignUp>
+    <SignUp.InstalledWallets />
+    <SignUp.WalletConnect />
+    <SignUp.MoreWallets />
+  </SignUp>
+  ```
+
+  react-ui:
+
+  - New export: `QrCode` (+ `QrCodeProps`). Adds the `uqr` dependency.
+
+- Updated dependencies [2fe1800]
+- Updated dependencies [2fe1800]
+  - @zerodev/react-ui@0.0.8
+
 ## 0.0.11
 
 ### Patch Changes
