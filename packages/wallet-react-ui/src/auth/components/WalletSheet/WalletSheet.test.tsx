@@ -106,7 +106,9 @@ describe('WalletSheet', () => {
     const wc = fakeWcConnector()
     connectors = [wc]
     render(<WalletSheet open onOpenChange={() => {}} />)
-    expect(screen.getByText('Generating connection link…')).toBeDefined()
+    // Pending state: no QR yet, copy stays disabled until the URI arrives.
+    expect(screen.queryByTestId('qr')).toBeNull()
+    expect(screen.getByText('Copy link').closest('button')?.disabled).toBe(true)
     expect(screen.queryByText('Mobile')).toBeNull()
 
     act(() => wc.emit({ type: 'display_uri', data: 'wc:raw@2' }))
