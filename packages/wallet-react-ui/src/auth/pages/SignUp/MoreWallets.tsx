@@ -1,6 +1,7 @@
 import { ListItem, ListItemChevron, ListItemIcon } from '@zerodev/react-ui'
 import { useState } from 'react'
 import { useConnect, useConnectors } from 'wagmi'
+import { walletConnectLogo } from '../../brandAssets'
 import {
   WalletGridSheet,
   type WalletTileData,
@@ -56,8 +57,6 @@ export function SignUpMoreWallets({
 
   const guideTiles: WalletTileData[] = WALLET_GUIDE.map((wallet) => {
     const announced = walletConnectors.find((c) => announcesWallet(c, wallet))
-    const installed =
-      announced ?? walletConnectors.find((c) => matchesWallet(c, wallet))
     return {
       key: wallet.id,
       name: wallet.name,
@@ -76,8 +75,11 @@ export function SignUpMoreWallets({
           openWalletSheet(wallet)
           return
         }
-        if (installed) {
-          startConnect(installed)
+        // No WC handoff available — a configured connector that claims the
+        // wallet (e.g. a vendor SDK) is the last way to connect.
+        const claimed = walletConnectors.find((c) => matchesWallet(c, wallet))
+        if (claimed) {
+          startConnect(claimed)
           return
         }
         setOpen(false)
@@ -97,6 +99,22 @@ export function SignUpMoreWallets({
       onSelect: () => startConnect(connector),
     }))
 
+  const walletConnectTiles: WalletTileData[] = wcEnabled
+    ? [
+        {
+          key: 'walletconnect',
+          name: 'WalletConnect',
+          icon: walletConnectLogo,
+          onSelect: () => {
+            if (authPending) return
+            if (!guardAgreement()) return
+            setOpen(false)
+            openWalletSheet()
+          },
+        },
+      ]
+    : []
+
   const handleClick = () => {
     if (authPending) return
     if (!guardAgreement()) return
@@ -115,7 +133,7 @@ export function SignUpMoreWallets({
       <WalletGridSheet
         open={open}
         onOpenChange={setOpen}
-        tiles={[...guideTiles, ...connectorTiles]}
+        tiles={[...walletConnectTiles, ...guideTiles, ...connectorTiles]}
       />
     </>
   )
