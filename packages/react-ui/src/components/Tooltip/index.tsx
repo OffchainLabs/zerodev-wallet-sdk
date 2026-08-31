@@ -2,6 +2,7 @@ import { Tooltip as TooltipPrimitive } from 'radix-ui'
 import type { ComponentProps, ReactNode, Ref } from 'react'
 
 import { cn } from '../../utils/common'
+import { useZdPortalContainer } from '../../utils/portal'
 
 /**
  * Floating tooltip wrapping the Radix primitive with our token palette.
@@ -20,7 +21,19 @@ import { cn } from '../../utils/common'
 export const TooltipProvider = TooltipPrimitive.Provider
 export const TooltipRoot = TooltipPrimitive.Root
 export const TooltipTrigger = TooltipPrimitive.Trigger
-export const TooltipPortal = TooltipPrimitive.Portal
+
+export function TooltipPortal({
+  container,
+  ...props
+}: ComponentProps<typeof TooltipPrimitive.Portal>) {
+  const defaultContainer = useZdPortalContainer()
+  return (
+    <TooltipPrimitive.Portal
+      container={container ?? defaultContainer}
+      {...props}
+    />
+  )
+}
 
 export interface TooltipContentProps
   extends ComponentProps<typeof TooltipPrimitive.Content> {

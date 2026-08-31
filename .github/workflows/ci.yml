@@ -125,6 +125,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     needs: [build]
+    concurrency:
+      group: integration-tests-staging
+      queue: max
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -165,6 +168,9 @@ jobs:
       always()
       && needs.build.result == 'success'
       && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    concurrency:
+      group: e2e-tests-staging
+      queue: max
     steps:
       - name: Require published previews
         if: github.event_name == 'pull_request' && needs.preview.result != 'success'
