@@ -22,18 +22,41 @@ vi.mock('../utils/isMobile', () => ({
 const connect = vi.fn()
 let connectors: unknown[] = []
 let connections: unknown[] = []
+let reconnecting = false
 vi.mock('wagmi', () => ({
   useConnectors: () => connectors,
   useConnect: () => ({ mutate: connect }),
   useConnections: () => connections,
+  useAccount: () => ({ isReconnecting: reconnecting }),
 }))
 
 type MessageHandler = (event: { type: string; data?: unknown }) => void
 
-/** Connector double with a working `message` emitter. Stamped like the
- * zeroDevWalletConnect factory's output unless `stamped: false`. */
+/** Connector double with a working `message` emitter and a provider that
+ * emits `connect` on fresh session settles and whose sign-client emits
+ * `proposal_expire`. Stamped like the zeroDevWalletConnect factory's output
+ * unless `stamped: false`. */
 function fakeWcConnector({ stamped = true } = {}) {
   const handlers = new Set<MessageHandler>()
+  const expireHandlers = new Set<() => void>()
+  const connectHandlers = new Set<() => void>()
+  const expiryEvents = {
+    on: vi.fn((_event: string, handler: () => void) => {
+      expireHandlers.add(handler)
+    }),
+    off: vi.fn((_event: string, handler: () => void) => {
+      expireHandlers.delete(handler)
+    }),
+  }
+  const provider = {
+    on: vi.fn((_event: string, handler: () => void) => {
+      connectHandlers.add(handler)
+    }),
+    off: vi.fn((_event: string, handler: () => void) => {
+      connectHandlers.delete(handler)
+    }),
+    signer: { client: { events: expiryEvents } },
+  }
   return {
     uid: crypto.randomUUID(),
     id: 'walletConnect',
@@ -50,6 +73,15 @@ function fakeWcConnector({ stamped = true } = {}) {
     emit: (event: { type: string; data?: unknown }) => {
       for (const handler of handlers) handler(event)
     },
+    getProvider: vi.fn(async () => provider),
+    provider,
+    expiryEvents,
+    expireProposal: () => {
+      for (const handler of expireHandlers) handler()
+    },
+    settleSession: () => {
+      for (const handler of connectHandlers) handler()
+    },
   }
 }
 
@@ -57,6 +89,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   connectors = []
   connections = []
+  reconnecting = false
   mobile.value = false
 })
 
@@ -103,12 +136,80 @@ describe('useWalletConnectPairing', () => {
     expect(connect).toHaveBeenCalledTimes(1)
   })
 
-  it('closes the auth flow when the pairing connects', () => {
+  it('closes the auth flow when a fresh session settles, surviving Strict Mode', async () => {
     const wc = fakeWcConnector()
     connectors = [wc]
-    renderHook(() => useWalletConnectPairing())
-    act(() => connect.mock.calls[0][1].onSuccess())
+    renderHook(() => useWalletConnectPairing(), { wrapper: StrictMode })
+    // Let the async getProvider subscription settle.
+    await act(async () => {})
+    expect(goToStep).not.toHaveBeenCalled()
+
+    // The provider's `connect` event = the user approved OUR pairing.
+    act(() => wc.settleSession())
     expect(goToStep).toHaveBeenCalledWith(null)
+  })
+
+  it('does not close the flow for a session restored before mount', () => {
+    const wc = fakeWcConnector()
+    connectors = [wc]
+    connections = [{ connector: wc }]
+    renderHook(() => useWalletConnectPairing())
+    expect(goToStep).not.toHaveBeenCalled()
+  })
+
+  it('does not close the flow when a session restores after mount', async () => {
+    // The rehydration race: wagmi finishes restoring a persisted session
+    // AFTER the sign-up page mounted. A restored session emits no provider
+    // `connect` event, so the flow must stay open.
+    const wc = fakeWcConnector()
+    connectors = [wc]
+    const { rerender } = renderHook(() => useWalletConnectPairing())
+    await act(async () => {})
+
+    connections = [{ connector: wc }]
+    rerender()
+    expect(goToStep).not.toHaveBeenCalled()
+  })
+
+  it('defers the pairing kick while wagmi is reconnecting', () => {
+    const wc = fakeWcConnector()
+    connectors = [wc]
+    reconnecting = true
+    const { rerender } = renderHook(() => useWalletConnectPairing())
+    expect(connect).not.toHaveBeenCalled()
+
+    // Rehydration settled without a connection — now the kick runs.
+    reconnecting = false
+    rerender()
+    expect(connect).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces provider init failure through the error state', async () => {
+    const wc = fakeWcConnector()
+    wc.getProvider.mockRejectedValueOnce(new Error('relay unreachable'))
+    connectors = [wc]
+    const { result } = renderHook(() => useWalletConnectPairing())
+    await act(async () => {})
+    expect(result.current.error).toBe('relay unreachable')
+  })
+
+  it('errors on proposal expiry via the sign-client event, surviving Strict Mode', async () => {
+    const wc = fakeWcConnector()
+    connectors = [wc]
+    const { result } = renderHook(() => useWalletConnectPairing(), {
+      wrapper: StrictMode,
+    })
+    // Let the async getProvider subscription settle.
+    await act(async () => {})
+    act(() => wc.emit({ type: 'display_uri', data: 'wc:t@2?relay' }))
+
+    act(() => wc.expireProposal())
+    expect(result.current.error).toBe('Proposal expired')
+
+    const metamask = WALLET_GUIDE.find((w) => w.id === 'metamask')
+    if (!metamask) throw new Error('metamask missing from WALLET_GUIDE')
+    mobile.value = true
+    expect(result.current.deepLinkFor(metamask)).toBeNull()
   })
 
   it('surfaces connect errors and retry resets state and reconnects', () => {
@@ -156,13 +257,23 @@ describe('useWalletConnectPairing', () => {
     expect(connect).not.toHaveBeenCalled()
   })
 
-  it('unsubscribes its message handler on unmount', () => {
+  it('unsubscribes its message and expiry handlers on unmount', async () => {
     const wc = fakeWcConnector()
     connectors = [wc]
     const { unmount } = renderHook(() => useWalletConnectPairing())
+    await act(async () => {})
     const handler = wc.emitter.on.mock.calls[0][1]
+    const expireHandler = wc.expiryEvents.on.mock.calls[0][1]
     unmount()
     expect(wc.emitter.off).toHaveBeenCalledWith('message', handler)
+    expect(wc.expiryEvents.off).toHaveBeenCalledWith(
+      'proposal_expire',
+      expireHandler,
+    )
+    expect(wc.provider.off).toHaveBeenCalledWith(
+      'connect',
+      wc.provider.on.mock.calls[0][1],
+    )
   })
 
   it('deepLinkFor wraps the URI on mobile and stays null on desktop', () => {
