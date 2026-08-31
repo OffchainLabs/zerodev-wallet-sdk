@@ -55,6 +55,7 @@ export {
   type ProgressStepProps,
   type ProgressStepStatus,
 } from './components/ProgressStep'
+export { QrCode, type QrCodeProps } from './components/QrCode'
 export { Screen } from './components/Screen'
 export { Section, type SectionProps } from './components/Section'
 export {
