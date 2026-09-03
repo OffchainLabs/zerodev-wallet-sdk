@@ -1,25 +1,20 @@
 /**
  * Browser E2E for connecting the lab to a real MetaMask extension.
  *
- * Needs the lab running and `WALLET_SRP` / `WALLET_PASSWORD` set. The first
- * run downloads the pinned MetaMask build and onboards it once; every run after
- * that reuses the cached profile.
+ * Needs the lab running. The first run downloads the pinned MetaMask build and
+ * onboards it once; every run after that reuses the cached profile.
  */
 
 import { expect } from '@playwright/test'
 import { mnemonicToAccount } from 'viem/accounts'
 import { test } from '../fixtures/metamask.js'
-import { credentialsFromEnv } from '../helpers/wallet-credentials.js'
+import { TEST_WALLET } from '../helpers/wallet-credentials.js'
 
 const LAB_TIMEOUT_MS = 90_000
 
-/**
- * The expected Ethereum address derived from the secret recovery phrase.
- * The secret recovery phrase is deterministic and provided by the environment variable `WALLET_SRP`.
- * @returns The expected Ethereum address derived from the secret recovery phrase.
- */
+/** The address `TEST_WALLET`'s phrase derives, which is what the lab should show. */
 const expectedAddress = () =>
-  mnemonicToAccount(credentialsFromEnv().secretRecoveryPhrase).address
+  mnemonicToAccount(TEST_WALLET.secretRecoveryPhrase).address
 
 test.describe('Preset 2 — real MetaMask', () => {
   test.describe.configure({ timeout: 300_000 })

@@ -12,7 +12,7 @@ import {
   launchWithMetaMask,
   unlockIfLocked,
 } from '../helpers/metamask/session.js'
-import { credentialsFromEnv } from '../helpers/wallet-credentials.js'
+import { TEST_WALLET } from '../helpers/wallet-credentials.js'
 
 interface MetaMaskFixtures {
   context: BrowserContext
@@ -66,13 +66,13 @@ export const test = base.extend<MetaMaskFixtures, MetaMaskWorkerFixtures>({
   },
 
   metamask: async ({ context, extensionId }, use) => {
-    await use(new MetaMask(context, extensionId, credentialsFromEnv().password))
+    await use(new MetaMask(context, extensionId, TEST_WALLET.password))
   },
 
   walletPage: async ({ context, extensionId }, use) => {
     const page = await context.newPage()
     await page.goto(extensionUrl(extensionId))
-    await unlockIfLocked(page, credentialsFromEnv().password)
+    await unlockIfLocked(page, TEST_WALLET.password)
     await use(page)
     if (!page.isClosed()) await page.close()
   },

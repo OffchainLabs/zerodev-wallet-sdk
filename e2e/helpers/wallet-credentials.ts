@@ -1,33 +1,22 @@
 /**
  * The test wallet the browser e2e suite imports into a wallet extension.
  *
- * **One phrase across every wallet.** If some wallet ever needs its own phrase,
- * give that wallet an override here rather than splitting the shared pair.
+ * **Public on purpose. Never send this account real funds.**
  *
- * The phrase is a throwaway and unfunded. It lives in `.env`, never in the
- * repo, and in CI it comes from a secret.
+ * One phrase across every wallet. If one ever needs its own, add an override
+ * here rather than splitting the pair.
  */
 
 export interface WalletCredentials {
-  /** Throwaway 12-word phrase. Comes from the environment, never the repo. */
+  /** 12-word BIP-39 phrase. Unfunded, disposable, deliberately public. */
   secretRecoveryPhrase: string
-  /** Local to the cached extension profile. It protects nothing of value. */
+  /** Local to the cached extension profile. Protects nothing. */
   password: string
 }
 
-/**
- * Reads the credentials from the environment.
- * Fails loudly rather than defaulting.
- */
-export function credentialsFromEnv(): WalletCredentials {
-  const secretRecoveryPhrase = process.env.WALLET_SRP
-  const password = process.env.WALLET_PASSWORD
-
-  if (!secretRecoveryPhrase || !password) {
-    throw new Error(
-      'WALLET_SRP and WALLET_PASSWORD must be set to run the wallet-extension e2e suite. ' +
-        'See .env.example — the phrase is a throwaway and belongs in .env, never in the repo.',
-    )
-  }
-  return { secretRecoveryPhrase, password }
+export const TEST_WALLET: WalletCredentials = {
+  /** This secret recovery phrase is public and for testing purposes only. Do not use it for real funds. */
+  secretRecoveryPhrase:
+    'cover unfair advice banana magnet shock language canoe donor moment provide general',
+  password: 'Testing_1234',
 }

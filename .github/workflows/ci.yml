@@ -219,8 +219,6 @@ jobs:
         run: pnpm exec playwright test --config e2e/playwright.config.ts
         env:
           LAB_APP_URL: http://localhost:3000
-          WALLET_SRP: ${{ secrets.WALLET_SRP }}
-          WALLET_PASSWORD: ${{ secrets.WALLET_PASSWORD }}
 
       - name: Save e2e fixture cache
         if: always() && steps.e2e-cache.outputs.cache-hit != 'true' && hashFiles('e2e/.cache/*/installed.json') != ''

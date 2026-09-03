@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os'
 import * as path from 'node:path'
 import { type BrowserContext, chromium } from '@playwright/test'
 import { mnemonicToAccount } from 'viem/accounts'
-import { credentialsFromEnv } from '../wallet-credentials.js'
+import { TEST_WALLET } from '../wallet-credentials.js'
 import { ensureMetaMaskExtension, PROFILE_SNAPSHOT_DIR } from './extension.js'
 import { onboardWithRecoveryPhrase } from './onboard.js'
 import { unlockIfLocked } from './unlock.js'
@@ -138,11 +138,10 @@ async function waitForPersistedOnboarding(
 export async function ensureOnboardedProfile(
   headless: boolean,
 ): Promise<string> {
-  const credentials = credentialsFromEnv()
+  const credentials = TEST_WALLET
 
-  // The account the configured phrase derives, stored beside the snapshot so a
-  // changed WALLET_SRP re-onboards instead of silently reusing the previous
-  // wallet.
+  // The account the phrase derives, stored beside the snapshot so editing
+  // TEST_WALLET re-onboards instead of silently reusing the previous wallet.
   const account = mnemonicToAccount(credentials.secretRecoveryPhrase).address
 
   if (existsSync(PROFILE_SNAPSHOT_DIR)) {
