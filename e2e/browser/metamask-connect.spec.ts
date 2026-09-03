@@ -8,6 +8,7 @@
 import { expect } from '@playwright/test'
 import { mnemonicToAccount } from 'viem/accounts'
 import { test } from '../fixtures/metamask.js'
+import { expectSignRunSucceeded } from '../helpers/tx-runs.js'
 import { TEST_WALLET } from '../helpers/wallet-credentials.js'
 
 const LAB_TIMEOUT_MS = 90_000
@@ -79,14 +80,7 @@ test.describe('Preset 2 — real MetaMask', () => {
 
     await metamask.approveSignature()
 
-    const run = page.getByTestId('sign-run-1')
-    await expect(run).toHaveAttribute('data-status', 'success', {
-      timeout: LAB_TIMEOUT_MS,
-    })
-
-    await expect(run).toHaveAttribute('data-verify', 'valid', {
-      timeout: LAB_TIMEOUT_MS,
-    })
+    await expectSignRunSucceeded(page.getByTestId('sign-run-1'))
   })
 
   test('rejecting the request leaves the lab unconnected', async ({
