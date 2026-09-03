@@ -201,6 +201,7 @@ jobs:
           # Pin the bundler/paymaster to staging so the AA stack matches the
           # staging KMS above (the SDK default host is prod).
           NEXT_PUBLIC_ZERODEV_AA_HOST: https://staging-meta-aa-provider.onrender.com
+          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID }}
 
       - name: Wait for QA lab
         run: |
