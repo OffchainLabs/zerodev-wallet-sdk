@@ -18,33 +18,47 @@ jobs:
           # keep labels in sync when a push removes the risky files
           sync-labels: true
 
-  # File-level attention banners: rendered by GitHub at the top of each
-  # flagged file's diff in the Files changed tab. Warnings mark files that
-  # carry decisions (human tier); notices mark the mechanical tier.
+  # File-level attention. Two surfaces, because each has a blind spot:
+  # annotations render inline in Files changed (but only when anchored to a
+  # line that's in the diff), and the sticky comment gives a ranked map with
+  # jump links that's always visible in Conversation.
   attention:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-      - name: Annotate files needing human attention
+
+      - name: Annotate files in the diff
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           BASE=$(git merge-base "origin/$BASE_REF" HEAD)
-          git diff --name-only "$BASE" | while read -r f; do
-            case "$f" in
-              packages/*/package.json)
-                if git diff "$BASE" -- "$f" | grep -qE '"(peer|dev)?[dD]ependencies"'; then
-                  echo "::warning file=$f::HUMAN REVIEW — dependency sections changed; check the dep-vs-peer strategy and that frozen-lockfile CI passes"
-                fi ;;
-              */src/index.ts)
-                echo "::warning file=$f::HUMAN REVIEW — public API surface changed; docs/api-reports/ must be regenerated and a changeset included" ;;
-              .changeset/*.md)
-                echo "::warning file=$f::HUMAN REVIEW — release mechanics; patch-only convention unless the PR body says otherwise" ;;
-              packages/core/src/*)
-                echo "::warning file=$f::HUMAN REVIEW — auth/signing path" ;;
-              *.test.*|apps/*)
-                echo "::notice file=$f::ai-verified tier — skim only" ;;
-            esac
-          done
+          node scripts/review-attention.mjs "$BASE"
+
+      - name: Post/update the attention map comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          MARKER="<!-- review-attention-map -->"
+          {
+            echo "$MARKER"
+            node scripts/review-attention.mjs "$BASE" --markdown
+          } > map.md
+
+          # Sticky: update the existing map instead of stacking a new
+          # comment on every push.
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq "[.[] | select(.body | contains(\"$MARKER\"))] | first | .id // empty")
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@map.md --jq .html_url
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@map.md --jq .html_url
+          fi
