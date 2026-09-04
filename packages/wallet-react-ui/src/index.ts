@@ -6,10 +6,15 @@
 // Auth
 export { ConnectWallet } from './auth'
 export { useAuth } from './auth/hooks/useAuth'
+// Connected wallet identity
+export type {
+  ConnectedWalletInfo,
+  ConnectedWalletSource,
+} from './auth/hooks/useConnectedWalletInfo.js'
+export { useConnectedWalletInfo } from './auth/hooks/useConnectedWalletInfo.js'
 export { SignUp } from './auth/pages/SignUp'
 export type { AuthMethod, AuthStep, EmailAuthMethod } from './auth/types'
 export type { WalletId } from './auth/walletGuide'
-
 // Connector
 export type {
   // SigningConfig,
