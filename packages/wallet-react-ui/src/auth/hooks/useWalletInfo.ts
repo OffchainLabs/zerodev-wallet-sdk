@@ -8,20 +8,16 @@ import {
 } from '../walletGuide'
 
 /** How the active connection reaches the wallet. */
-export type ConnectedWalletSource =
-  | 'injected'
-  | 'walletconnect'
-  | 'embedded'
-  | 'other'
+export type WalletSource = 'injected' | 'walletconnect' | 'embedded' | 'other'
 
-export type ConnectedWalletInfo = {
+export type WalletInfo = {
   /** Human-readable wallet name ('MetaMask', 'Trust Wallet', …). */
   name?: string | undefined
   /** Wallet icon URL or data: URI, when one is known. */
   icon?: string | undefined
   /** Guide id when the wallet matches the kit's wallet guide. */
   walletId?: WalletId | undefined
-  source: ConnectedWalletSource
+  source: WalletSource
 }
 
 /** The slice of `@walletconnect/ethereum-provider` this hook reads. */
@@ -55,19 +51,7 @@ function guideEntryForConnector(connector: {
   return WALLET_GUIDE.find((wallet) => matchesWallet(connector, wallet))
 }
 
-/**
- * Identity of the wallet behind the active wagmi connection — the kit's
- * equivalent of AppKit's `useWalletInfo`, for wallet-specific handling and
- * analytics attribution.
- *
- * wagmi's `useAccount().connector` already names injected wallets, but a
- * WalletConnect connection only reports "WalletConnect" — the actual wallet
- * on the other end (Trust, Rainbow, … on a phone) is in the session's peer
- * metadata, which this hook reads from the provider. Returns `undefined`
- * while disconnected, and resolves the WalletConnect case asynchronously
- * (briefly `name: undefined` after connect/reload).
- */
-export function useConnectedWalletInfo(): ConnectedWalletInfo | undefined {
+function useResolvedWalletInfo(): WalletInfo | undefined {
   const { connector, isConnected } = useAccount()
   const [peerMetadata, setPeerMetadata] = useState<
     { name?: string; icons?: readonly string[] } | undefined
@@ -128,4 +112,26 @@ export function useConnectedWalletInfo(): ConnectedWalletInfo | undefined {
     walletId: entry?.id as WalletId | undefined,
     source: connector.type === 'injected' ? 'injected' : 'other',
   }
+}
+
+/**
+ * Identity of the wallet behind the active wagmi connection, for
+ * wallet-specific handling and analytics attribution. Call-compatible with
+ * AppKit's `useWalletInfo` — same name, same `{ walletInfo }` return shape,
+ * so migrating is an import swap; `walletId` and `source` are kit extras.
+ *
+ * wagmi's `useAccount().connector` already names injected wallets, but a
+ * WalletConnect connection only reports "WalletConnect" — the actual wallet
+ * on the other end (Trust, Rainbow, … on a phone) is in the session's peer
+ * metadata, which this hook reads from the provider. `walletInfo` is
+ * `undefined` while disconnected, and the WalletConnect case resolves
+ * asynchronously (briefly `name: undefined` after connect/reload).
+ *
+ * @param _namespace - Accepted for AppKit call-compatibility ('eip155');
+ * ignored — the kit is EVM-only.
+ */
+export function useWalletInfo(_namespace?: string): {
+  walletInfo: WalletInfo | undefined
+} {
+  return { walletInfo: useResolvedWalletInfo() }
 }

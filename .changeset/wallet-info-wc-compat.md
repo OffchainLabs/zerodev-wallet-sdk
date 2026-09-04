@@ -3,11 +3,14 @@
 '@zerodev/wallet-react-ui': patch
 ---
 
-feat: `useConnectedWalletInfo` + WalletConnect compat fixes
+feat: `useWalletInfo` + WalletConnect compat fixes
 
-- New `useConnectedWalletInfo` hook: identity of the wallet behind the
-  active wagmi connection — `{ name, icon, walletId, source }`, or
-  `undefined` while disconnected. Injected wallets resolve from the
+- New `useWalletInfo` hook: identity of the wallet behind the active wagmi
+  connection. Call-compatible with AppKit's `useWalletInfo` (same name, same
+  `{ walletInfo }` return shape, optional ignored namespace arg), so
+  migrating from AppKit is an import swap. `walletInfo` carries
+  `{ name, icon, walletId, source }`, or is `undefined` while disconnected.
+  Injected wallets resolve from the
   connector, WalletConnect connections from the session's peer metadata
   (the actual wallet on the other end, resolved asynchronously), the
   embedded wallet reports `source: 'embedded'`.

@@ -4,7 +4,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WALLET_GUIDE } from '../walletGuide'
-import { useConnectedWalletInfo } from './useConnectedWalletInfo'
+import { useWalletInfo } from './useWalletInfo'
 
 afterEach(cleanup)
 
@@ -44,9 +44,9 @@ function wcConnector(metadata: unknown) {
   }
 }
 
-describe('useConnectedWalletInfo', () => {
+describe('useWalletInfo', () => {
   it('returns undefined while disconnected', () => {
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
     expect(result.current).toBeUndefined()
   })
 
@@ -59,7 +59,7 @@ describe('useConnectedWalletInfo', () => {
     }
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
 
     expect(result.current).toEqual({
       name: 'MetaMask',
@@ -78,7 +78,7 @@ describe('useConnectedWalletInfo', () => {
     }
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
 
     expect(result.current).toEqual({
       name: 'ZeroDev Wallet',
@@ -94,7 +94,7 @@ describe('useConnectedWalletInfo', () => {
     })
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
 
     // Peer metadata resolves asynchronously; the transport is known upfront.
     expect(result.current).toMatchObject({ source: 'walletconnect' })
@@ -114,7 +114,7 @@ describe('useConnectedWalletInfo', () => {
     account.connector = wcConnector({ name: 'MetaMask Wallet', icons: [] })
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
     await flush()
 
     expect(result.current?.walletId).toBe('metamask')
@@ -129,7 +129,7 @@ describe('useConnectedWalletInfo', () => {
     })
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
     await flush()
 
     expect(result.current).toEqual({
@@ -149,7 +149,7 @@ describe('useConnectedWalletInfo', () => {
     }
     account.isConnected = true
 
-    const { result } = renderHook(() => useConnectedWalletInfo())
+    const { result } = renderHook(() => useWalletInfo().walletInfo)
 
     expect(result.current).toMatchObject({
       name: 'Coinbase Wallet',
