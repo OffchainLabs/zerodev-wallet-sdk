@@ -17,3 +17,34 @@ jobs:
         with:
           # keep labels in sync when a push removes the risky files
           sync-labels: true
+
+  # File-level attention banners: rendered by GitHub at the top of each
+  # flagged file's diff in the Files changed tab. Warnings mark files that
+  # carry decisions (human tier); notices mark the mechanical tier.
+  attention:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Annotate files needing human attention
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          git diff --name-only "$BASE" | while read -r f; do
+            case "$f" in
+              packages/*/package.json)
+                if git diff "$BASE" -- "$f" | grep -qE '"(peer|dev)?[dD]ependencies"'; then
+                  echo "::warning file=$f::HUMAN REVIEW — dependency sections changed; check the dep-vs-peer strategy and that frozen-lockfile CI passes"
+                fi ;;
+              */src/index.ts)
+                echo "::warning file=$f::HUMAN REVIEW — public API surface changed; docs/api-reports/ must be regenerated and a changeset included" ;;
+              .changeset/*.md)
+                echo "::warning file=$f::HUMAN REVIEW — release mechanics; patch-only convention unless the PR body says otherwise" ;;
+              packages/core/src/*)
+                echo "::warning file=$f::HUMAN REVIEW — auth/signing path" ;;
+              *.test.*|apps/*)
+                echo "::notice file=$f::ai-verified tier — skim only" ;;
+            esac
+          done
