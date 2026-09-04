@@ -5,8 +5,6 @@
 
 - `AuthMethod` — TypeAlias
 - `AuthStep` — TypeAlias
-- `ConnectedWalletInfo` — TypeAlias
-- `ConnectedWalletSource` — TypeAlias
 - `ConnectWallet` — Function: `({ onClose: userOnClose, size, renderSignUp, logo, }?: { onClose?: () => void; size?: "sm" | "md" | "lg"; renderSignUp?: () => ReactNode; logo?: ReactNode; }) => Element`
 - `EmailAuthMethod` — TypeAlias
 - `SignUp` — Variable: `(({ children, termsAndConditionsUrl, privacyPolicyUrl, emailAuthMethod, }: SignUpRootProps) => Element) & { Default: (props: Omit<SignUpRootProps, "children">) => Element; Passkey: () => Element; Google: () => Element; Email: () => Element; Wallet: ({ walletId }: { walletId: "metamask" | "trust" | "…`
@@ -15,7 +13,6 @@
 - `TxHistoryProps` — Interface
 - `TxHistoryStep` — TypeAlias
 - `useAuth` — Function: `() => { step: AuthStep; email: string; otpId: string; otpEncryptionTargetBundle: string; goToStep: (step: AuthStep) => void; goBack: () => void; reset: () => void; setEmail: (email: string) => void; setOtpSession: (input: { otpId: string; otpEncryptionTargetBundle: string; }) => void; clearOtpSessio…`
-- `useConnectedWalletInfo` — Function: `() => ConnectedWalletInfo`
 - `WalletId` — TypeAlias
 - `ZeroDevKitConnectorParams` — TypeAlias
 - `zeroDevWallet` — Function: `(params: ZeroDevWalletConnectorParams) => CreateConnectorFn`
